@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>XAI Report Builder UI</title>
+  <style>
+    :root {
+      --bg: #f6f7f8;
+      --panel: #171717;
+      --panel-soft: #222326;
+      --text: #121316;
+      --muted: #6f7380;
+      --line: #e4e7ec;
+      --white: #ffffff;
+      --accent: #0b57d0;
+      --assistant: #ffffff;
+      --assistant-line: #e7ebf2;
+      --user: #0b57d0;
+      --user-text: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    .layout {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-columns: 276px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      background: linear-gradient(180deg, #161616 0%, #1f2023 100%);
+      color: #f4f5f6;
+      border-right: 1px solid #0f1011;
+      padding: 12px;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .new-chat {
+      border: 1px solid #35373b;
+      border-radius: 12px;
+      background: #2a2d32;
+      color: #f8f8f9;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px;
+      cursor: pointer;
+    }
+
+    .new-chat:hover {
+      background: #32363c;
+    }
+
+    .side-hint {
+      border: 1px solid #35373b;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #cfd3da;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .chat-list {
+      min-height: 0;
+      overflow: auto;
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      padding-right: 2px;
+    }
+
+    .chat-item {
+      border: 1px solid transparent;
+      border-radius: 10px;
+      padding: 9px;
+      background: transparent;
+      color: #f0f3f8;
+      text-align: left;
+      cursor: pointer;
+      display: grid;
+      gap: 3px;
+    }
+
+    .chat-item:hover {
+      background: #2a2d32;
+      border-color: #383b41;
+    }
+
+    .chat-item.active {
+      background: #2e3542;
+      border-color: #3f4a5e;
+    }
+
+    .chat-item .title {
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chat-item .meta {
+      font-size: 11px;
+      color: #b8bfca;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .main {
+      min-width: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100%;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(4px);
+      padding: 10px 16px;
+    }
+
+    .brand {
+      min-width: 0;
+    }
+
+    .brand .name {
+      font-weight: 700;
+      font-size: 15px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .brand .meta {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(170px, 220px));
+      gap: 8px;
+      align-items: center;
+    }
+
+    .control {
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      color: #454c5a;
+    }
+
+    .control select {
+      width: 100%;
+      border: 1px solid #ccd3de;
+      border-radius: 10px;
+      padding: 8px 10px;
+      background: var(--white);
+      color: #1c2331;
+      font-size: 13px;
+    }
+
+    .messages {
+      overflow: auto;
+      padding: 18px 0 24px;
+      display: grid;
+      align-content: start;
+      gap: 14px;
+    }
+
+    .message-row {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      padding: 0 16px;
+    }
+
+    .message-wrap {
+      width: min(920px, 100%);
+      display: flex;
+    }
+
+    .message-row.user .message-wrap {
+      justify-content: flex-end;
+    }
+
+    .message-row.assistant .message-wrap {
+      justify-content: flex-start;
+    }
+
+    .bubble {
+      max-width: min(780px, 100%);
+      border-radius: 14px;
+      padding: 11px 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 14px;
+      border: 1px solid var(--assistant-line);
+      background: var(--assistant);
+      color: #1e2533;
+      box-shadow: 0 2px 8px rgba(10, 17, 29, 0.04);
+    }
+
+    .message-row.assistant .bubble.has-explanation {
+      cursor: pointer;
+    }
+
+    .message-row.user .bubble {
+      background: var(--user);
+      color: var(--user-text);
+      border-color: #0949af;
+    }
+
+    .explain-hint {
+      margin-top: 8px;
+      font-size: 11px;
+      opacity: 0.75;
+      color: #4d5a70;
+    }
+
+    .explain-panel {
+      display: none;
+      margin-top: 8px;
+      border-top: 1px dashed #d7deea;
+      padding-top: 8px;
+      font-size: 12px;
+      color: #334055;
+      white-space: pre-wrap;
+    }
+
+    .bubble.expanded .explain-panel {
+      display: block;
+    }
+
+    .time {
+      margin-top: 8px;
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .composer-shell {
+      border-top: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, #ffffff 40%);
+      padding: 8px 12px 12px;
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+    }
+
+    .composer-content {
+      width: min(920px, 100%);
+      display: grid;
+      gap: 8px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 18px;
+    }
+
+    .chip {
+      border: 1px solid #d0d7e3;
+      border-radius: 999px;
+      background: #edf2fb;
+      color: #284263;
+      padding: 3px 8px;
+      font-size: 11px;
+    }
+
+    .composer {
+      border: 1px solid #cfd6e2;
+      border-radius: 14px;
+      background: #ffffff;
+      padding: 8px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 11px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn.attach {
+      background: #ecf1f9;
+      color: #254160;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn.attach svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+    }
+
+    .btn.send {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    #promptInput {
+      width: 100%;
+      min-height: 44px;
+      max-height: 220px;
+      border: 0;
+      outline: none;
+      resize: none;
+      padding: 8px 2px;
+      font-size: 14px;
+      line-height: 1.42;
+      background: transparent;
+      color: #182033;
+      font-family: inherit;
+    }
+
+    .composer-note {
+      text-align: center;
+      font-size: 11px;
+      color: #7a8090;
+    }
+
+    @media (max-width: 1080px) {
+      .controls {
+        grid-template-columns: 1fr;
+        width: min(280px, 100%);
+      }
+    }
+
+    @media (max-width: 860px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        display: none;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .controls {
+        width: 100%;
+      }
+
+      .message-row {
+        padding: 0 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <button id="newChatBtn" class="new-chat" type="button">+ Новый чат</button>
+      <div class="side-hint">
+        Чат полностью управляет pipeline.<br />
+        Примеры:<br />
+        - "Создай отчет"<br />
+        - "Загрузи файлы и сделай полный пайплайн"<br />
+        - "Проанализируй риски и качество"
+      </div>
+      <div id="chatList" class="chat-list"></div>
+      <div class="side-hint">Выбор модели влияет на режим генерации и анализа в этом чате.</div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="brand">
+          <div class="name">XAI Report Builder UI</div>
+          <div id="topMeta" class="meta">Отчет: -</div>
+        </div>
+        <div class="controls">
+          <label class="control">
+            Профиль
+            <select id="profileSelect"></select>
+          </label>
+          <label class="control">
+            Модель
+            <select id="modelSelect"></select>
+          </label>
+        </div>
+      </header>
+
+      <section id="messages" class="messages"></section>
+
+      <section class="composer-shell">
+        <div class="composer-content">
+          <div id="fileChips" class="chips"></div>
+          <div class="composer">
+            <button
+              id="attachBtn"
+              class="btn attach"
+              type="button"
+              title="Прикрепить файлы"
+              aria-label="Прикрепить файлы"
+            >
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M21.44 11.05 12.25 20.24a6 6 0 1 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.2a2 2 0 1 1-2.83-2.83l8.49-8.48"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </button>
+            <textarea id="promptInput" placeholder="Напишите сообщение..." rows="1"></textarea>
+            <button id="sendBtn" class="btn send" type="button">Отправить</button>
+          </div>
+          <div class="composer-note">Весь запуск pipeline и анализ выполняются через чат-сообщения.</div>
+        </div>
+        <input id="fileInput" type="file" multiple hidden />
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "xai_chat_ui_state_v2";
+
+    const state = {
+      apiBase: window.location.origin.replace(/\/$/, ""),
+      profiles: [],
+      models: [],
+      chats: [],
+      activeChatId: "",
+      pendingFiles: [],
+      busy: false,
+    };
+
+    const el = {
+      newChatBtn: document.getElementById("newChatBtn"),
+      chatList: document.getElementById("chatList"),
+      topMeta: document.getElementById("topMeta"),
+      profileSelect: document.getElementById("profileSelect"),
+      modelSelect: document.getElementById("modelSelect"),
+      messages: document.getElementById("messages"),
+      fileChips: document.getElementById("fileChips"),
+      attachBtn: document.getElementById("attachBtn"),
+      fileInput: document.getElementById("fileInput"),
+      promptInput: document.getElementById("promptInput"),
+      sendBtn: document.getElementById("sendBtn"),
+    };
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function makeId(prefix = "id") {
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(16).slice(2, 10)}`;
+    }
+
+    function short(value) {
+      if (!value) return "-";
+      return value.length > 18 ? `${value.slice(0, 18)}...` : value;
+    }
+
+    function sanitizeAssistantText(text) {
+      if (!text) return "";
+      let cleaned = String(text);
+      cleaned = cleaned.replace(/```[\s\S]*?```/g, "");
+      cleaned = cleaned.replace(/`([^`]+)`/g, "$1");
+      cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
+      return cleaned.trim();
+    }
+
+    function activeChat() {
+      return state.chats.find((item) => item.id === state.activeChatId) || null;
+    }
+
+    function defaultProfileId() {
+      return state.profiles[0] ? state.profiles[0].id : "rosobrnadzor";
+    }
+
+    function defaultModelId() {
+      const preferred = state.models.find((item) => item.available);
+      return preferred ? preferred.id : "pipeline-basic";
+    }
+
+    function createChat(initial = {}) {
+      return {
+        id: makeId("chat"),
+        title: initial.title || "Новый чат",
+        profileId: initial.profileId || defaultProfileId(),
+        modelId: initial.modelId || defaultModelId(),
+        reportId: initial.reportId || "",
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+        messages: initial.messages || [
+          {
+            id: makeId("msg"),
+            role: "assistant",
+            text: "Готов к работе. Напишите задачу, например: 'создай отчет', 'полный пайплайн', 'проанализируй качество отчета'.",
+            ts: nowIso(),
+          },
+        ],
+      };
+    }
+
+    async function apiRequest(path, options = {}) {
+      const response = await fetch(`${state.apiBase}${path}`, options);
+      const raw = await response.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        data = { raw };
+      }
+      if (!response.ok) {
+        const detail = data && data.detail ? data.detail : `HTTP ${response.status}`;
+        throw new Error(detail);
+      }
+      return data;
+    }
+
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed.chats)) state.chats = parsed.chats;
+        if (typeof parsed.activeChatId === "string") state.activeChatId = parsed.activeChatId;
+      } catch (_) {
+        // broken local storage ignored
+      }
+    }
+
+    function saveLocalState() {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          chats: state.chats,
+          activeChatId: state.activeChatId,
+        }),
+      );
+    }
+
+    function addMessage(role, text, json = null, explanation = "") {
+      const chat = activeChat();
+      if (!chat) return;
+      const safeText = role === "assistant" ? sanitizeAssistantText(text) : text;
+      chat.messages.push({
+        id: makeId("msg"),
+        role,
+        text: safeText,
+        json,
+        explanation: explanation || "",
+        expanded: false,
+        ts: nowIso(),
+      });
+      chat.updatedAt = nowIso();
+      renderMessages();
+      renderSidebar();
+      saveLocalState();
+      el.messages.scrollTop = el.messages.scrollHeight;
+    }
+
+    function setBusy(value) {
+      state.busy = value;
+      el.sendBtn.disabled = value;
+      el.attachBtn.disabled = value;
+      el.newChatBtn.disabled = value;
+      el.promptInput.disabled = value;
+      el.profileSelect.disabled = value;
+      el.modelSelect.disabled = value;
+    }
+
+    function renderTopMeta() {
+      const chat = activeChat();
+      if (!chat) {
+        el.topMeta.textContent = "Отчет: -";
+        return;
+      }
+      const model = state.models.find((item) => item.id === chat.modelId);
+      const modelTitle = model ? model.title : chat.modelId;
+      el.topMeta.textContent = `Отчет: ${short(chat.reportId)} | Модель: ${modelTitle}`;
+    }
+
+    function renderSidebar() {
+      const chat = activeChat();
+      el.chatList.innerHTML = "";
+      const items = [...state.chats].sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+      for (const item of items) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `chat-item${chat && chat.id === item.id ? " active" : ""}`;
+
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = item.title;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = `report: ${short(item.reportId)} | ${new Date(item.updatedAt).toLocaleString()}`;
+
+        btn.appendChild(title);
+        btn.appendChild(meta);
+        btn.addEventListener("click", () => setActiveChat(item.id));
+        el.chatList.appendChild(btn);
+      }
+    }
+
+    function renderMessages() {
+      const chat = activeChat();
+      el.messages.innerHTML = "";
+      if (!chat) return;
+
+      for (const msg of chat.messages) {
+        const row = document.createElement("div");
+        row.className = `message-row ${msg.role}`;
+
+        const wrap = document.createElement("div");
+        wrap.className = "message-wrap";
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        const messageText = document.createElement("div");
+        messageText.textContent = msg.text || "";
+        bubble.appendChild(messageText);
+
+        if (msg.role === "assistant" && msg.explanation) {
+          bubble.classList.add("has-explanation");
+          if (msg.expanded) {
+            bubble.classList.add("expanded");
+          }
+
+          const hint = document.createElement("div");
+          hint.className = "explain-hint";
+          hint.textContent = msg.expanded
+            ? "Скрыть объяснение"
+            : "Нажмите на сообщение, чтобы узнать, почему получен этот ответ";
+          bubble.appendChild(hint);
+
+          const panel = document.createElement("div");
+          panel.className = "explain-panel";
+          panel.textContent = msg.explanation;
+          bubble.appendChild(panel);
+
+          bubble.addEventListener("click", () => {
+            const opened = panel.classList.toggle("open");
+            bubble.classList.toggle("expanded", opened);
+            hint.textContent = opened
+              ? "Скрыть объяснение"
+              : "Нажмите на сообщение, чтобы узнать, почему получен этот ответ";
+            msg.expanded = opened;
+            saveLocalState();
+          });
+        }
+
+        const time = document.createElement("div");
+        time.className = "time";
+        time.textContent = new Date(msg.ts).toLocaleTimeString();
+        bubble.appendChild(time);
+
+        wrap.appendChild(bubble);
+        row.appendChild(wrap);
+        el.messages.appendChild(row);
+      }
+
+      el.messages.scrollTop = el.messages.scrollHeight;
+      renderTopMeta();
+    }
+
+    function renderFileChips() {
+      el.fileChips.innerHTML = "";
+      for (const file of state.pendingFiles) {
+        const span = document.createElement("span");
+        span.className = "chip";
+        span.textContent = file.name;
+        el.fileChips.appendChild(span);
+      }
+    }
+
+    function renderProfileSelect(chat) {
+      el.profileSelect.innerHTML = "";
+      for (const item of state.profiles) {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = `${item.title} (${item.id})`;
+        el.profileSelect.appendChild(option);
+      }
+      if (chat) {
+        el.profileSelect.value = chat.profileId;
+      }
+    }
+
+    function renderModelSelect(chat) {
+      el.modelSelect.innerHTML = "";
+      for (const item of state.models) {
+        const option = document.createElement("option");
+        option.value = item.id;
+        option.textContent = item.available ? item.title : `${item.title} (недоступна)`;
+        option.disabled = !item.available;
+        el.modelSelect.appendChild(option);
+      }
+      if (chat) {
+        const exists = state.models.some((item) => item.id === chat.modelId && item.available);
+        if (!exists) {
+          chat.modelId = defaultModelId();
+        }
+        el.modelSelect.value = chat.modelId;
+      }
+    }
+
+    function renderAll() {
+      const chat = activeChat();
+      renderProfileSelect(chat);
+      renderModelSelect(chat);
+      renderSidebar();
+      renderMessages();
+      renderFileChips();
+      renderTopMeta();
+    }
+
+    function setActiveChat(chatId) {
+      state.activeChatId = chatId;
+      renderAll();
+      saveLocalState();
+    }
+
+    function clearPendingFiles() {
+      state.pendingFiles = [];
+      el.fileInput.value = "";
+      renderFileChips();
+    }
+
+    function autosizeInput() {
+      el.promptInput.style.height = "44px";
+      el.promptInput.style.height = `${Math.min(el.promptInput.scrollHeight, 220)}px`;
+    }
+
+    async function sendMessage() {
+      if (state.busy) return;
+
+      const chat = activeChat();
+      if (!chat) return;
+
+      const text = (el.promptInput.value || "").trim();
+      const files = [...state.pendingFiles];
+      if (!text && !files.length) return;
+
+      if (chat.title === "Новый чат" && text) {
+        chat.title = text.slice(0, 84);
+      }
+
+      chat.profileId = el.profileSelect.value || chat.profileId;
+      chat.modelId = el.modelSelect.value || chat.modelId;
+
+      let userText = text;
+      if (files.length) {
+        const names = files.map((file) => file.name).join(", ");
+        userText = text ? `${text}\n\n[Файлы: ${names}]` : `[Файлы: ${names}]`;
+      }
+      addMessage("user", userText || "[Пустое сообщение]");
+
+      el.promptInput.value = "";
+      autosizeInput();
+      clearPendingFiles();
+
+      const form = new FormData();
+      form.append("message", text);
+      form.append("profile_id", chat.profileId);
+      form.append("model_id", chat.modelId);
+      if (chat.reportId) {
+        form.append("report_id", chat.reportId);
+      }
+      for (const file of files) {
+        form.append("files", file, file.name);
+      }
+
+      try {
+        setBusy(true);
+        const result = await apiRequest("/chat/message", { method: "POST", body: form });
+        if (result.report_id) {
+          chat.reportId = result.report_id;
+        }
+        if (result.profile_id) {
+          chat.profileId = result.profile_id;
+        }
+        if (result.model_id) {
+          chat.modelId = result.model_id;
+        }
+        const explanation =
+          (typeof result.explanation === "string" && result.explanation) ||
+          (result.data && typeof result.data.assistant_explanation === "string" ? result.data.assistant_explanation : "");
+        addMessage("assistant", result.reply || "Пустой ответ.", null, explanation);
+      } catch (err) {
+        addMessage("assistant", `Ошибка: ${err.message || String(err)}`);
+      } finally {
+        chat.updatedAt = nowIso();
+        saveLocalState();
+        renderAll();
+        setBusy(false);
+        el.promptInput.focus();
+      }
+    }
+
+    function bindEvents() {
+      el.newChatBtn.addEventListener("click", () => {
+        const chat = createChat({
+          profileId: el.profileSelect.value || defaultProfileId(),
+          modelId: el.modelSelect.value || defaultModelId(),
+        });
+        state.chats.push(chat);
+        setActiveChat(chat.id);
+      });
+
+      el.profileSelect.addEventListener("change", () => {
+        const chat = activeChat();
+        if (!chat) return;
+        chat.profileId = el.profileSelect.value;
+        chat.updatedAt = nowIso();
+        saveLocalState();
+        renderTopMeta();
+      });
+
+      el.modelSelect.addEventListener("change", () => {
+        const chat = activeChat();
+        if (!chat) return;
+        chat.modelId = el.modelSelect.value;
+        chat.updatedAt = nowIso();
+        saveLocalState();
+        renderTopMeta();
+      });
+
+      el.attachBtn.addEventListener("click", () => el.fileInput.click());
+      el.fileInput.addEventListener("change", () => {
+        state.pendingFiles = [...el.fileInput.files];
+        renderFileChips();
+      });
+
+      el.sendBtn.addEventListener("click", sendMessage);
+      el.promptInput.addEventListener("input", autosizeInput);
+      el.promptInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+    }
+
+    async function loadProfiles() {
+      const data = await apiRequest("/profiles");
+      state.profiles = data.profiles || [];
+    }
+
+    async function loadModels() {
+      const data = await apiRequest("/chat/models");
+      state.models = data.models || [];
+      if (!state.models.length) {
+        state.models = [
+          {
+            id: "pipeline-basic",
+            title: "Pipeline Basic",
+            available: true,
+            reason: "ok",
+          },
+          {
+            id: "general-assistant",
+            title: "General Assistant",
+            available: true,
+            reason: "fallback",
+          },
+        ];
+      }
+    }
+
+    async function init() {
+      loadLocalState();
+      await loadProfiles();
+      await loadModels();
+
+      if (!state.chats.length) {
+        const chat = createChat();
+        state.chats = [chat];
+        state.activeChatId = chat.id;
+      }
+
+      if (!state.activeChatId || !activeChat()) {
+        state.activeChatId = state.chats[0].id;
+      }
+
+      bindEvents();
+      renderAll();
+      el.promptInput.focus();
+    }
+
+    init().catch((err) => {
+      console.error(err);
+      alert(`UI init error: ${err.message || err}`);
+    });
+  </script>
+</body>
+</html>

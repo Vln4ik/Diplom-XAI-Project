@@ -1,0 +1,22 @@
+{
+  "name": "full_mps_qwen05b_v1",
+  "description": "Full fine-tune on Apple Silicon (MPS), stable profile.",
+  "script": "scripts/train_full_sft.py",
+  "args": {
+    "dataset": "data/processed/sft_full_mix_v1_11k5.jsonl",
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "output": "data/models/full-qwen05b-report-v1",
+    "epochs": 1,
+    "batch-size": 1,
+    "max-length": 256,
+    "max-steps": 80,
+    "learning-rate": 2e-5,
+    "weight-decay": 0.01,
+    "gradient-accumulation-steps": 8,
+    "warmup-steps": 20,
+    "save-steps": 40,
+    "eval-ratio": 0.05,
+    "seed": 42,
+    "gradient-checkpointing": true
+  }
+}

@@ -1,0 +1,11 @@
+.venv/
+.venv-train/
+__pycache__/
+.pytest_cache/
+*.pyc
+data/reports/
+data/uploads/
+data/models/
+data/raw/
+data/processed/
+data/*.log

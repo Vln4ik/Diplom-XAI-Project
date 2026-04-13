@@ -1,0 +1,22 @@
+{
+  "name": "full_mps_qwen05b_v2_newdata",
+  "description": "Full fine-tune on new RU conversational datasets + domain mix (MPS profile).",
+  "script": "scripts/train_full_sft.py",
+  "args": {
+    "dataset": "data/processed/sft_full_mix_v2_15k5.jsonl",
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "output": "data/models/full-qwen05b-report-v2-newdata",
+    "epochs": 1,
+    "batch-size": 1,
+    "max-length": 256,
+    "max-steps": 100,
+    "learning-rate": 2e-5,
+    "weight-decay": 0.01,
+    "gradient-accumulation-steps": 8,
+    "warmup-steps": 25,
+    "save-steps": 50,
+    "eval-ratio": 0.05,
+    "seed": 42,
+    "gradient-checkpointing": true
+  }
+}
