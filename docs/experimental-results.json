@@ -1,0 +1,110 @@
+{
+  "scenario": "rosobrnadzor_educational_org_small_document_package",
+  "manual_process_minutes": {
+    "review_regulatory_basis": {
+      "min": 25,
+      "max": 60
+    },
+    "identify_applicable_requirements": {
+      "min": 20,
+      "max": 45
+    },
+    "search_and_verify_evidence": {
+      "min": 45,
+      "max": 120
+    },
+    "compile_requirement_matrix": {
+      "min": 20,
+      "max": 45
+    },
+    "draft_report_text": {
+      "min": 25,
+      "max": 60
+    },
+    "internal_alignment_and_revision": {
+      "min": 15,
+      "max": 30
+    }
+  },
+  "manual_process_summary_minutes": {
+    "min": 150.0,
+    "max": 360.0,
+    "midpoint": 255.0
+  },
+  "automated_human_minutes": {
+    "upload_and_categorize_documents": {
+      "min": 10,
+      "max": 15
+    },
+    "verify_processing_and_search_results": {
+      "min": 5,
+      "max": 10
+    },
+    "review_requirements_and_risks": {
+      "min": 15,
+      "max": 35
+    },
+    "final_editorial_review": {
+      "min": 5,
+      "max": 20
+    },
+    "export_and_submit_report": {
+      "min": 5,
+      "max": 10
+    }
+  },
+  "automated_human_summary_minutes": {
+    "min": 40.0,
+    "max": 90.0,
+    "midpoint": 65.0
+  },
+  "machine_cycle_seconds_mean": 12.2658,
+  "machine_cycle_minutes_mean": 0.2044,
+  "automated_total_summary_minutes": {
+    "min": 40.2044,
+    "max": 90.2044,
+    "midpoint": 65.2044
+  },
+  "time_comparison": {
+    "min_minutes_saved": 59.7956,
+    "max_minutes_saved": 319.7956,
+    "midpoint_minutes_saved": 189.7956,
+    "min_reduction_percent": 39.86,
+    "max_reduction_percent": 88.83,
+    "midpoint_reduction_percent": 74.43
+  },
+  "conservative_reporting_reduction_percent": {
+    "min": 40,
+    "max": 70
+  },
+  "quality_gain_assumptions_percent": {
+    "requirement_omission_risk_reduction": {
+      "min": 15,
+      "max": 30
+    },
+    "evidence_completeness_improvement": {
+      "min": 20,
+      "max": 40
+    },
+    "review_reproducibility_improvement": {
+      "min": 25,
+      "max": 50
+    }
+  },
+  "quality_proxy_observed": {
+    "documents_processed_share": 1.0,
+    "evidence_coverage": 1.0,
+    "xai_coverage": 1.0,
+    "export_success_rate": 1.0,
+    "requirements_count": 3,
+    "sections_count": 9
+  },
+  "performance_baseline_snapshot": {
+    "process_total_seconds_mean": 4.1443,
+    "analyze_seconds_mean": 1.0202,
+    "generate_seconds_mean": 7.1013,
+    "load_generate_seconds_mean": 13.2132,
+    "load_success_rate": 1.0,
+    "load_throughput_runs_per_minute": 6.4189
+  }
+}

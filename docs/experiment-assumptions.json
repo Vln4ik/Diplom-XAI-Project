@@ -1,0 +1,77 @@
+{
+  "scenario": "rosobrnadzor_educational_org_small_document_package",
+  "manual_process_minutes": {
+    "review_regulatory_basis": {
+      "min": 25,
+      "max": 60
+    },
+    "identify_applicable_requirements": {
+      "min": 20,
+      "max": 45
+    },
+    "search_and_verify_evidence": {
+      "min": 45,
+      "max": 120
+    },
+    "compile_requirement_matrix": {
+      "min": 20,
+      "max": 45
+    },
+    "draft_report_text": {
+      "min": 25,
+      "max": 60
+    },
+    "internal_alignment_and_revision": {
+      "min": 15,
+      "max": 30
+    }
+  },
+  "automated_human_minutes": {
+    "upload_and_categorize_documents": {
+      "min": 10,
+      "max": 15
+    },
+    "verify_processing_and_search_results": {
+      "min": 5,
+      "max": 10
+    },
+    "review_requirements_and_risks": {
+      "min": 15,
+      "max": 35
+    },
+    "final_editorial_review": {
+      "min": 5,
+      "max": 20
+    },
+    "export_and_submit_report": {
+      "min": 5,
+      "max": 10
+    }
+  },
+  "conservative_reporting_reduction_percent": {
+    "min": 40,
+    "max": 70
+  },
+  "quality_gain_assumptions_percent": {
+    "requirement_omission_risk_reduction": {
+      "min": 15,
+      "max": 30
+    },
+    "evidence_completeness_improvement": {
+      "min": 20,
+      "max": 40
+    },
+    "review_reproducibility_improvement": {
+      "min": 25,
+      "max": 50
+    }
+  },
+  "quality_proxy_observed": {
+    "documents_processed_share": 1.0,
+    "evidence_coverage": 1.0,
+    "xai_coverage": 1.0,
+    "export_success_rate": 1.0,
+    "requirements_count": 3,
+    "sections_count": 9
+  }
+}

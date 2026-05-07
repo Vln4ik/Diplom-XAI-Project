@@ -267,6 +267,8 @@ cd frontend && npm run e2e
 - описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
 - архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)
 - статус роадмапа: [docs/roadmap-status.md](docs/roadmap-status.md)
+- методика эксперимента: [docs/experimental-methodology.md](docs/experimental-methodology.md)
+- результаты эксперимента: [docs/experimental-results.md](docs/experimental-results.md)
 - ручной demo-сценарий: [docs/demo-scenario.md](docs/demo-scenario.md)
 - acceptance-checklist: [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
 - метрики качества: [docs/quality-metrics.md](docs/quality-metrics.md)
