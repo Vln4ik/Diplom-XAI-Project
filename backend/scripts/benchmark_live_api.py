@@ -5,7 +5,9 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import mimetypes
+import subprocess
 import sys
+import threading
 import time
 import uuid
 from datetime import UTC, datetime
@@ -19,7 +21,14 @@ PROJECT_ROOT = BACKEND_ROOT.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.services.performance import flatten_timing_metrics, success_rate, throughput_per_minute  # noqa: E402
+from app.services.performance import (  # noqa: E402
+    flatten_timing_metrics,
+    parse_memory_to_mib,
+    parse_percentage,
+    success_rate,
+    summarize_resource_samples,
+    throughput_per_minute,
+)
 
 SAMPLES_DIR = PROJECT_ROOT / "samples" / "documents"
 SAMPLE_DOCUMENTS = [
@@ -32,6 +41,119 @@ SAMPLE_DOCUMENTS = [
 
 class ApiError(RuntimeError):
     pass
+
+
+class DockerResourceSampler:
+    def __init__(
+        self,
+        *,
+        compose_file: Path,
+        services: list[str],
+        interval_seconds: float,
+    ) -> None:
+        self.compose_file = compose_file
+        self.services = services
+        self.interval_seconds = interval_seconds
+        self.samples: list[dict[str, object]] = []
+        self.errors: list[str] = []
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._containers = self._discover_containers()
+
+    def _discover_containers(self) -> dict[str, str]:
+        command = [
+            "docker",
+            "compose",
+            "-f",
+            str(self.compose_file),
+            "ps",
+            "--format",
+            "json",
+        ]
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        containers: dict[str, str] = {}
+        for raw_line in result.stdout.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            if not isinstance(payload, dict):
+                continue
+            service_name = str(payload.get("Service") or "").strip()
+            container_name = str(payload.get("Name") or "").strip()
+            state = str(payload.get("State") or "").strip().lower()
+            if service_name and container_name and state == "running":
+                containers[service_name] = container_name
+        filtered = {service: containers[service] for service in self.services if service in containers}
+        if not filtered:
+            raise RuntimeError("No running Docker containers matched the requested resource services")
+        return filtered
+
+    def _collect_once(self) -> dict[str, object]:
+        container_names = list(self._containers.values())
+        command = ["docker", "stats", "--no-stream", "--format", "{{json .}}", *container_names]
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        name_to_service = {name: service for service, name in self._containers.items()}
+        containers_payload: dict[str, dict[str, float]] = {}
+
+        for raw_line in result.stdout.splitlines():
+            line = raw_line.strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            if not isinstance(payload, dict):
+                continue
+            container_name = str(payload.get("Name") or "").strip()
+            service_name = name_to_service.get(container_name)
+            if not service_name:
+                continue
+            memory_usage = str(payload.get("MemUsage") or "")
+            used_memory_raw = memory_usage.split("/", 1)[0].strip() if memory_usage else ""
+            containers_payload[service_name] = {
+                "cpu_percent": parse_percentage(payload.get("CPUPerc")),
+                "memory_mib": parse_memory_to_mib(used_memory_raw),
+                "memory_percent": parse_percentage(payload.get("MemPerc")),
+                "pids": float(str(payload.get("PIDs") or "0").strip() or "0"),
+            }
+
+        return {
+            "captured_at": datetime.now(UTC).isoformat(),
+            "containers": containers_payload,
+        }
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                self.samples.append(self._collect_once())
+            except Exception as exc:  # pragma: no cover - runtime protection
+                self.errors.append(str(exc))
+            if self._stop_event.wait(self.interval_seconds):
+                break
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, name="docker-resource-sampler", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=max(2.0, self.interval_seconds * 2))
+
+    def to_payload(self, *, include_samples: bool) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "mode": "docker",
+            "compose_file": str(self.compose_file),
+            "services": self.services,
+            "resolved_containers": self._containers,
+            "sample_interval_seconds": self.interval_seconds,
+            "sample_count": len(self.samples),
+            "summary": summarize_resource_samples(self.samples),
+        }
+        if include_samples:
+            payload["samples"] = self.samples
+        if self.errors:
+            payload["errors"] = self.errors
+        return payload
 
 
 def _request(
@@ -374,7 +496,24 @@ def _collect_runs(args: argparse.Namespace) -> tuple[list[dict[str, object]], li
 def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
     started = time.perf_counter()
     ai_status = _request(method="GET", url=_api_url(args.base_url, "/api/system/ai-status"), timeout=args.request_timeout)
-    runs, errors = _collect_runs(args)
+    resource_sampler: DockerResourceSampler | None = None
+    resource_profile: dict[str, object] | None = None
+
+    if args.resource_profile == "docker":
+        resource_sampler = DockerResourceSampler(
+            compose_file=args.compose_file,
+            services=[service.strip() for service in args.resource_services.split(",") if service.strip()],
+            interval_seconds=args.resource_interval,
+        )
+        resource_sampler.start()
+
+    try:
+        runs, errors = _collect_runs(args)
+    finally:
+        if resource_sampler is not None:
+            resource_sampler.stop()
+            resource_profile = resource_sampler.to_payload(include_samples=args.include_resource_samples)
+
     total_wall_time_seconds = round(time.perf_counter() - started, 4)
     completed_runs = len(runs)
     failed_runs = len(errors)
@@ -397,6 +536,8 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
         "query": args.query,
         "expected_section_count": args.expected_section_count,
     }
+    if resource_profile is not None:
+        payload["resource_profile"] = resource_profile
     if errors:
         payload["errors"] = errors
     return payload
@@ -415,6 +556,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--request-timeout", type=float, default=60.0)
     parser.add_argument("--pipeline-timeout", type=float, default=240.0)
     parser.add_argument("--poll-interval", type=float, default=1.0)
+    parser.add_argument("--resource-profile", choices=("none", "docker"), default="none")
+    parser.add_argument("--compose-file", type=Path, default=PROJECT_ROOT / "infra" / "docker-compose.yml")
+    parser.add_argument("--resource-services", default="backend,worker,postgres,redis,ollama")
+    parser.add_argument("--resource-interval", type=float, default=1.0)
+    parser.add_argument("--include-resource-samples", action="store_true")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()
 

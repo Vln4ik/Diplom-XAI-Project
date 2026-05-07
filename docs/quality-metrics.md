@@ -116,26 +116,61 @@
 - успешность export
 - готовность отчёта в сценарии
 
+Кроме того, теперь в проекте есть и первый формальный `gold benchmark`:
+
+- `requirement extraction precision`: `1.0000`
+- `requirement extraction recall`: `1.0000`
+- `requirement extraction F1`: `1.0000`
+- `evidence linking precision`: `0.5556`
+- `evidence linking recall`: `0.8333`
+- `evidence linking F1`: `0.6667`
+
+Подробная фиксация вынесена в [docs/quality-benchmark-results.md](quality-benchmark-results.md).
+
+Дополнительно в проекте теперь есть `benchmark-suite` из трёх сценариев. Его агрегированные показатели:
+
+- `requirement extraction precision`: `1.0000`
+- `requirement extraction recall`: `1.0000`
+- `requirement extraction F1`: `1.0000`
+- `evidence linking precision`: `0.6000`
+- `evidence linking recall`: `0.9000`
+- `evidence linking F1`: `0.7200`
+
+Подробная фиксация вынесена в [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+
+### Что уже измерено под более тяжёлой нагрузкой
+
+Теперь в проекте есть и отдельный `3x` stress baseline с container-level resource profiling:
+
+- `concurrency`: `3`
+- `success_rate`: `1.0`
+- `throughput_runs_per_minute`: `6.2504`
+- `generate mean`: `20.3659s`
+- `backend memory mean`: `140.08 MiB`
+- `worker memory mean`: `982.48 MiB`
+
+Подробная фиксация вынесена в [docs/stress-baseline.md](stress-baseline.md).
+
 ### Чего пока нет
 
-У нас пока нет formal semantic accuracy метрик уровня:
+У нас пока нет:
 
-- `precision`
-- `recall`
-- `F1`
-- экспертной оценки correctness итогового отчёта на размеченном gold dataset
+- benchmark на расширенном и репрезентативном корпусе реальных кейсов
+- отдельной formal accuracy-оценки для `applicability classification`
+- отдельной formal accuracy-оценки для итоговых generated report sections
+- экспертной межразметочной проверки на большом наборе кейсов
 
 Поэтому корректная формулировка сейчас такая:
 
-- у нас уже есть измеримый functional quality и coverage
-- у нас ещё нет формально доказанной semantic accuracy на репрезентативной выборке
+- у нас уже есть измеримый functional quality и первый formal benchmark по `requirement extraction` и `evidence linking`
+- у нас ещё нет формально доказанной semantic accuracy на широкой репрезентативной выборке
 
 ## Что планируется добавить дальше
 
 Следующий слой quality-метрик:
 
-- annotated benchmark для requirement extraction
-- `precision/recall/F1`
+- расширенный annotated benchmark для requirement extraction и evidence linking
+- `precision/recall/F1` на большем наборе кейсов
 - сравнение качества между fallback и local model runtime
 - отдельная экспертная оценка корректности generated report sections
 
@@ -143,12 +178,17 @@
 
 - Автоматически через `backend/tests/test_pipeline.py`.
 - Автоматически через `backend/tests/test_acceptance_demo_flow.py`.
+- Автоматически через `backend/tests/test_quality_benchmark.py`.
 - Косвенно через `dashboard`, `notifications` и `audit log`.
-- Отдельно через live benchmark: [docs/performance-baseline.md](/Users/vinchik/Desktop/Diplom/docs/performance-baseline.md).
-- Отдельно через concurrency/load profile: [docs/load-baseline.md](/Users/vinchik/Desktop/Diplom/docs/load-baseline.md).
+- Отдельно через live benchmark: [docs/performance-baseline.md](performance-baseline.md).
+- Отдельно через concurrency/load profile: [docs/load-baseline.md](load-baseline.md).
+- Отдельно через `3x` stress profile с Docker resource metrics: [docs/stress-baseline.md](stress-baseline.md).
+- Отдельно через formal benchmark report: [docs/quality-benchmark-results.md](quality-benchmark-results.md).
+- Отдельно через benchmark-suite report: [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
 
 ## Ограничения текущей фиксации
 
-- Нет отдельного benchmark-набора с эталонной разметкой.
-- Нет формальной метрики precision/recall для requirement extraction.
-- Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` concurrency, но нет профиля на больших данных и нет системных `CPU/RAM` замеров.
+- Benchmark-suite всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
+- Формальные метрики пока покрывают только `requirement extraction` и `evidence linking`.
+- Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` load profile и `3x` stress profile с Docker `CPU/RAM` замерами.
+- Текущий resource sampler пока не покрывает host-level `Ollama`, если он работает вне Docker Compose.

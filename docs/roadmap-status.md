@@ -195,13 +195,16 @@
 - browser e2e
 - performance baseline
 - load baseline
+- formal quality benchmark для `requirement extraction` и `evidence linking`
+- benchmark-suite из нескольких сценариев
 - docs по demo и приёмке
 - формальная методика экспериментальной оценки
 - автоматически генерируемый experimental report
+- runtime observability endpoint-ы и CI workflow
 
 Результат:
 
-- система уже имеет не только функционал, но и проверяемый validation contour с материалами для экспериментальной части диплома
+- система уже имеет не только функционал, но и проверяемый validation contour с материалами для экспериментальной части диплома, benchmark-suite и базовым production-hardening слоем
 
 ## 5. Что реализовано частично
 
@@ -215,13 +218,22 @@
 - local LLM
 - hybrid retrieval
 - structured XAI
+- initial gold benchmark с `precision/recall/F1`
+- benchmark-suite с позитивными и gap-сценариями
+- OCR scaffold и image-document entry point
+- базовый production-hardening слой: `CI`, `health`, `metrics`
+- `3x` stress baseline с Docker resource profiling
 
 Ещё не доведено:
 
 - domain fine-tuning
-- calibration на реальных кейсах
-- reranking quality
-- formal precision/recall metrics
+- calibration на расширенном корпусе реальных кейсов
+- reranking quality на репрезентативной выборке
+- benchmark для generated sections и applicability classification
+- production OCR/vision pipeline
+- внешние интеграции и ЭП
+- host-level profiling для внешнего `Ollama`
+- полноценный stress/observability contour production-уровня
 
 ### 5.2. Performance and load
 
@@ -229,11 +241,15 @@
 
 - sequential performance baseline
 - `2x` concurrency load baseline
+- `3x` stress baseline
+- Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
+- runtime metrics endpoint-ы
+- CI workflow для backend/frontend
 
 Ещё нет:
 
-- `3x+` stress профилей
-- CPU/RAM системного профиля
+- `4x+` stress профилей
+- host-level `CPU/RAM` профиля для внешнего `Ollama`
 - больших документных наборов
 - separate comparison `fallback` vs `Ollama model`
 

@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     local_llm_max_input_chars: int = 4000
     local_llm_summary_max_new_tokens: int = 96
     local_llm_section_max_new_tokens: int = 256
+    ocr_provider: str = "disabled"
+    ocr_languages: str = "rus+eng"
+    tesseract_cmd: str | None = None
+    external_integrations_csv: str = ""
+    esign_provider: str = "disabled"
     ollama_base_url: str = "http://localhost:11434/api"
     ollama_embedding_model: str = "all-minilm"
     ollama_llm_model: str = "gemma3:270m"

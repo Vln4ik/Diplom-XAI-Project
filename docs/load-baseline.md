@@ -62,7 +62,7 @@
 
 ## Что ещё не покрыто
 
-- Нет профиля выше `2x` concurrency.
+- Профиль выше `2x` concurrency теперь вынесен отдельно в [docs/stress-baseline.md](stress-baseline.md).
 - Нет отдельного стресс-теста на длинные документы и большие наборы evidence.
-- Нет корреляции с `CPU/RAM` контейнеров и host runtime.
+- Нет host-level корреляции с `CPU/RAM` внешнего `Ollama` runtime.
 - Нет сравнительного профиля `fallback` vs `Ollama model` под одной и той же нагрузкой.

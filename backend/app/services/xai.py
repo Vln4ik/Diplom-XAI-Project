@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.models import DocumentFragment, RequirementStatus, RiskLevel
-from app.services.analysis import unique_significant_tokens
+from app.services.analysis import significant_token_roots, unique_significant_tokens
 
 
 @dataclass
@@ -50,6 +50,14 @@ def _matched_keywords(requirement_text: str, fragment_text: str) -> list[str]:
     return sorted(requirement_tokens & fragment_tokens)[:5]
 
 
+def _matched_token_ratio(requirement_text: str, fragment_text: str) -> float:
+    requirement_tokens = set(significant_token_roots(requirement_text))
+    fragment_tokens = set(significant_token_roots(fragment_text))
+    if not requirement_tokens or not fragment_tokens:
+        return 0.0
+    return round(len(requirement_tokens & fragment_tokens) / len(requirement_tokens), 2)
+
+
 def build_found_data(requirement_text: str, ranked_evidence: list[tuple[DocumentFragment, float]], *, limit: int = 5) -> list[str]:
     found: list[str] = []
     seen: set[str] = set()
@@ -93,6 +101,7 @@ def build_requirement_artifacts(
                 "description": compact_text(fragment.fragment_text, limit=200),
                 "confidence_score": score,
                 "matched_keywords": _matched_keywords(requirement_text, fragment.fragment_text),
+                "matched_token_ratio": _matched_token_ratio(requirement_text, fragment.fragment_text),
             }
         )
 
@@ -103,6 +112,7 @@ def build_requirement_artifacts(
         if evidence_payload and evidence_payload[0].get("matched_keywords")
         else "не выделены"
     )
+    best_coverage = evidence_payload[0]["matched_token_ratio"] if evidence_payload else 0.0
 
     logic_json = [
         applicability_reason or "Применимость не была уточнена вручную.",
@@ -111,6 +121,7 @@ def build_requirement_artifacts(
         f"Найдено подтверждающих фрагментов: {len(ranked_evidence)} из {source_documents_count} документ(ов).",
         f"Наиболее релевантное подтверждение: {best_excerpt}",
         f"Совпавшие признаки по лучшему evidence: {strongest_signals}.",
+        f"Покрытие признаков по лучшему evidence: {best_coverage}.",
         f"Уровень уверенности: {confidence}.",
     ]
     if manual_lock_note:

@@ -1,0 +1,323 @@
+{
+  "suite_size": 3,
+  "benchmarks": [
+    {
+      "benchmark_name": "rosobrnadzor_demo_quality_benchmark",
+      "scenario": "Рособрнадзор + образовательная организация",
+      "report_type": "readiness_report",
+      "expected_requirements": 3,
+      "predicted_requirements": 3,
+      "requirement_extraction": {
+        "expected_total": 3,
+        "predicted_total": 3,
+        "matched_total": 3,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "category_accuracy": 1.0,
+        "status_accuracy": 1.0,
+        "average_match_similarity": 0.99,
+        "unmatched_expected_ids": [],
+        "unexpected_predicted_titles": [],
+        "matches": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+            "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+            "predicted_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+            "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          }
+        ]
+      },
+      "evidence_linking": {
+        "expected_total": 6,
+        "predicted_total": 10,
+        "matched_total": 5,
+        "precision": 0.5,
+        "recall": 0.8333,
+        "f1": 0.625,
+        "grounded_requirements_share": 1.0,
+        "per_requirement": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_total": 2,
+            "predicted_total": 3,
+            "matched_total": 2,
+            "recall": 1.0,
+            "precision": 0.6667,
+            "matches": [
+              {
+                "expected_snippet": "website_sections_published | 2026 | 12",
+                "predicted_snippet": "website_sections_published | 2026 | 12",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+                "predicted_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_total": 3,
+            "predicted_total": 5,
+            "matched_total": 2,
+            "recall": 0.6667,
+            "precision": 0.4,
+            "matches": [
+              {
+                "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "predicted_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+                "predicted_snippet": "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_total": 1,
+            "predicted_total": 2,
+            "matched_total": 1,
+            "recall": 1.0,
+            "precision": 0.5,
+            "matches": [
+              {
+                "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "predicted_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "similarity": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_name": "rosobrnadzor_compact_package_benchmark",
+      "scenario": "Рособрнадзор + образовательная организация + компактный пакет",
+      "report_type": "readiness_report",
+      "expected_requirements": 3,
+      "predicted_requirements": 3,
+      "requirement_extraction": {
+        "expected_total": 3,
+        "predicted_total": 3,
+        "matched_total": 3,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "category_accuracy": 1.0,
+        "status_accuracy": 1.0,
+        "average_match_similarity": 0.99,
+        "unmatched_expected_ids": [],
+        "unexpected_predicted_titles": [],
+        "matches": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+            "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+            "predicted_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+            "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          }
+        ]
+      },
+      "evidence_linking": {
+        "expected_total": 4,
+        "predicted_total": 5,
+        "matched_total": 4,
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.8889,
+        "grounded_requirements_share": 1.0,
+        "per_requirement": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_total": 1,
+            "predicted_total": 2,
+            "matched_total": 1,
+            "recall": 1.0,
+            "precision": 0.5,
+            "matches": [
+              {
+                "expected_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+                "predicted_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_total": 2,
+            "predicted_total": 2,
+            "matched_total": 2,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "predicted_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+                "predicted_snippet": "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_total": 1,
+            "predicted_total": 1,
+            "matched_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "predicted_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+                "similarity": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_name": "rosobrnadzor_normative_only_gap_benchmark",
+      "scenario": "Рособрнадзор + образовательная организация + только нормативная база",
+      "report_type": "readiness_report",
+      "expected_requirements": 3,
+      "predicted_requirements": 3,
+      "requirement_extraction": {
+        "expected_total": 3,
+        "predicted_total": 3,
+        "matched_total": 3,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "category_accuracy": 1.0,
+        "status_accuracy": 1.0,
+        "average_match_similarity": 0.99,
+        "unmatched_expected_ids": [],
+        "unexpected_predicted_titles": [],
+        "matches": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+            "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+            "predicted_title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+            "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          }
+        ]
+      },
+      "evidence_linking": {
+        "expected_total": 0,
+        "predicted_total": 0,
+        "matched_total": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "grounded_requirements_share": 0.0,
+        "per_requirement": [
+          {
+            "expected_id": "req_local_acts",
+            "expected_total": 0,
+            "predicted_total": 0,
+            "matched_total": 0,
+            "recall": 0.0,
+            "precision": 0.0,
+            "matches": []
+          },
+          {
+            "expected_id": "req_license_staff",
+            "expected_total": 0,
+            "predicted_total": 0,
+            "matched_total": 0,
+            "recall": 0.0,
+            "precision": 0.0,
+            "matches": []
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_total": 0,
+            "predicted_total": 0,
+            "matched_total": 0,
+            "recall": 0.0,
+            "precision": 0.0,
+            "matches": []
+          }
+        ]
+      }
+    }
+  ],
+  "aggregate": {
+    "requirement_extraction": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "category_accuracy_mean": 1.0,
+      "status_accuracy_mean": 1.0
+    },
+    "evidence_linking": {
+      "precision": 0.6,
+      "recall": 0.9,
+      "f1": 0.72,
+      "grounded_requirements_share_mean": 0.6667
+    }
+  }
+}

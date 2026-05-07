@@ -1,0 +1,55 @@
+{
+  "name": "rosobrnadzor_demo_quality_benchmark",
+  "scenario": "Рособрнадзор + образовательная организация",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "rosobrnadzor_sample.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "rosobrnadzor_evidence_site.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "education_metrics.csv",
+      "category": "data_table"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе."
+      ]
+    },
+    {
+      "id": "req_license_staff",
+      "title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+      "category": "Лицензия и аккредитация",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+        "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+        "\"Государственная аккредитация\""
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+      "category": "Официальный сайт",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+        "website_sections_published | 2026 | 12"
+      ]
+    }
+  ]
+}

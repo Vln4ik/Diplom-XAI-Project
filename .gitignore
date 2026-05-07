@@ -27,6 +27,7 @@ backend/.pytest_cache/
 backend/htmlcov/
 backend/.coverage
 backend/storage/
+storage/
 backend/*.egg-info/
 frontend/test-results/
 frontend/playwright-report/

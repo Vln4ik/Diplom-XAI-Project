@@ -159,9 +159,10 @@ def analyze_report(db: Session, report: Report) -> Report:
             fragments,
             category,
             exclude_fragment_id=fragment.id,
+            exclude_document_ids={fragment.document_id} if fragment.document_id else None,
             limit=5,
         )
-        confidence = derive_requirement_confidence(applicability_status, related)
+        confidence = derive_requirement_confidence(applicability_status, fragment.fragment_text, related)
         status = _requirement_status(applicability_status, len(related), confidence)
         risk_level = _risk_level(status, confidence, applicability_status)
         source_documents_count = len({item.document_id for item, _score in related if item.document_id})

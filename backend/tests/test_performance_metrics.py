@@ -1,6 +1,15 @@
 from __future__ import annotations
 
-from app.services.performance import flatten_timing_metrics, percentile, success_rate, summarize_metric, throughput_per_minute
+from app.services.performance import (
+    flatten_timing_metrics,
+    parse_memory_to_mib,
+    parse_percentage,
+    percentile,
+    success_rate,
+    summarize_metric,
+    summarize_resource_samples,
+    throughput_per_minute,
+)
 
 
 def test_percentile_interpolates_between_values():
@@ -41,3 +50,35 @@ def test_throughput_per_minute_handles_simple_case():
 def test_success_rate_handles_zero_and_fraction():
     assert success_rate(0, 0) == 0.0
     assert success_rate(3, 4) == 0.75
+
+
+def test_parse_percentage_and_memory_helpers():
+    assert parse_percentage("13.25%") == 13.25
+    assert parse_percentage("0,56%") == 0.56
+    assert parse_memory_to_mib("1GiB") == 1024.0
+    assert parse_memory_to_mib("512MiB") == 512.0
+    assert parse_memory_to_mib("1024KiB") == 1.0
+
+
+def test_summarize_resource_samples_groups_by_service():
+    summary = summarize_resource_samples(
+        [
+            {
+                "captured_at": "2026-05-07T00:00:00Z",
+                "containers": {
+                    "backend": {"cpu_percent": 10.0, "memory_mib": 128.0, "memory_percent": 1.6, "pids": 18.0},
+                    "worker": {"cpu_percent": 20.0, "memory_mib": 900.0, "memory_percent": 11.8, "pids": 15.0},
+                },
+            },
+            {
+                "captured_at": "2026-05-07T00:00:01Z",
+                "containers": {
+                    "backend": {"cpu_percent": 30.0, "memory_mib": 132.0, "memory_percent": 1.7, "pids": 18.0},
+                },
+            },
+        ]
+    )
+
+    assert summary["backend"]["cpu_percent"]["mean"] == 20.0
+    assert summary["backend"]["memory_mib"]["max"] == 132.0
+    assert summary["worker"]["memory_percent"]["mean"] == 11.8

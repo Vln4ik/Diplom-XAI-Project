@@ -146,9 +146,10 @@ def sync_requirement_artifacts(
         fragments,
         requirement.category,
         exclude_fragment_id=requirement.source_fragment_id,
+        exclude_document_ids={requirement.source_document_id} if requirement.source_document_id else None,
         limit=5,
     )
-    confidence = derive_requirement_confidence(requirement.applicability_status, ranked_evidence)
+    confidence = derive_requirement_confidence(requirement.applicability_status, requirement.text, ranked_evidence)
     if requirement.applicability_status == ApplicabilityStatus.not_applicable:
         confidence = max(confidence, 0.85)
 

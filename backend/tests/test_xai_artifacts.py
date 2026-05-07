@@ -39,7 +39,9 @@ def test_build_requirement_artifacts_returns_richer_payload():
     assert artifacts.found_data
     assert "score: 0.91" in artifacts.found_data[0]
     assert artifacts.evidence_payload[0]["matched_keywords"]
+    assert artifacts.evidence_payload[0]["matched_token_ratio"] > 0
     assert "Уровень риска: low" in artifacts.conclusion
     assert any("Наиболее релевантное подтверждение" in item for item in artifacts.logic_json)
+    assert any("Покрытие признаков по лучшему evidence" in item for item in artifacts.logic_json)
     assert "Лучшее подтверждение" in artifacts.explanation_text
     assert artifacts.recommended_action

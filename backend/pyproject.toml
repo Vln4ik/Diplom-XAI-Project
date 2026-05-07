@@ -28,6 +28,10 @@ dev = [
 local-ai = [
   "sentence-transformers>=3.4.1",
 ]
+ocr = [
+  "pillow>=11.0.0",
+  "pytesseract>=0.3.13",
+]
 
 [build-system]
 requires = ["setuptools>=75.0"]

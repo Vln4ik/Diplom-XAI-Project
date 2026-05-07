@@ -1,0 +1,34 @@
+{
+  "name": "rosobrnadzor_normative_only_gap_benchmark",
+  "scenario": "Рособрнадзор + образовательная организация + только нормативная база",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "rosobrnadzor_sample.txt",
+      "category": "normative"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_status": "data_missing",
+      "expected_evidence": []
+    },
+    {
+      "id": "req_license_staff",
+      "title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+      "category": "Лицензия и аккредитация",
+      "expected_status": "data_missing",
+      "expected_evidence": []
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+      "category": "Официальный сайт",
+      "expected_status": "data_missing",
+      "expected_evidence": []
+    }
+  ]
+}

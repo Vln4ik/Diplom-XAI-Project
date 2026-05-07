@@ -136,6 +136,49 @@
 - `4/4` export-артефакта создаются успешно
 - полный машинный цикл `process + analyze + generate` составляет около `12.27s`
 
+### Первые формальные quality-метрики
+
+На текущем `gold benchmark` для сценария `Рособрнадзор + образовательная организация` зафиксированы следующие результаты:
+
+- `requirement extraction precision`: `1.0000`
+- `requirement extraction recall`: `1.0000`
+- `requirement extraction F1`: `1.0000`
+- `evidence linking precision`: `0.5556`
+- `evidence linking recall`: `0.8333`
+- `evidence linking F1`: `0.6667`
+
+Эти значения показывают, что текущий MVP уже устойчиво извлекает сами требования, но слой подбора и ранжирования evidence всё ещё требует дальнейшей калибровки. Детализация вынесена в [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md).
+
+### Расширенный benchmark-suite
+
+Дополнительно в проекте собран `benchmark-suite` из трёх сценариев:
+
+- полный пакет документов;
+- компактный пакет `нормативная база + evidence`;
+- gap-сценарий `только нормативная база`.
+
+Агрегированные результаты suite:
+
+- `requirement extraction F1`: `1.0000`
+- `evidence linking precision`: `0.6000`
+- `evidence linking recall`: `0.9000`
+- `evidence linking F1`: `0.7200`
+
+Детализация вынесена в [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md).
+
+### Stress и ресурсный профиль
+
+Дополнительно для текущего MVP зафиксирован отдельный `3x` stress baseline с container-level profiling:
+
+- `concurrency`: `3`
+- `success_rate`: `1.0`
+- `throughput_runs_per_minute`: `6.2504`
+- `generate mean`: `20.3659s`
+- `backend memory mean`: `140.08 MiB`
+- `worker memory mean`: `982.48 MiB`
+
+Это позволяет говорить не только о latency, но и о реальном ресурсоёмком узле текущей системы: под параллельной нагрузкой главным bottleneck остаётся генерация разделов отчёта и связанный с ней AI runtime. Детализация вынесена в [docs/stress-baseline.md](docs/stress-baseline.md).
+
 ### Оценка выигрыша по времени
 
 Для малого пакета документов ручной сценарий обычно занимает:
@@ -160,18 +203,19 @@
 - улучшение полноты evidence-покрытия: `20-40%`
 - повышение воспроизводимости и единообразия проверки: `25-50%`
 
-Важно: это предварительные инженерные оценки, а не формальные метрики `precision/recall/F1`. Для строгой научной валидации требуется отдельный размеченный benchmark и экспертное сравнение на репрезентативной выборке кейсов.
+Важно: теперь в проекте уже есть первый формальный benchmark с `precision/recall/F1`, но он пока построен на малом demo corpus. Для строгой научной валидации всё ещё требуется расширенный размеченный benchmark и экспертное сравнение на репрезентативной выборке кейсов.
 
 ## Ограничения текущего MVP
 
 В текущую версию сознательно не включены:
 
 - полноценный `iOS`-клиент
-- OCR для сложных сканов и image-heavy документов
 - интеграции с внешними государственными системами
 - электронная подпись
 - multi-regulator production scope
 - domain fine-tuning на большом размеченном корпусе
+
+При этом в backend уже добавлен начальный `OCR scaffold`: система поддерживает image-файлы и подключаемый OCR provider. Полноценный production OCR/vision pipeline остаётся следующим этапом.
 
 ## Структура репозитория
 
@@ -235,6 +279,13 @@ docker compose -f infra/docker-compose.yml up --build
 - `admin@example.com`
 - `ChangeMe123!`
 
+## Служебные runtime endpoint-ы
+
+- `GET /api/system/ai-status` — активные `AI/OCR` provider-ы
+- `GET /api/system/health` — состояние базы, storage и runtime-конфигурации
+- `GET /api/system/metrics` — JSON snapshot request-метрик
+- `GET /api/system/metrics/prometheus` — Prometheus-compatible exposition
+
 ## Команды проверки
 
 ```bash
@@ -260,11 +311,35 @@ cd frontend && npm run e2e
   --output docs/load-baseline.json
 ```
 
+## Stress benchmark с resource profiling
+
+```bash
+./.venv/bin/python backend/scripts/benchmark_live_api.py \
+  --runs 3 \
+  --concurrency 3 \
+  --resource-profile docker \
+  --resource-interval 1.0 \
+  --output docs/stress-baseline.json
+```
+
+## Formal quality benchmark
+
+```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_report.py
+```
+
+## Quality benchmark suite
+
+```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py
+```
+
 ## Документация проекта
 
 - системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
 - пользовательский путь: [docs/user-flow.md](docs/user-flow.md)
 - описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
+- подробное объяснение моделей и XAI-блока: [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
 - архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)
 - статус роадмапа: [docs/roadmap-status.md](docs/roadmap-status.md)
 - методика эксперимента: [docs/experimental-methodology.md](docs/experimental-methodology.md)
@@ -272,9 +347,12 @@ cd frontend && npm run e2e
 - ручной demo-сценарий: [docs/demo-scenario.md](docs/demo-scenario.md)
 - acceptance-checklist: [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
 - метрики качества: [docs/quality-metrics.md](docs/quality-metrics.md)
+- quality benchmark report: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
+- quality benchmark suite: [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md)
 - performance baseline: [docs/performance-baseline.md](docs/performance-baseline.md)
 - load baseline: [docs/load-baseline.md](docs/load-baseline.md)
+- stress baseline: [docs/stress-baseline.md](docs/stress-baseline.md)
 
 ## Статус проекта
 
-Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, экспортом, acceptance-сценарием, browser e2e и performance/load baseline. Следующий этап развития связан с повышением качества моделей, расширением benchmark-контуров и дальнейшей формализацией научных метрик качества.
+Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, экспортом, acceptance-сценарием, browser e2e, quality benchmark, load baseline и `3x` stress baseline с container-level profiling. Следующий этап развития связан с повышением качества evidence linking, расширением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.

@@ -10,6 +10,7 @@ from docx import Document as DocxDocument
 from openpyxl import load_workbook
 from pypdf import PdfReader
 
+from app.integrations.ocr import OCRError, get_ocr_provider
 from app.models import FragmentType
 
 
@@ -129,6 +130,20 @@ def _extract_pdf(path: Path) -> ExtractionResult:
     return ExtractionResult(text="\n\n".join(lines), fragments=fragments, requires_review=requires_review, page_count=len(reader.pages))
 
 
+def _extract_image(path: Path) -> ExtractionResult:
+    try:
+        ocr_result = get_ocr_provider().extract_text(path)
+    except OCRError:
+        return ExtractionResult(text="", fragments=[], requires_review=True, page_count=1)
+
+    fragments = [
+        FragmentSeed(text=chunk.strip(), fragment_type=FragmentType.page, page_number=1)
+        for chunk in ocr_result.text.splitlines()
+        if chunk.strip()
+    ]
+    return ExtractionResult(text=ocr_result.text, fragments=fragments, requires_review=not bool(fragments), page_count=1)
+
+
 def extract_document(path_str: str) -> ExtractionResult:
     path = Path(path_str)
     suffix = path.suffix.lower()
@@ -144,4 +159,6 @@ def extract_document(path_str: str) -> ExtractionResult:
         return _extract_docx(path)
     if suffix == ".pdf":
         return _extract_pdf(path)
+    if suffix in {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}:
+        return _extract_image(path)
     raise ValueError(f"Unsupported document format: {suffix}")
