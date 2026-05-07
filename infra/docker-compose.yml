@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: xai_report_builder
+      POSTGRES_USER: xai
+      POSTGRES_PASSWORD: xai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ../backend
+      args:
+        INSTALL_LOCAL_AI: ${INSTALL_LOCAL_AI:-0}
+    environment:
+      XAI_APP_DATABASE_URL: postgresql+psycopg://xai:xai@postgres:5432/xai_report_builder
+      XAI_APP_REDIS_URL: redis://redis:6379/0
+      XAI_APP_STORAGE_PATH: /app/storage
+      XAI_APP_SECRET_KEY: change-me-change-me-change-me-123
+      XAI_APP_ACCESS_TOKEN_TTL_MINUTES: 60
+      XAI_APP_REFRESH_TOKEN_TTL_MINUTES: 4320
+      XAI_APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
+      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
+      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
+      XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
+      XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
+    volumes:
+      - ../backend:/app
+      - backend_storage:/app/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build:
+      context: ../backend
+      args:
+        INSTALL_LOCAL_AI: ${INSTALL_LOCAL_AI:-0}
+    environment:
+      XAI_APP_DATABASE_URL: postgresql+psycopg://xai:xai@postgres:5432/xai_report_builder
+      XAI_APP_REDIS_URL: redis://redis:6379/0
+      XAI_APP_STORAGE_PATH: /app/storage
+      XAI_APP_SECRET_KEY: change-me-change-me-change-me-123
+      XAI_APP_CELERY_TASK_ALWAYS_EAGER: "0"
+      XAI_APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.com
+      XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
+      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
+      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
+      XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
+      XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
+    volumes:
+      - ../backend:/app
+      - backend_storage:/app/storage
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A app.workers.celery_app.celery_app worker --loglevel=INFO
+
+  ollama:
+    profiles:
+      - local-ai
+    image: ollama/ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  frontend:
+    build:
+      context: ../frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+      NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+    volumes:
+      - ../frontend:/app
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
+
+volumes:
+  postgres_data:
+  backend_storage:
+  ollama_data:

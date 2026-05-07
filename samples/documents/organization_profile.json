@@ -1,0 +1,18 @@
+{
+  "organization_name": "Колледж цифровых компетенций",
+  "organization_type": "educational",
+  "website": "https://college.example.edu",
+  "director_name": "Иванова Мария Сергеевна",
+  "responsible_person": "Петров Алексей Игоревич",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Лицензирование",
+    "Государственная аккредитация"
+  ],
+  "programs": [
+    "Информационные системы и программирование",
+    "Сетевое и системное администрирование"
+  ],
+  "has_official_website": true,
+  "has_accreditation": true
+}
