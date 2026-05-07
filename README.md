@@ -1,37 +1,37 @@
 # XAI Report Builder
 
-Monorepo for the web-first MVP of a reporting platform for supervisory authorities.
+Monorepo проекта `web-first MVP` платформы для формирования объяснимой отчётности по надзорным и проверочным сценариям.
 
-## Structure
+## Структура
 
-- `backend/` — FastAPI, SQLAlchemy, Alembic, Celery, document pipeline, export services
-- `frontend/` — React + TypeScript + Vite client
-- `infra/` — Docker Compose and local infrastructure bootstrap
-- `docs/` — architecture notes and implementation roadmap
-- `samples/` — sample files for demo and testing
+- `backend/` — `FastAPI`, `SQLAlchemy`, `Alembic`, `Celery`, document pipeline, export-сервисы
+- `frontend/` — клиент на `React + TypeScript + Vite`
+- `infra/` — `Docker Compose` и локальная инфраструктура запуска
+- `docs/` — архитектурная и проектная документация
+- `samples/` — примеры входных файлов для demo и тестов
 
-## Branch Strategy
+## Стратегия веток
 
-- `legacy-prototype` — archive pointer to the old FastAPI prototype
-- `roadmap` — planning and architecture branch
-- `main` — implementation branch
-- `feature/*` — short-lived task branches
+- `legacy-prototype` — архивная ветка старого прототипа
+- `roadmap` — ветка планирования и архитектурной документации
+- `main` — основная ветка реализации
+- `feature/*` — короткоживущие рабочие ветки
 
-## Quick Start
+## Быстрый старт
 
-The primary local workflow is Docker-based.
+Основной локальный сценарий запуска построен вокруг `Docker`.
 
 ```bash
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-This starts the stable fallback mode: hash embeddings plus deterministic section assembly.
+Эта команда запускает стабильный `fallback`-режим: hash embeddings и детерминированную сборку разделов отчёта.
 
-## Local AI Modes
+## Локальные AI-режимы
 
-Recommended local AI runtime: `Ollama`.
+Рекомендуемый локальный AI runtime: `Ollama`.
 
-Start the stack with the local AI profile and switch providers:
+Запуск стека с локальным AI-профилем:
 
 ```bash
 COMPOSE_PROFILES=local-ai \
@@ -40,20 +40,20 @@ XAI_APP_LLM_PROVIDER=ollama \
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-Recommended one-command bootstrap:
+Рекомендуемый однокомандный bootstrap:
 
 ```bash
 bash infra/enable-ollama.sh
 ```
 
-Manual model pull, if you prefer:
+Если хочешь загрузить модели вручную:
 
 ```bash
 docker compose -f infra/docker-compose.yml exec ollama ollama pull all-minilm
 docker compose -f infra/docker-compose.yml exec ollama ollama pull gemma3:270m
 ```
 
-Experimental in-process `transformers` mode is still available, but only as opt-in:
+Экспериментальный in-process режим через `transformers` тоже доступен, но только как `opt-in`:
 
 ```bash
 INSTALL_LOCAL_AI=1 \
@@ -62,48 +62,47 @@ XAI_APP_LLM_PROVIDER=local_transformers \
 docker compose -f infra/docker-compose.yml up --build
 ```
 
-Services:
+Доступные сервисы:
 
 - API: `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
+- API-документация: `http://localhost:8000/docs`
 - Frontend: `http://localhost:5173`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
 
-## Current Scope
+## Текущий scope
 
-The first implementation targets:
+Первая реализация ориентирована на:
 
 - `Рособрнадзор`
-- educational organizations
-- web-first MVP
-- local file storage
-- local LLM integration through a provider abstraction
-- local embedding model with fallback to deterministic hash embeddings
+- образовательные организации
+- `web-first MVP`
+- локальное файловое хранилище
+- локальную интеграцию LLM через provider abstraction
+- локальную embedding-модель с fallback на детерминированные hash embeddings
 
-## Notes
+## Актуальные примечания
 
-- GitHub remote is not configured yet.
-- `gh` is installed locally, but GitHub authentication is not configured yet.
-- The old prototype is preserved through the local `legacy-prototype` branch.
-- Docker bootstrap admin credentials: `admin@example.com` / `ChangeMe123!`
+- проект уже опубликован в GitHub: `Vln4ik/Diplom-XAI-Project`
+- старый прототип сохранён в ветке `legacy-prototype`
+- локальные bootstrap-учётные данные Docker-стенда: `admin@example.com` / `ChangeMe123!`
 
-## Demo And Acceptance
+## Demo и acceptance
 
-- Demo dataset: [samples/documents](/Users/vinchik/Desktop/Diplom/samples/documents)
-- System handbook: [docs/system-handbook.md](/Users/vinchik/Desktop/Diplom/docs/system-handbook.md)
-- User flow: [docs/user-flow.md](/Users/vinchik/Desktop/Diplom/docs/user-flow.md)
-- LLM and XAI method: [docs/llm-xai-method.md](/Users/vinchik/Desktop/Diplom/docs/llm-xai-method.md)
-- Architecture decisions: [docs/architecture-decisions.md](/Users/vinchik/Desktop/Diplom/docs/architecture-decisions.md)
-- Roadmap status: [docs/roadmap-status.md](/Users/vinchik/Desktop/Diplom/docs/roadmap-status.md)
-- GitHub publication status: [docs/github-publication-status.md](/Users/vinchik/Desktop/Diplom/docs/github-publication-status.md)
-- Manual demo scenario: [docs/demo-scenario.md](/Users/vinchik/Desktop/Diplom/docs/demo-scenario.md)
-- Acceptance checklist: [docs/acceptance-checklist.md](/Users/vinchik/Desktop/Diplom/docs/acceptance-checklist.md)
-- Quality metrics note: [docs/quality-metrics.md](/Users/vinchik/Desktop/Diplom/docs/quality-metrics.md)
-- Performance baseline: [docs/performance-baseline.md](/Users/vinchik/Desktop/Diplom/docs/performance-baseline.md)
-- Load baseline: [docs/load-baseline.md](/Users/vinchik/Desktop/Diplom/docs/load-baseline.md)
+- demo dataset: [samples/documents](/Users/vinchik/Desktop/Diplom/samples/documents)
+- системное руководство: [docs/system-handbook.md](/Users/vinchik/Desktop/Diplom/docs/system-handbook.md)
+- пользовательский путь: [docs/user-flow.md](/Users/vinchik/Desktop/Diplom/docs/user-flow.md)
+- описание LLM и XAI-метода: [docs/llm-xai-method.md](/Users/vinchik/Desktop/Diplom/docs/llm-xai-method.md)
+- архитектурные решения: [docs/architecture-decisions.md](/Users/vinchik/Desktop/Diplom/docs/architecture-decisions.md)
+- статус роадмапа: [docs/roadmap-status.md](/Users/vinchik/Desktop/Diplom/docs/roadmap-status.md)
+- статус GitHub-публикации: [docs/github-publication-status.md](/Users/vinchik/Desktop/Diplom/docs/github-publication-status.md)
+- ручной demo-сценарий: [docs/demo-scenario.md](/Users/vinchik/Desktop/Diplom/docs/demo-scenario.md)
+- acceptance-checklist: [docs/acceptance-checklist.md](/Users/vinchik/Desktop/Diplom/docs/acceptance-checklist.md)
+- метрики качества: [docs/quality-metrics.md](/Users/vinchik/Desktop/Diplom/docs/quality-metrics.md)
+- performance baseline: [docs/performance-baseline.md](/Users/vinchik/Desktop/Diplom/docs/performance-baseline.md)
+- load baseline: [docs/load-baseline.md](/Users/vinchik/Desktop/Diplom/docs/load-baseline.md)
 
-## User Journey
+## Путь пользователя
 
 Коротко путь пользователя на сайте выглядит так:
 
@@ -125,13 +124,13 @@ The first implementation targets:
 
 Развёрнутая версия этого сценария описана в [docs/user-flow.md](/Users/vinchik/Desktop/Diplom/docs/user-flow.md).
 
-## Estimated Impact
+## Оценка эффекта
 
 Что уже измерено на demo dataset:
 
 - `4/4` документа успешно обрабатываются
 - `3/3` требования имеют evidence
-- `3/3` требования имеют XAI logic chain
+- `3/3` требования имеют `XAI logic chain`
 - `4/4` export-артефакта формируются успешно
 - машинный цикл `process + analyze + generate` занимает около `12.27s`
 
@@ -151,10 +150,10 @@ The first implementation targets:
 Важно:
 
 - это предварительные инженерные оценки
-- они не равны formal `precision/recall/F1`
-- для строгой scientific-валидации нужен отдельный размеченный benchmark
+- они не равны формальным `precision/recall/F1`
+- для строгой научной валидации нужен отдельный размеченный benchmark
 
-Verification commands:
+## Команды проверки
 
 ```bash
 ./.venv/bin/pytest -q backend/tests
@@ -162,7 +161,7 @@ cd frontend && npm run build
 cd frontend && npm run e2e
 ```
 
-Performance benchmark:
+## Performance benchmark
 
 ```bash
 ./.venv/bin/python backend/scripts/benchmark_live_api.py \
@@ -170,7 +169,7 @@ Performance benchmark:
   --output docs/performance-baseline.json
 ```
 
-Concurrency/load benchmark:
+## Concurrency/load benchmark
 
 ```bash
 ./.venv/bin/python backend/scripts/benchmark_live_api.py \
@@ -179,13 +178,13 @@ Concurrency/load benchmark:
   --output docs/load-baseline.json
 ```
 
-## Local AI Runtime
+## Локальный AI runtime
 
 - Embeddings:
-  recommended: `Ollama + all-minilm`; experimental in-process option: `sentence-transformers`.
+  рекомендуемый вариант — `Ollama + all-minilm`; экспериментальный in-process вариант — `sentence-transformers`
 - LLM:
-  recommended: `Ollama + gemma3:270m`; experimental in-process option: `transformers`.
+  рекомендуемый вариант — `Ollama + gemma3:270m`; экспериментальный in-process вариант — `transformers`
 - Runtime status:
   `GET /api/system/ai-status`
-- Important:
-  vectors are still stored in the configured `embedding_size` dimension. For Ollama embeddings the app requests this dimension from `/api/embed`; for other providers it adapts vectors to the current `32`-dimensional storage. A dedicated `pgvector` dimension expansion/tuning step is still pending.
+- Важно:
+  векторы пока сохраняются в настроенной размерности `embedding_size`. Для `Ollama embeddings` приложение запрашивает эту размерность через `/api/embed`; для других провайдеров векторы адаптируются к текущему хранилищу размерности `32`. Отдельный этап расширения и tuning `pgvector` всё ещё остаётся в плане.
