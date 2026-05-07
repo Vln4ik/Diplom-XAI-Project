@@ -92,6 +92,7 @@ The first implementation targets:
 
 - Demo dataset: [samples/documents](/Users/vinchik/Desktop/Diplom/samples/documents)
 - System handbook: [docs/system-handbook.md](/Users/vinchik/Desktop/Diplom/docs/system-handbook.md)
+- User flow: [docs/user-flow.md](/Users/vinchik/Desktop/Diplom/docs/user-flow.md)
 - LLM and XAI method: [docs/llm-xai-method.md](/Users/vinchik/Desktop/Diplom/docs/llm-xai-method.md)
 - Architecture decisions: [docs/architecture-decisions.md](/Users/vinchik/Desktop/Diplom/docs/architecture-decisions.md)
 - Roadmap status: [docs/roadmap-status.md](/Users/vinchik/Desktop/Diplom/docs/roadmap-status.md)
