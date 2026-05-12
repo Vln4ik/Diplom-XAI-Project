@@ -24,7 +24,9 @@ def _format_percent(value: float) -> str:
 def render_markdown(report: dict[str, object]) -> str:
     aggregate = report["aggregate"]
     extraction = aggregate["requirement_extraction"]
+    applicability = aggregate["applicability"]
     evidence = aggregate["evidence_linking"]
+    sections = aggregate["report_sections"]
     lines = [
         "# Quality Benchmark Suite Results",
         "",
@@ -42,12 +44,23 @@ def render_markdown(report: dict[str, object]) -> str:
         f"- `category_accuracy_mean`: `{_format_percent(extraction['category_accuracy_mean'])}`",
         f"- `status_accuracy_mean`: `{_format_percent(extraction['status_accuracy_mean'])}`",
         "",
+        "### Applicability",
+        "",
+        f"- `accuracy_mean`: `{_format_percent(applicability['accuracy_mean'])}`",
+        "",
         "### Evidence linking",
         "",
         f"- `precision`: `{_format_ratio(evidence['precision'])}`",
         f"- `recall`: `{_format_ratio(evidence['recall'])}`",
         f"- `f1`: `{_format_ratio(evidence['f1'])}`",
         f"- `grounded_requirements_share_mean`: `{_format_percent(evidence['grounded_requirements_share_mean'])}`",
+        "",
+        "### Report sections",
+        "",
+        f"- `presence_rate_mean`: `{_format_percent(sections['presence_rate_mean'])}`",
+        f"- `non_empty_content_share_mean`: `{_format_percent(sections['non_empty_content_share_mean'])}`",
+        f"- `source_requirement_coverage_mean`: `{_format_percent(sections['source_requirement_coverage_mean'])}`",
+        f"- `min_source_requirement_pass_share_mean`: `{_format_percent(sections['min_source_requirement_pass_share_mean'])}`",
         "",
         "## 2. Результаты по сценариям",
         "",
@@ -59,9 +72,11 @@ def render_markdown(report: dict[str, object]) -> str:
                 "",
                 f"- scenario: `{benchmark['scenario']}`",
                 f"- extraction F1: `{_format_ratio(benchmark['requirement_extraction']['f1'])}`",
+                f"- applicability accuracy: `{_format_percent(benchmark['applicability']['accuracy'])}`",
                 f"- evidence F1: `{_format_ratio(benchmark['evidence_linking']['f1'])}`",
                 f"- evidence precision: `{_format_ratio(benchmark['evidence_linking']['precision'])}`",
                 f"- evidence recall: `{_format_ratio(benchmark['evidence_linking']['recall'])}`",
+                f"- section coverage: `{_format_percent(benchmark['report_sections']['source_requirement_coverage'])}`",
                 "",
             ]
         )

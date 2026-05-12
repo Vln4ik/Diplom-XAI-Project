@@ -22,6 +22,7 @@ class BenchmarkExpectedRequirement:
     title: str
     category: str
     expected_status: str
+    expected_applicability: str | None
     expected_evidence: list[str]
 
 
@@ -30,9 +31,25 @@ class BenchmarkPredictedRequirement:
     requirement_id: str
     title: str
     category: str
+    applicability_status: str
     status: str
     confidence_score: float
     evidence_descriptions: list[str]
+
+
+@dataclass(frozen=True)
+class BenchmarkExpectedSection:
+    title: str
+    expected_requirement_ids: list[str]
+    min_source_requirements: int
+    require_non_empty_content: bool
+
+
+@dataclass(frozen=True)
+class BenchmarkPredictedSection:
+    title: str
+    content: str
+    source_requirement_ids: list[str]
 
 
 @dataclass(frozen=True)
@@ -236,6 +253,137 @@ def evaluate_evidence_linking(
     }
 
 
+def evaluate_applicability(matches: list[RequirementMatch]) -> dict[str, object]:
+    comparable = [match for match in matches if match.expected.expected_applicability is not None]
+    if not comparable:
+        return {
+            "expected_total": 0,
+            "matched_total": 0,
+            "accuracy": 0.0,
+            "mismatches": [],
+        }
+
+    correct = sum(
+        1
+        for match in comparable
+        if match.expected.expected_applicability == match.predicted.applicability_status
+    )
+    return {
+        "expected_total": len(comparable),
+        "matched_total": len(comparable),
+        "accuracy": _round(correct / len(comparable)),
+        "mismatches": [
+            {
+                "expected_id": match.expected.benchmark_id,
+                "expected_applicability": match.expected.expected_applicability,
+                "predicted_applicability": match.predicted.applicability_status,
+                "title": match.expected.title,
+            }
+            for match in comparable
+            if match.expected.expected_applicability != match.predicted.applicability_status
+        ],
+    }
+
+
+def evaluate_report_sections(
+    expected_sections: list[BenchmarkExpectedSection],
+    predicted_sections: list[BenchmarkPredictedSection],
+    matches: list[RequirementMatch],
+) -> dict[str, object]:
+    if not expected_sections:
+        return {
+            "expected_total": 0,
+            "predicted_total": len(predicted_sections),
+            "presence_rate": 0.0,
+            "non_empty_content_share": 0.0,
+            "source_requirement_coverage": 0.0,
+            "min_source_requirement_pass_share": 0.0,
+            "per_section": [],
+        }
+
+    predicted_by_title = {section.title: section for section in predicted_sections}
+    requirement_id_map = {match.predicted.requirement_id: match.expected.benchmark_id for match in matches}
+
+    matched_sections = 0
+    non_empty_sections = 0
+    min_source_sections = 0
+    expected_links_total = 0
+    matched_links_total = 0
+    per_section: list[dict[str, object]] = []
+
+    for expected_section in expected_sections:
+        predicted = predicted_by_title.get(expected_section.title)
+        if predicted is None:
+            per_section.append(
+                {
+                    "title": expected_section.title,
+                    "present": False,
+                    "non_empty": False,
+                    "expected_requirement_ids": expected_section.expected_requirement_ids,
+                    "matched_requirement_ids": [],
+                    "source_requirement_recall": 0.0,
+                    "min_source_requirements": expected_section.min_source_requirements,
+                    "min_source_requirements_ok": expected_section.min_source_requirements == 0,
+                }
+            )
+            expected_links_total += len(expected_section.expected_requirement_ids)
+            continue
+
+        matched_sections += 1
+        normalized_content = " ".join(predicted.content.split())
+        non_empty = (not expected_section.require_non_empty_content) or bool(normalized_content)
+        if non_empty:
+            non_empty_sections += 1
+
+        mapped_requirement_ids = [
+            requirement_id_map[requirement_id]
+            for requirement_id in predicted.source_requirement_ids
+            if requirement_id in requirement_id_map
+        ]
+        unique_mapped_requirement_ids = list(dict.fromkeys(mapped_requirement_ids))
+        matched_requirement_ids = [
+            requirement_id
+            for requirement_id in expected_section.expected_requirement_ids
+            if requirement_id in unique_mapped_requirement_ids
+        ]
+
+        expected_links_total += len(expected_section.expected_requirement_ids)
+        matched_links_total += len(matched_requirement_ids)
+
+        min_source_ok = len(unique_mapped_requirement_ids) >= expected_section.min_source_requirements
+        if min_source_ok:
+            min_source_sections += 1
+
+        per_section.append(
+            {
+                "title": expected_section.title,
+                "present": True,
+                "non_empty": non_empty,
+                "expected_requirement_ids": expected_section.expected_requirement_ids,
+                "matched_requirement_ids": matched_requirement_ids,
+                "source_requirement_recall": _round(
+                    0.0
+                    if not expected_section.expected_requirement_ids
+                    else len(matched_requirement_ids) / len(expected_section.expected_requirement_ids)
+                ),
+                "min_source_requirements": expected_section.min_source_requirements,
+                "min_source_requirements_ok": min_source_ok,
+            }
+        )
+
+    return {
+        "expected_total": len(expected_sections),
+        "predicted_total": len(predicted_sections),
+        "presence_rate": _round(matched_sections / len(expected_sections)),
+        "non_empty_content_share": _round(non_empty_sections / len(expected_sections)),
+        "source_requirement_coverage": _round(
+            0.0 if expected_links_total == 0 else matched_links_total / expected_links_total
+        ),
+        "min_source_requirement_pass_share": _round(min_source_sections / len(expected_sections)),
+        "per_section": per_section,
+    }
+
+
 def _build_alembic_config(backend_root: Path) -> Config:
     config = Config(str(backend_root / "alembic.ini"))
     config.set_main_option("script_location", str(backend_root / "alembic"))
@@ -262,12 +410,26 @@ def _predicted_requirements_from_api(test_client: TestClient, headers: dict[str,
                 requirement_id=item["id"],
                 title=item["title"],
                 category=item["category"],
+                applicability_status=item["applicability_status"],
                 status=item["status"],
                 confidence_score=float(item["confidence_score"]),
                 evidence_descriptions=evidence_descriptions,
             )
         )
     return predicted
+
+
+def _predicted_sections_from_api(test_client: TestClient, headers: dict[str, str], report_id: str) -> list[BenchmarkPredictedSection]:
+    response = test_client.get(f"/api/reports/{report_id}/sections", headers=headers)
+    response.raise_for_status()
+    return [
+        BenchmarkPredictedSection(
+            title=item["title"],
+            content=item["content"],
+            source_requirement_ids=list(item.get("source_requirement_ids") or []),
+        )
+        for item in response.json()
+    ]
 
 
 def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
@@ -285,9 +447,19 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
             title=item["title"],
             category=item["category"],
             expected_status=item["expected_status"],
+            expected_applicability=item.get("expected_applicability"),
             expected_evidence=item["expected_evidence"],
         )
         for item in benchmark["expected_requirements"]
+    ]
+    expected_sections = [
+        BenchmarkExpectedSection(
+            title=item["title"],
+            expected_requirement_ids=list(item.get("expected_requirement_ids") or []),
+            min_source_requirements=int(item.get("min_source_requirements", 0)),
+            require_non_empty_content=bool(item.get("require_non_empty_content", True)),
+        )
+        for item in benchmark.get("expected_sections", [])
     ]
 
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -295,6 +467,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
         temp_database = temp_path / "benchmark.db"
         temp_storage = temp_path / "storage"
         predicted_requirements: list[BenchmarkPredictedRequirement] = []
+        predicted_sections: list[BenchmarkPredictedSection] = []
 
         previous_env = {
             "XAI_APP_DATABASE_URL": str(get_settings().database_url),
@@ -360,6 +533,9 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
                 analyze.raise_for_status()
 
                 predicted_requirements = _predicted_requirements_from_api(test_client, headers, organization_id)
+                generate = test_client.post(f"/api/reports/{report_id}/generate", headers=headers)
+                generate.raise_for_status()
+                predicted_sections = _predicted_sections_from_api(test_client, headers, report_id)
         finally:
             get_engine().dispose()
             get_settings.cache_clear()
@@ -376,6 +552,8 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
     extraction = evaluate_requirement_extraction(expected_requirements, predicted_requirements)
     matches = match_requirements(expected_requirements, predicted_requirements)
     evidence = evaluate_evidence_linking(matches)
+    applicability = evaluate_applicability(matches)
+    sections = evaluate_report_sections(expected_sections, predicted_sections, matches)
     return {
         "benchmark_name": benchmark["name"],
         "scenario": benchmark["scenario"],
@@ -383,7 +561,9 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
         "expected_requirements": len(expected_requirements),
         "predicted_requirements": len(predicted_requirements),
         "requirement_extraction": extraction,
+        "applicability": applicability,
         "evidence_linking": evidence,
+        "report_sections": sections,
     }
 
 
@@ -395,6 +575,11 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
     evidence_tp = sum(int(report["evidence_linking"]["matched_total"]) for report in reports)
     evidence_predicted = sum(int(report["evidence_linking"]["predicted_total"]) for report in reports)
     evidence_expected = sum(int(report["evidence_linking"]["expected_total"]) for report in reports)
+    applicability_accuracies = [float(report["applicability"]["accuracy"]) for report in reports if int(report["applicability"]["expected_total"]) > 0]
+    section_presence_rates = [float(report["report_sections"]["presence_rate"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_non_empty_rates = [float(report["report_sections"]["non_empty_content_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_coverage_rates = [float(report["report_sections"]["source_requirement_coverage"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_min_source_pass_rates = [float(report["report_sections"]["min_source_requirement_pass_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
 
     return {
         "suite_size": len(reports),
@@ -413,6 +598,9 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
                     [float(report["requirement_extraction"]["status_accuracy"]) for report in reports]
                 ),
             },
+            "applicability": {
+                "accuracy_mean": _mean(applicability_accuracies),
+            },
             "evidence_linking": {
                 **precision_recall_f1(
                     true_positive=evidence_tp,
@@ -422,6 +610,12 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
                 "grounded_requirements_share_mean": _mean(
                     [float(report["evidence_linking"]["grounded_requirements_share"]) for report in reports]
                 ),
+            },
+            "report_sections": {
+                "presence_rate_mean": _mean(section_presence_rates),
+                "non_empty_content_share_mean": _mean(section_non_empty_rates),
+                "source_requirement_coverage_mean": _mean(section_coverage_rates),
+                "min_source_requirement_pass_share_mean": _mean(section_min_source_pass_rates),
             },
         },
     }

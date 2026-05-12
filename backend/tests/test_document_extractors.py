@@ -3,11 +3,13 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from docx import Document as DocxDocument
 from openpyxl import Workbook
 from pypdf import PdfWriter
 
+from app.integrations.ocr import OCRResult
 from app.processors.documents import extract_document
 
 
@@ -73,3 +75,56 @@ def test_extract_text_json_csv_docx_xlsx_pdf(tmp_path: Path):
 
     assert pdf_result.requires_review is True
     assert pdf_result.page_count == 1
+
+
+def test_extract_image_uses_ocr_provider(monkeypatch, tmp_path: Path):
+    image_path = tmp_path / "license_scan.png"
+    image_path.write_bytes(b"fake image placeholder")
+
+    class StubOCRProvider:
+        def extract_text(self, path: Path) -> OCRResult:
+            return OCRResult(
+                text="Скан лицензии и аккредитации",
+                provider="stub-ocr",
+                metadata={"source": path.name},
+            )
+
+    monkeypatch.setattr("app.processors.documents.get_ocr_provider", lambda: StubOCRProvider())
+
+    result = extract_document(str(image_path))
+
+    assert result.requires_review is False
+    assert result.page_count == 1
+    assert result.text == "Скан лицензии и аккредитации"
+    assert len(result.fragments) == 1
+    assert result.fragments[0].page_number == 1
+
+
+def test_extract_pdf_uses_ocr_fallback_for_blank_page(monkeypatch, tmp_path: Path):
+    pdf_path = tmp_path / "scanned.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=300, height=300)
+    with pdf_path.open("wb") as file:
+        writer.write(file)
+
+    class StubOCRProvider:
+        def extract_image_object(self, image: object, source_name: str) -> OCRResult:
+            return OCRResult(
+                text="Отсканированный приказ о размещении локальных актов",
+                provider="stub-ocr",
+                metadata={"source": source_name},
+            )
+
+    monkeypatch.setattr("app.processors.documents.get_ocr_provider", lambda: StubOCRProvider())
+    monkeypatch.setattr(
+        "app.processors.documents._render_pdf_page_for_ocr",
+        lambda path, page_number: SimpleNamespace(page_number=page_number, path=path),
+    )
+
+    result = extract_document(str(pdf_path))
+
+    assert result.requires_review is False
+    assert result.page_count == 1
+    assert "Отсканированный приказ" in result.text
+    assert len(result.fragments) == 1
+    assert result.fragments[0].page_number == 1

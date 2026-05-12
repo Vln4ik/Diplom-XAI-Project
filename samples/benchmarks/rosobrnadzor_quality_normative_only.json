@@ -13,6 +13,7 @@
       "id": "req_programs",
       "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
       "category": "Образовательные программы",
+      "expected_applicability": "applicable",
       "expected_status": "data_missing",
       "expected_evidence": []
     },
@@ -20,6 +21,7 @@
       "id": "req_license_staff",
       "title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
       "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
       "expected_status": "data_missing",
       "expected_evidence": []
     },
@@ -27,8 +29,37 @@
       "id": "req_local_acts",
       "title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
       "category": "Официальный сайт",
+      "expected_applicability": "applicable",
       "expected_status": "data_missing",
       "expected_evidence": []
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Выявленные несоответствия и недостающие данные",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
     }
   ]
 }

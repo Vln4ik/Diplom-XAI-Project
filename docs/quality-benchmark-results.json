@@ -43,13 +43,19 @@
       }
     ]
   },
+  "applicability": {
+    "expected_total": 3,
+    "matched_total": 3,
+    "accuracy": 1.0,
+    "mismatches": []
+  },
   "evidence_linking": {
     "expected_total": 6,
-    "predicted_total": 9,
-    "matched_total": 5,
-    "precision": 0.5556,
-    "recall": 0.8333,
-    "f1": 0.6667,
+    "predicted_total": 7,
+    "matched_total": 6,
+    "precision": 0.8571,
+    "recall": 1.0,
+    "f1": 0.9231,
     "grounded_requirements_share": 1.0,
     "per_requirement": [
       {
@@ -75,11 +81,16 @@
       {
         "expected_id": "req_license_staff",
         "expected_total": 3,
-        "predicted_total": 4,
-        "matched_total": 2,
-        "recall": 0.6667,
-        "precision": 0.5,
+        "predicted_total": 3,
+        "matched_total": 3,
+        "recall": 1.0,
+        "precision": 1.0,
         "matches": [
+          {
+            "expected_snippet": "\"Государственная аккредитация\"",
+            "predicted_snippet": "\"Государственная аккредитация\"",
+            "similarity": 1.0
+          },
           {
             "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
             "predicted_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
@@ -95,10 +106,10 @@
       {
         "expected_id": "req_programs",
         "expected_total": 1,
-        "predicted_total": 2,
+        "predicted_total": 1,
         "matched_total": 1,
         "recall": 1.0,
-        "precision": 0.5,
+        "precision": 1.0,
         "matches": [
           {
             "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
@@ -106,6 +117,72 @@
             "similarity": 1.0
           }
         ]
+      }
+    ]
+  },
+  "report_sections": {
+    "expected_total": 4,
+    "predicted_total": 9,
+    "presence_rate": 1.0,
+    "non_empty_content_share": 1.0,
+    "source_requirement_coverage": 1.0,
+    "min_source_requirement_pass_share": 1.0,
+    "per_section": [
+      {
+        "title": "Основания подготовки отчета",
+        "present": true,
+        "non_empty": true,
+        "expected_requirement_ids": [],
+        "matched_requirement_ids": [],
+        "source_requirement_recall": 0.0,
+        "min_source_requirements": 0,
+        "min_source_requirements_ok": true
+      },
+      {
+        "title": "Перечень применимых требований",
+        "present": true,
+        "non_empty": true,
+        "expected_requirement_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "matched_requirement_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "source_requirement_recall": 1.0,
+        "min_source_requirements": 3,
+        "min_source_requirements_ok": true
+      },
+      {
+        "title": "Сведения, подтверждающие выполнение требований",
+        "present": true,
+        "non_empty": true,
+        "expected_requirement_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "matched_requirement_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "source_requirement_recall": 1.0,
+        "min_source_requirements": 3,
+        "min_source_requirements_ok": true
+      },
+      {
+        "title": "Заключение",
+        "present": true,
+        "non_empty": true,
+        "expected_requirement_ids": [],
+        "matched_requirement_ids": [],
+        "source_requirement_recall": 0.0,
+        "min_source_requirements": 1,
+        "min_source_requirements_ok": true
       }
     ]
   }

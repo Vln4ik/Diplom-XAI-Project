@@ -30,6 +30,7 @@ local-ai = [
 ]
 ocr = [
   "pillow>=11.0.0",
+  "pypdfium2>=4.30.0",
   "pytesseract>=0.3.13",
 ]
 

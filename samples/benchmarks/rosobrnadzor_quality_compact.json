@@ -17,6 +17,7 @@
       "id": "req_programs",
       "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
       "category": "Образовательные программы",
+      "expected_applicability": "applicable",
       "expected_status": "data_found",
       "expected_evidence": [
         "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе."
@@ -26,6 +27,7 @@
       "id": "req_license_staff",
       "title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
       "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
       "expected_status": "data_found",
       "expected_evidence": [
         "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
@@ -36,10 +38,39 @@
       "id": "req_local_acts",
       "title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
       "category": "Официальный сайт",
+      "expected_applicability": "applicable",
       "expected_status": "data_found",
       "expected_evidence": [
         "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты."
       ]
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Сведения, подтверждающие выполнение требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
     }
   ]
 }

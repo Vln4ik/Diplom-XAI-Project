@@ -1,10 +1,14 @@
 {
-  "name": "rosobrnadzor_demo_quality_benchmark",
-  "scenario": "Рособрнадзор + образовательная организация",
+  "name": "rosobrnadzor_mixed_scope_applicability_benchmark",
+  "scenario": "Рособрнадзор + образовательная организация + смешанный нормативный контур",
   "report_type": "readiness_report",
   "documents": [
     {
       "filename": "rosobrnadzor_sample.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "rosobrnadzor_mixed_scope_additional.txt",
       "category": "normative"
     },
     {
@@ -53,15 +57,17 @@
         "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
         "website_sections_published | 2026 | 12"
       ]
+    },
+    {
+      "id": "req_server_room",
+      "title": "Организация обязана вести журнал контроля температуры серверной комнаты и оформлять результаты внутреннего мониторинга.",
+      "category": "Общие сведения об организации",
+      "expected_applicability": "needs_clarification",
+      "expected_status": "needs_clarification",
+      "expected_evidence": []
     }
   ],
   "expected_sections": [
-    {
-      "title": "Основания подготовки отчета",
-      "expected_requirement_ids": [],
-      "min_source_requirements": 0,
-      "require_non_empty_content": true
-    },
     {
       "title": "Перечень применимых требований",
       "expected_requirement_ids": [
@@ -80,6 +86,30 @@
         "req_local_acts"
       ],
       "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Выявленные несоответствия и недостающие данные",
+      "expected_requirement_ids": [
+        "req_server_room"
+      ],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Риски",
+      "expected_requirement_ids": [
+        "req_server_room"
+      ],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Рекомендации",
+      "expected_requirement_ids": [
+        "req_server_room"
+      ],
+      "min_source_requirements": 1,
       "require_non_empty_content": true
     },
     {

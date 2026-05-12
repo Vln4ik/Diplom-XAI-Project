@@ -1,0 +1,47 @@
+{
+  "benchmark_name": "ocr_demo_benchmark",
+  "ocr_provider": "tesseract",
+  "ocr_languages": "rus+eng",
+  "cases": [
+    {
+      "benchmark_id": "ocr-clean-image",
+      "scenario": "clean_image",
+      "file_name": "clean_notice.png",
+      "expected_format": "image",
+      "expected_text": "Лицензия и аккредитация размещены на сайте. Teachers total 48. Локальные акты опубликованы.",
+      "expected_keywords": ["лицензия", "аккредитация", "48", "локальные акты"]
+    },
+    {
+      "benchmark_id": "ocr-noisy-image",
+      "scenario": "noisy_image",
+      "file_name": "noisy_notice.png",
+      "expected_format": "image",
+      "expected_text": "На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026.",
+      "expected_keywords": ["локальные нормативные акты", "программы обучения", "2026"]
+    },
+    {
+      "benchmark_id": "ocr-table-image",
+      "scenario": "table_like_image",
+      "file_name": "table_scan.png",
+      "expected_format": "image",
+      "expected_text": "PROGRAM STATUS NOTE Информационные системы active site Педагогика active registry License yes published",
+      "expected_keywords": ["информационные системы", "педагогика", "license", "active"]
+    },
+    {
+      "benchmark_id": "ocr-image-pdf",
+      "scenario": "image_only_pdf",
+      "file_name": "site_scan.pdf",
+      "expected_format": "pdf",
+      "expected_text": "Официальный сайт содержит сведения о лицензии и кадрах. Teachers total 48.",
+      "expected_keywords": ["официальный сайт", "лицензии", "кадрах", "48"]
+    },
+    {
+      "benchmark_id": "ocr-mixed-layout-pdf",
+      "scenario": "mixed_layout_pdf",
+      "file_name": "mixed_layout_scan.pdf",
+      "expected_format": "pdf",
+      "expected_text": "Отчет о готовности к проверке. Официальный сайт содержит сведения о лицензии и кадрах. Ниже приведена краткая таблица размещенных разделов. SECTION STATUS NOTE Лицензия yes published Кадры yes 48 teachers Программы yes registry Рекомендация проверить полноту раздела об образовательных программах. Teachers total 48.",
+      "expected_keywords": ["section status note", "лицензия", "кадры", "программы yes registry", "48 teachers", "teachers total"]
+    }
+  ]
+}

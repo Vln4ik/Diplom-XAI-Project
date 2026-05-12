@@ -1,0 +1,140 @@
+{
+  "benchmark_name": "ocr_demo_benchmark",
+  "ocr_provider": {
+    "provider": "tesseract",
+    "mode": "model",
+    "available": true,
+    "tesseract_cmd": "/opt/homebrew/bin/tesseract",
+    "psm_candidates": [
+      3,
+      4,
+      11
+    ],
+    "variants": [
+      "original",
+      "threshold"
+    ]
+  },
+  "aggregate": {
+    "case_total": 5,
+    "requires_review_rate": 0.0,
+    "char_similarity_mean": 0.91,
+    "token_precision_mean": 0.9818,
+    "token_recall_mean": 0.9818,
+    "token_f1_mean": 0.9818,
+    "keyword_coverage_mean": 1.0
+  },
+  "by_format": {
+    "image": {
+      "case_total": 3,
+      "char_similarity_mean": 0.9584,
+      "token_f1_mean": 0.9697,
+      "keyword_coverage_mean": 1.0,
+      "requires_review_rate": 0.0
+    },
+    "pdf": {
+      "case_total": 2,
+      "char_similarity_mean": 0.8375,
+      "token_f1_mean": 1.0,
+      "keyword_coverage_mean": 1.0,
+      "requires_review_rate": 0.0
+    }
+  },
+  "cases": [
+    {
+      "benchmark_id": "ocr-clean-image",
+      "scenario": "clean_image",
+      "file_name": "clean_notice.png",
+      "format": "image",
+      "requires_review": false,
+      "page_count": 1,
+      "extracted_text_excerpt": "Лицензия и аккредитация размещены на сайте.\nTeachers total: 48.\nЛокальные акты опубликованы.",
+      "char_similarity": 0.9727,
+      "token_precision": 1.0,
+      "token_recall": 1.0,
+      "token_f1": 1.0,
+      "keyword_hits": 4,
+      "keyword_total": 4,
+      "keyword_coverage": 1.0,
+      "expected_token_total": 10,
+      "predicted_token_total": 10,
+      "overlap_token_total": 10
+    },
+    {
+      "benchmark_id": "ocr-noisy-image",
+      "scenario": "noisy_image",
+      "file_name": "noisy_notice.png",
+      "format": "image",
+      "requires_review": false,
+      "page_count": 1,
+      "extracted_text_excerpt": "На сайте размещены локальные нормативные акты.\nПрограммы обучения опубликованы.\n2026",
+      "char_similarity": 0.9704,
+      "token_precision": 1.0,
+      "token_recall": 1.0,
+      "token_f1": 1.0,
+      "keyword_hits": 3,
+      "keyword_total": 3,
+      "keyword_coverage": 1.0,
+      "expected_token_total": 9,
+      "predicted_token_total": 9,
+      "overlap_token_total": 9
+    },
+    {
+      "benchmark_id": "ocr-table-image",
+      "scenario": "table_like_image",
+      "file_name": "table_scan.png",
+      "format": "image",
+      "requires_review": false,
+      "page_count": 1,
+      "extracted_text_excerpt": "PROGRAM STATUS МОТЕ\nИнформационные системы active site\nПедагогика active registry\nLicense yes published",
+      "char_similarity": 0.932,
+      "token_precision": 0.9091,
+      "token_recall": 0.9091,
+      "token_f1": 0.9091,
+      "keyword_hits": 4,
+      "keyword_total": 4,
+      "keyword_coverage": 1.0,
+      "expected_token_total": 11,
+      "predicted_token_total": 11,
+      "overlap_token_total": 10
+    },
+    {
+      "benchmark_id": "ocr-image-pdf",
+      "scenario": "image_only_pdf",
+      "file_name": "site_scan.pdf",
+      "format": "pdf",
+      "requires_review": false,
+      "page_count": 1,
+      "extracted_text_excerpt": "Официальный сайт содержит сведения о лицензии и кадрах.\nTeachers total: 48.",
+      "char_similarity": 0.9799,
+      "token_precision": 1.0,
+      "token_recall": 1.0,
+      "token_f1": 1.0,
+      "keyword_hits": 4,
+      "keyword_total": 4,
+      "keyword_coverage": 1.0,
+      "expected_token_total": 8,
+      "predicted_token_total": 8,
+      "overlap_token_total": 8
+    },
+    {
+      "benchmark_id": "ocr-mixed-layout-pdf",
+      "scenario": "mixed_layout_pdf",
+      "file_name": "mixed_layout_scan.pdf",
+      "format": "pdf",
+      "requires_review": false,
+      "page_count": 1,
+      "extracted_text_excerpt": "Отчет о готовности к проверке\nОфициальный сайт содержит сведения о лицензии и кадрах.\nНиже приведена краткая таблица размещенных разделов.\nSECTION STATUS NOTE\nРекомендация: проверить полноту раздела об образовательных программах.\nTeachers t",
+      "char_similarity": 0.6951,
+      "token_precision": 1.0,
+      "token_recall": 1.0,
+      "token_f1": 1.0,
+      "keyword_hits": 6,
+      "keyword_total": 6,
+      "keyword_coverage": 1.0,
+      "expected_token_total": 27,
+      "predicted_token_total": 27,
+      "overlap_token_total": 27
+    }
+  ]
+}

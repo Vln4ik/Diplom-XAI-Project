@@ -102,7 +102,7 @@
 - embeddings: `Ollama + all-minilm`
 - LLM: `Ollama + gemma3:270m`
 
-Важно: текущая реализация является text-centric и transformer-based. На данном этапе в проекте не используются `CNN` или полноценный vision/OCR-контур для сложных сканов.
+Важно: текущая реализация остаётся text-centric и transformer-based. При этом в MVP уже работает `Tesseract OCR` для image-файлов и image-only PDF, но `CNN` и полноценный document-vision/layout-analysis контур для сложных сканов в проект пока не входят.
 
 ## Пользовательский сценарий
 
@@ -143,28 +143,55 @@
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `evidence linking precision`: `0.5556`
-- `evidence linking recall`: `0.8333`
-- `evidence linking F1`: `0.6667`
+- `applicability accuracy`: `1.0000`
+- `evidence linking precision`: `0.8571`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `0.9231`
+- `report sections source coverage`: `1.0000`
 
 Эти значения показывают, что текущий MVP уже устойчиво извлекает сами требования, но слой подбора и ранжирования evidence всё ещё требует дальнейшей калибровки. Детализация вынесена в [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md).
 
 ### Расширенный benchmark-suite
 
-Дополнительно в проекте собран `benchmark-suite` из трёх сценариев:
+Дополнительно в проекте собран `benchmark-suite` из четырёх сценариев:
 
 - полный пакет документов;
 - компактный пакет `нормативная база + evidence`;
+- mixed-scope сценарий с требованием, требующим ручной проверки применимости;
 - gap-сценарий `только нормативная база`.
 
 Агрегированные результаты suite:
 
 - `requirement extraction F1`: `1.0000`
-- `evidence linking precision`: `0.6000`
-- `evidence linking recall`: `0.9000`
-- `evidence linking F1`: `0.7200`
+- `status_accuracy_mean`: `0.9167`
+- `applicability accuracy mean`: `1.0000`
+- `evidence linking precision`: `0.8421`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `0.9143`
+- `report sections source coverage mean`: `0.9583`
 
 Детализация вынесена в [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md).
+
+### OCR benchmark
+
+Для нового OCR-контура добавлен отдельный benchmark на committed corpus из пяти сценариев:
+
+- clean image
+- noisy image
+- table-like image
+- image-only PDF
+- mixed-layout PDF
+
+Агрегированные результаты:
+
+- `char_similarity_mean`: `0.9100`
+- `token_precision_mean`: `0.9818`
+- `token_recall_mean`: `0.9818`
+- `token_f1_mean`: `0.9818`
+- `keyword_coverage_mean`: `1.0000`
+- `requires_review_rate`: `0.0000`
+
+Практически это означает, что базовый `Tesseract OCR` с multi-pass обработкой уже устойчиво извлекает ключевые признаки во всех пяти OCR-сценариях. Самым слабым сценарием теперь остаётся `mixed-layout PDF`, но уже не по coverage, а по `char similarity`: слова и ключевые сигналы извлекаются, однако порядок и layout fidelity ещё проседают. Следующий шаг в OCR-части связан уже не с общим “усилить OCR”, а с `layout-aware OCR / document structure reconstruction`.
 
 ### Stress и ресурсный профиль
 
@@ -215,7 +242,20 @@
 - multi-regulator production scope
 - domain fine-tuning на большом размеченном корпусе
 
-При этом в backend уже добавлен начальный `OCR scaffold`: система поддерживает image-файлы и подключаемый OCR provider. Полноценный production OCR/vision pipeline остаётся следующим этапом.
+При этом в текущем MVP уже работает базовый `OCR`-контур:
+
+- распознавание `PNG/JPG/TIFF/BMP`;
+- OCR-fallback для image-only `PDF`;
+- автоматическое включение `Tesseract` в Docker-окружении и launcher-скриптах.
+- отдельный OCR benchmark на committed corpus.
+- multi-pass OCR с несколькими `PSM` и image-variants.
+
+Следующим этапом остаются более тяжёлые OCR/vision-задачи:
+
+- layout analysis сложных PDF;
+- OCR noisy-сканов с низким качеством;
+- vision-first обработка таблиц и многостраничных mixed-layout документов;
+- улучшение именно mixed-layout OCR и восстановления порядка контента, так как это сейчас самый слабый OCR-сценарий по layout fidelity.
 
 ## Структура репозитория
 

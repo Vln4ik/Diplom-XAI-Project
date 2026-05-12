@@ -121,22 +121,54 @@
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `evidence linking precision`: `0.5556`
-- `evidence linking recall`: `0.8333`
-- `evidence linking F1`: `0.6667`
+- `applicability accuracy`: `1.0000`
+- `evidence linking precision`: `0.8571`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `0.9231`
+- `report sections source coverage`: `1.0000`
 
 Подробная фиксация вынесена в [docs/quality-benchmark-results.md](quality-benchmark-results.md).
 
-Дополнительно в проекте теперь есть `benchmark-suite` из трёх сценариев. Его агрегированные показатели:
+Дополнительно в проекте теперь есть `benchmark-suite` из четырёх сценариев. Его агрегированные показатели:
 
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `evidence linking precision`: `0.6000`
-- `evidence linking recall`: `0.9000`
-- `evidence linking F1`: `0.7200`
+- `status_accuracy_mean`: `0.9167`
+- `applicability accuracy mean`: `1.0000`
+- `evidence linking precision`: `0.8421`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `0.9143`
+- `report sections source coverage mean`: `0.9583`
 
 Подробная фиксация вынесена в [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+
+### OCR benchmark
+
+Для OCR-контура теперь есть отдельный benchmark на committed corpus из пяти сценариев:
+
+- clean image;
+- noisy image;
+- table-like image;
+- image-only PDF;
+- mixed-layout PDF.
+
+Агрегированные показатели:
+
+- `char_similarity_mean`: `0.9100`
+- `token_precision_mean`: `0.9818`
+- `token_recall_mean`: `0.9818`
+- `token_f1_mean`: `0.9818`
+- `keyword_coverage_mean`: `1.0000`
+- `requires_review_rate`: `0.0000`
+
+Подробная фиксация вынесена в [docs/ocr-benchmark-results.md](ocr-benchmark-results.md).
+
+Интерпретация этих цифр важна:
+
+- clean/noisy image, table-like image и image-only PDF сейчас закрываются очень уверенно;
+- `mixed-layout PDF` теперь тоже закрывается по token/keyword coverage, но остаётся самым слабым по `char_similarity`, то есть по fidelity порядка и структуры контента;
+- значит следующий реальный шаг по OCR — это уже `layout-aware OCR` и восстановление структуры документа, а не просто “включить OCR”.
 
 ### Что уже измерено под более тяжёлой нагрузкой
 
@@ -156,13 +188,13 @@
 У нас пока нет:
 
 - benchmark на расширенном и репрезентативном корпусе реальных кейсов
-- отдельной formal accuracy-оценки для `applicability classification`
-- отдельной formal accuracy-оценки для итоговых generated report sections
+- устойчивой formal accuracy-оценки для `applicability classification` на большом реальном корпусе
+- устойчивой formal accuracy-оценки для итоговых generated report sections на большом реальном корпусе
 - экспертной межразметочной проверки на большом наборе кейсов
 
 Поэтому корректная формулировка сейчас такая:
 
-- у нас уже есть измеримый functional quality и первый formal benchmark по `requirement extraction` и `evidence linking`
+- у нас уже есть измеримый functional quality и расширенный formal benchmark по `requirement extraction`, `applicability`, `evidence linking` и section coverage
 - у нас ещё нет формально доказанной semantic accuracy на широкой репрезентативной выборке
 
 ## Что планируется добавить дальше
@@ -170,6 +202,8 @@
 Следующий слой quality-метрик:
 
 - расширенный annotated benchmark для requirement extraction и evidence linking
+- расширенный annotated benchmark для applicability и section quality
+- OCR benchmark на большем и более сложном image-heavy корпусе
 - `precision/recall/F1` на большем наборе кейсов
 - сравнение качества между fallback и local model runtime
 - отдельная экспертная оценка корректности generated report sections
@@ -185,10 +219,12 @@
 - Отдельно через `3x` stress profile с Docker resource metrics: [docs/stress-baseline.md](stress-baseline.md).
 - Отдельно через formal benchmark report: [docs/quality-benchmark-results.md](quality-benchmark-results.md).
 - Отдельно через benchmark-suite report: [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+- Отдельно через OCR benchmark report: [docs/ocr-benchmark-results.md](ocr-benchmark-results.md).
 
 ## Ограничения текущей фиксации
 
 - Benchmark-suite всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
-- Формальные метрики пока покрывают только `requirement extraction` и `evidence linking`.
+- OCR benchmark пока тоже построен на synthetic committed corpus, а не на реальном массиве noisy-сканов от пользователей.
+- Формальные метрики уже покрывают `requirement extraction`, `applicability`, `evidence linking`, section coverage и базовый OCR-corpus.
 - Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` load profile и `3x` stress profile с Docker `CPU/RAM` замерами.
 - Текущий resource sampler пока не покрывает host-level `Ollama`, если он работает вне Docker Compose.

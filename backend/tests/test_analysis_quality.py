@@ -127,3 +127,52 @@ def test_derive_requirement_confidence_penalizes_weak_single_source():
     assert strong_confidence > weak_confidence
     assert strong_confidence >= 0.7
     assert weak_confidence <= 0.55
+
+
+def test_rank_evidence_candidates_filters_hint_only_structural_fragments(monkeypatch):
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text='На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.',
+        ),
+        FragmentStub(
+            id="fragment-2",
+            document_id="doc-2",
+            fragment_text='"regulatory_scope": [',
+        ),
+        FragmentStub(
+            id="fragment-3",
+            document_id="doc-2",
+            fragment_text='"Лицензирование",',
+        ),
+        FragmentStub(
+            id="fragment-4",
+            document_id="doc-3",
+            fragment_text='"Государственная аккредитация"',
+        ),
+    ]
+
+    monkeypatch.setattr(
+        analysis,
+        "rank_fragments",
+        lambda db, **kwargs: [
+            RankedFragment(fragment=fragments[1], score=0.88, keyword_score=0.7, vector_score=0.72),
+            RankedFragment(fragment=fragments[0], score=0.84, keyword_score=0.8, vector_score=0.81),
+            RankedFragment(fragment=fragments[2], score=0.78, keyword_score=0.66, vector_score=0.69),
+            RankedFragment(fragment=fragments[3], score=0.76, keyword_score=0.65, vector_score=0.68),
+        ],
+    )
+
+    ranked = analysis.rank_evidence_candidates(
+        db=None,  # type: ignore[arg-type]
+        requirement_text="Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+        fragments=fragments,  # type: ignore[arg-type]
+        category="Лицензия и аккредитация",
+        limit=3,
+    )
+
+    ids = {fragment.id for fragment, _score in ranked}
+    assert "fragment-1" in ids
+    assert "fragment-4" in ids
+    assert "fragment-2" not in ids

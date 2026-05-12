@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
+from typing import Any
 
 from docx import Document as DocxDocument
 from openpyxl import load_workbook
@@ -31,6 +32,10 @@ class ExtractionResult:
     fragments: list[FragmentSeed]
     requires_review: bool = False
     page_count: int | None = None
+
+
+def _page_fragment_from_text(text: str, *, page_number: int) -> FragmentSeed:
+    return FragmentSeed(text=text.strip(), fragment_type=FragmentType.page, page_number=page_number)
 
 
 def _extract_text_file(path: Path) -> ExtractionResult:
@@ -123,10 +128,12 @@ def _extract_pdf(path: Path) -> ExtractionResult:
     for page_index, page in enumerate(reader.pages, start=1):
         text = (page.extract_text() or "").strip()
         if not text:
+            text = _extract_pdf_page_with_ocr(path, page_index)
+        if not text:
             requires_review = True
             continue
         lines.append(text)
-        fragments.append(FragmentSeed(text=text, fragment_type=FragmentType.page, page_number=page_index))
+        fragments.append(_page_fragment_from_text(text, page_number=page_index))
     return ExtractionResult(text="\n\n".join(lines), fragments=fragments, requires_review=requires_review, page_count=len(reader.pages))
 
 
@@ -136,12 +143,39 @@ def _extract_image(path: Path) -> ExtractionResult:
     except OCRError:
         return ExtractionResult(text="", fragments=[], requires_review=True, page_count=1)
 
-    fragments = [
-        FragmentSeed(text=chunk.strip(), fragment_type=FragmentType.page, page_number=1)
-        for chunk in ocr_result.text.splitlines()
-        if chunk.strip()
-    ]
+    fragments = [_page_fragment_from_text(ocr_result.text, page_number=1)] if ocr_result.text.strip() else []
     return ExtractionResult(text=ocr_result.text, fragments=fragments, requires_review=not bool(fragments), page_count=1)
+
+
+def _render_pdf_page_for_ocr(path: Path, page_number: int) -> Any:
+    try:
+        import pypdfium2 as pdfium  # type: ignore
+    except Exception as exc:  # pragma: no cover - optional dependency path
+        raise OCRError("PDF OCR rendering dependencies are not installed") from exc
+
+    pdf = None
+    page = None
+    try:
+        pdf = pdfium.PdfDocument(str(path))
+        page = pdf[page_number - 1]
+        pil_image = page.render(scale=2.0).to_pil()
+        return pil_image
+    except Exception as exc:  # pragma: no cover - defensive
+        raise OCRError(f"Unable to render PDF page {page_number} for OCR") from exc
+    finally:  # pragma: no branch - defensive cleanup
+        if page is not None and hasattr(page, "close"):
+            page.close()
+        if pdf is not None and hasattr(pdf, "close"):
+            pdf.close()
+
+
+def _extract_pdf_page_with_ocr(path: Path, page_number: int) -> str:
+    try:
+        image = _render_pdf_page_for_ocr(path, page_number)
+        ocr_result = get_ocr_provider().extract_image_object(image, source_name=f"{path.name}#page={page_number}")
+    except OCRError:
+        return ""
+    return ocr_result.text.strip()
 
 
 def extract_document(path_str: str) -> ExtractionResult:

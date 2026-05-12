@@ -195,7 +195,7 @@
 - browser e2e
 - performance baseline
 - load baseline
-- formal quality benchmark для `requirement extraction` и `evidence linking`
+- formal quality benchmark для `requirement extraction`, `applicability`, `evidence linking` и section coverage
 - benchmark-suite из нескольких сценариев
 - docs по demo и приёмке
 - формальная методика экспериментальной оценки
@@ -219,8 +219,10 @@
 - hybrid retrieval
 - structured XAI
 - initial gold benchmark с `precision/recall/F1`
-- benchmark-suite с позитивными и gap-сценариями
-- OCR scaffold и image-document entry point
+- benchmark-suite с позитивными, mixed-scope и gap-сценариями
+- базовый OCR-контур на `Tesseract` для image-файлов и image-only PDF
+- OCR benchmark на committed image/PDF corpus
+- multi-pass OCR с несколькими `PSM` и image-variants
 - базовый production-hardening слой: `CI`, `health`, `metrics`
 - `3x` stress baseline с Docker resource profiling
 
@@ -229,8 +231,9 @@
 - domain fine-tuning
 - calibration на расширенном корпусе реальных кейсов
 - reranking quality на репрезентативной выборке
-- benchmark для generated sections и applicability classification
-- production OCR/vision pipeline
+- benchmark на большом реальном корпусе для generated sections и applicability classification
+- layout-aware OCR/vision pipeline для сложных сканов и mixed-layout PDF
+- большой OCR benchmark на реальном corpus noisy-сканов
 - внешние интеграции и ЭП
 - host-level profiling для внешнего `Ollama`
 - полноценный stress/observability contour production-уровня
@@ -267,12 +270,19 @@
 
 ### 6.2. OCR и vision
 
-Поддержка image-heavy сценариев и сканов отложена.
+Базовый OCR-контур уже введён в MVP:
 
-Причины:
+- `Tesseract OCR` для `PNG/JPG/TIFF/BMP`
+- OCR-fallback для image-only `PDF`
+- диагностика OCR provider через `GET /api/system/ai-status`
+- отдельный OCR benchmark с clean/noisy/table/image-PDF/mixed-layout-PDF сценариями
+- multi-pass OCR с выбором лучшего кандидата по нескольким `PSM` и image-variants
 
-- текущий MVP строится вокруг текстовых источников
-- OCR и layout analysis сильно увеличивают техническую сложность
+Отложенной остаётся именно расширенная vision-часть:
+
+- layout analysis и восстановление порядка контента в сложных PDF
+- OCR noisy-сканов
+- vision-first разбор таблиц, форм и mixed-layout документов
 
 ## 7. Следующие шаги по приоритету
 
@@ -308,7 +318,8 @@
 
 ### 7.4. Приоритет D. Расширение функциональности
 
-- OCR
+- advanced OCR/vision
+- OCR benchmark на большом реальном корпусе
 - multi-regulator templates
 - mobile contour
 - внешние интеграции
@@ -359,7 +370,7 @@
 - `gh auth` не выполнен
 - текущий Git worktree всё ещё содержит переход от старого прототипа к новому monorepo
 - mobile contour не реализован
-- OCR не реализован
+- advanced OCR/vision contour не реализован
 - AI-качество пока ограничено lightweight local runtime
 
 ## 11. Честный итог по roadmap

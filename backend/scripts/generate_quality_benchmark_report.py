@@ -23,7 +23,9 @@ def _format_ratio(value: float) -> str:
 
 def render_markdown(report: dict[str, object]) -> str:
     extraction = report["requirement_extraction"]
+    applicability = report["applicability"]
     evidence = report["evidence_linking"]
+    sections = report["report_sections"]
     lines = [
         "# Quality Benchmark Results",
         "",
@@ -49,7 +51,14 @@ def render_markdown(report: dict[str, object]) -> str:
         f"| `status_accuracy` | `{_format_percent(extraction['status_accuracy'])}` |",
         f"| `average_match_similarity` | `{_format_ratio(extraction['average_match_similarity'])}` |",
         "",
-        "## 3. Evidence linking",
+        "## 3. Applicability",
+        "",
+        "| Метрика | Значение |",
+        "|---|---:|",
+        f"| `accuracy` | `{_format_percent(applicability['accuracy'])}` |",
+        f"| `matched_total` | `{applicability['matched_total']}` |",
+        "",
+        "## 4. Evidence linking",
         "",
         "| Метрика | Значение |",
         "|---|---:|",
@@ -59,13 +68,24 @@ def render_markdown(report: dict[str, object]) -> str:
         f"| `grounded_requirements_share` | `{_format_percent(evidence['grounded_requirements_share'])}` |",
         f"| `matched_evidence_pairs` | `{evidence['matched_total']}` |",
         "",
-        "## 4. Интерпретация",
+        "## 5. Report sections",
+        "",
+        "| Метрика | Значение |",
+        "|---|---:|",
+        f"| `presence_rate` | `{_format_percent(sections['presence_rate'])}` |",
+        f"| `non_empty_content_share` | `{_format_percent(sections['non_empty_content_share'])}` |",
+        f"| `source_requirement_coverage` | `{_format_percent(sections['source_requirement_coverage'])}` |",
+        f"| `min_source_requirement_pass_share` | `{_format_percent(sections['min_source_requirement_pass_share'])}` |",
+        "",
+        "## 6. Интерпретация",
         "",
         "- `requirement extraction` показывает, насколько полно система находит эталонные требования из нормативного корпуса.",
+        "- `applicability` показывает, насколько корректно система отделяет явно применимые требования от спорных и требующих ручной проверки.",
         "- `evidence linking` показывает, насколько точно система связывает найденные требования с ожидаемыми подтверждениями.",
+        "- `report sections` показывает, насколько корректно требования попадают в ожидаемые разделы отчета и не теряются при генерации.",
         "- различие между extraction и evidence-метриками позволяет разделять проблемы извлечения требований и проблемы ранжирования доказательств.",
         "",
-        "## 5. Детализация по требованиям",
+        "## 7. Детализация по требованиям",
         "",
     ]
     for item in evidence["per_requirement"]:

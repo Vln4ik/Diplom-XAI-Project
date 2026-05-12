@@ -21,6 +21,7 @@ services:
       context: ../backend
       args:
         INSTALL_LOCAL_AI: ${INSTALL_LOCAL_AI:-0}
+        INSTALL_OCR: ${INSTALL_OCR:-1}
     environment:
       XAI_APP_DATABASE_URL: postgresql+psycopg://xai:xai@postgres:5432/xai_report_builder
       XAI_APP_REDIS_URL: redis://redis:6379/0
@@ -32,6 +33,7 @@ services:
       XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
       XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
       XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_OCR_PROVIDER: ${XAI_APP_OCR_PROVIDER:-tesseract}
       XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
       XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
       XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
@@ -50,6 +52,7 @@ services:
       context: ../backend
       args:
         INSTALL_LOCAL_AI: ${INSTALL_LOCAL_AI:-0}
+        INSTALL_OCR: ${INSTALL_OCR:-1}
     environment:
       XAI_APP_DATABASE_URL: postgresql+psycopg://xai:xai@postgres:5432/xai_report_builder
       XAI_APP_REDIS_URL: redis://redis:6379/0
@@ -60,6 +63,7 @@ services:
       XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
       XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
       XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_OCR_PROVIDER: ${XAI_APP_OCR_PROVIDER:-tesseract}
       XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
       XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
       XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
