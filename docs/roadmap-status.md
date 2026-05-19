@@ -224,6 +224,7 @@
 - OCR benchmark на committed image/PDF corpus
 - multi-pass OCR с несколькими `PSM` и image-variants
 - базовый production-hardening слой: `CI`, `health`, `metrics`
+- Celery lifecycle diagnostics: queued/started/succeeded/failed events, recent task history, task latency metrics
 - `3x` stress baseline с Docker resource profiling
 
 Ещё не доведено:
@@ -246,7 +247,7 @@
 - `2x` concurrency load baseline
 - `3x` stress baseline
 - Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
-- runtime metrics endpoint-ы
+- runtime metrics endpoint-ы для HTTP и фоновых Celery-задач
 - CI workflow для backend/frontend
 
 Ещё нет:
@@ -255,6 +256,7 @@
 - host-level `CPU/RAM` профиля для внешнего `Ollama`
 - больших документных наборов
 - separate comparison `fallback` vs `Ollama model`
+- durable task observability через БД/Prometheus server/Grafana alerting
 
 ## 6. Что сознательно отложено
 

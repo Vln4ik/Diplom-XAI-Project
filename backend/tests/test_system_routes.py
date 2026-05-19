@@ -20,7 +20,10 @@ def test_system_health_and_metrics_endpoints(client):
     metrics_response = test_client.get("/api/system/metrics")
     assert metrics_response.status_code == 200
     assert "request_totals" in metrics_response.json()
+    assert "task_totals" in metrics_response.json()
+    assert "recent_tasks" in metrics_response.json()
 
     prometheus_response = test_client.get("/api/system/metrics/prometheus")
     assert prometheus_response.status_code == 200
     assert "xai_http_requests_total" in prometheus_response.text
+    assert "xai_celery_task_events_total" in prometheus_response.text

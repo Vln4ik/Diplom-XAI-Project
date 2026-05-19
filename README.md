@@ -323,8 +323,8 @@ docker compose -f infra/docker-compose.yml up --build
 
 - `GET /api/system/ai-status` — активные `AI/OCR` provider-ы
 - `GET /api/system/health` — состояние базы, storage и runtime-конфигурации
-- `GET /api/system/metrics` — JSON snapshot request-метрик
-- `GET /api/system/metrics/prometheus` — Prometheus-compatible exposition
+- `GET /api/system/metrics` — JSON snapshot request-метрик и Celery task lifecycle-метрик
+- `GET /api/system/metrics/prometheus` — Prometheus-compatible exposition для HTTP и фоновых задач
 
 ## Команды проверки
 

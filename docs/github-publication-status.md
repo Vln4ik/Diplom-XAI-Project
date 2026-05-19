@@ -15,10 +15,16 @@
 
 - repository: `https://github.com/Vln4ik/Diplom-XAI-Project`
 - branch: `main`
-- current local `HEAD`: `153edcd3c63627ab0a26284a30d7ffdc43efcee0`
-- current `origin/main`: `153edcd3c63627ab0a26284a30d7ffdc43efcee0`
 
-Локальная ветка `main` синхронизирована с `origin/main`.
+Локальная ветка `main` должна быть синхронизирована с `origin/main` после каждого публикационного шага.
+
+Актуальный commit проверяется командами:
+
+```bash
+git rev-parse HEAD
+git rev-parse origin/main
+git status -sb
+```
 
 ## 3. Что уже опубликовано
 
@@ -36,9 +42,11 @@
 - CI workflow;
 - подробная документация проекта.
 
-Последний опубликованный commit:
+Последний опубликованный commit проверяется через:
 
-- `153edcd` — `feat: expand OCR and quality benchmark coverage`
+```bash
+git log -1 --oneline origin/main
+```
 
 ## 4. Текущие ограничения публикационного контура
 
