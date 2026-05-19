@@ -10,12 +10,15 @@ CONTAINER_OLLAMA_BASE_URL="${XAI_APP_OLLAMA_BASE_URL:-http://host.docker.interna
 BACKEND_AI_STATUS_URL="${BACKEND_AI_STATUS_URL:-http://localhost:8000/api/system/ai-status}"
 BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://localhost:8000/api/system/health}"
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173/login}"
+PROMETHEUS_READY_URL="${PROMETHEUS_READY_URL:-http://localhost:9090/-/ready}"
+GRAFANA_HEALTH_URL="${GRAFANA_HEALTH_URL:-http://localhost:3000/api/health}"
 EMBED_MODEL="${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}"
 LLM_MODEL="${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}"
 DOCKER_WAIT_ATTEMPTS="${DOCKER_WAIT_ATTEMPTS:-180}"
 SERVICE_WAIT_ATTEMPTS="${SERVICE_WAIT_ATTEMPTS:-120}"
 WAIT_INTERVAL_SECONDS="${WAIT_INTERVAL_SECONDS:-2}"
 XAI_INCLUDE_FRONTEND="${XAI_INCLUDE_FRONTEND:-0}"
+XAI_INCLUDE_OBSERVABILITY="${XAI_INCLUDE_OBSERVABILITY:-0}"
 
 mkdir -p "$LOG_DIR"
 
@@ -100,6 +103,7 @@ pull_models() {
 
 start_backend_services() {
   local services=(postgres redis backend worker)
+  local compose_profiles="local-ai"
   local stack_label="backend-стека"
 
   if [[ "$XAI_INCLUDE_FRONTEND" == "1" ]]; then
@@ -107,8 +111,13 @@ start_backend_services() {
     stack_label="полного стека"
   fi
 
+  if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    services+=(prometheus grafana)
+    compose_profiles="$compose_profiles,observability"
+  fi
+
   print_step "Запуск $stack_label"
-  COMPOSE_PROFILES=local-ai \
+  COMPOSE_PROFILES="$compose_profiles" \
   XAI_APP_EMBEDDING_PROVIDER=ollama \
   XAI_APP_LLM_PROVIDER=ollama \
   XAI_APP_OLLAMA_BASE_URL="$CONTAINER_OLLAMA_BASE_URL" \
@@ -122,6 +131,13 @@ start_backend_services() {
   if [[ "$XAI_INCLUDE_FRONTEND" == "1" ]]; then
     wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsSI '$FRONTEND_URL'" "frontend UI"
     echo "Frontend UI готов."
+  fi
+
+  if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$PROMETHEUS_READY_URL'" "Prometheus"
+    echo "Prometheus готов."
+    wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$GRAFANA_HEALTH_URL'" "Grafana"
+    echo "Grafana готов."
   fi
 }
 
@@ -150,10 +166,20 @@ print_summary() {
   if [[ "$XAI_INCLUDE_FRONTEND" == "1" ]]; then
     echo "  Frontend: http://localhost:5173/login"
   fi
+  if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    echo "  Prometheus: http://localhost:9090"
+    echo "  Grafana:    http://localhost:3000"
+  fi
   echo
   echo "Логин:"
   echo "  admin@example.com"
   echo "  ChangeMe123!"
+  if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    echo
+    echo "Grafana:"
+    echo "  ${GRAFANA_ADMIN_USER:-admin}"
+    echo "  ${GRAFANA_ADMIN_PASSWORD:-ChangeMe123!}"
+  fi
 }
 
 main() {

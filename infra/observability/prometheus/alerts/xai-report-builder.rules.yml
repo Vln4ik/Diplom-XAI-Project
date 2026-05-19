@@ -1,0 +1,42 @@
+groups:
+  - name: xai-report-builder-runtime
+    rules:
+      - alert: XAIBackendDown
+        expr: up{job="xai-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: backend-api
+        annotations:
+          summary: XAI backend API is unreachable
+          description: Prometheus cannot scrape the backend metrics endpoint for more than 2 minutes.
+
+      - alert: XAIBackgroundTaskFailures
+        expr: increase(xai_celery_task_events_total{status="failed"}[10m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: backend-worker
+        annotations:
+          summary: Background task failures detected
+          description: One or more Celery tasks failed within the last 10 minutes.
+
+      - alert: XAIHighRequestLatency
+        expr: max by (path) (xai_http_request_duration_seconds_avg) > 2
+        for: 10m
+        labels:
+          severity: warning
+          service: backend-api
+        annotations:
+          summary: Elevated API latency detected
+          description: Average request latency stays above 2 seconds for at least 10 minutes.
+
+      - alert: XAIQueuedTasksGrowing
+        expr: sum(xai_celery_recent_tasks{status="queued"}) > 10
+        for: 10m
+        labels:
+          severity: warning
+          service: backend-worker
+        annotations:
+          summary: Task queue backlog is growing
+          description: More than 10 recent background tasks remain in queued state for at least 10 minutes.

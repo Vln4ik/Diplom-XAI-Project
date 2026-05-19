@@ -225,6 +225,7 @@
 - multi-pass OCR с несколькими `PSM` и image-variants
 - базовый production-hardening слой: `CI`, `health`, `metrics`
 - Celery lifecycle diagnostics через Redis-backed metrics: queued/started/succeeded/failed events, recent task history, task latency metrics
+- observability profile на `Prometheus + Grafana` с provisioned dashboard и alert rules
 - `3x` stress baseline с Docker resource profiling
 
 Ещё не доведено:
@@ -248,6 +249,7 @@
 - `3x` stress baseline
 - Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
 - runtime metrics endpoint-ы для HTTP и фоновых Celery-задач, включая shared task state между API и worker через Redis
+- optional `Prometheus/Grafana` stack для накопления и визуализации runtime-метрик
 - CI workflow для backend/frontend
 
 Ещё нет:
@@ -256,7 +258,7 @@
 - host-level `CPU/RAM` профиля для внешнего `Ollama`
 - больших документных наборов
 - separate comparison `fallback` vs `Ollama model`
-- persistent long-term task observability через БД/Prometheus server/Grafana alerting
+- `Alertmanager`, long-retention metrics store и полноценная notification routing поверх observability stack
 
 ## 6. Что сознательно отложено
 

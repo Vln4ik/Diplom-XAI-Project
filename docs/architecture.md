@@ -7,6 +7,8 @@
 - `postgres` — transactional store, FTS, `pgvector`
 - `redis` — task broker and result backend
 - `frontend` — React SPA
+- `prometheus` — optional metrics scraper and alert rule evaluator
+- `grafana` — optional observability UI with provisioned dashboard
 
 ## Domain Boundaries
 

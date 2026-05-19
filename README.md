@@ -306,6 +306,22 @@ XAI_APP_LLM_PROVIDER=local_transformers \
 docker compose -f infra/docker-compose.yml up --build
 ```
 
+### Запуск с observability stack
+
+```bash
+COMPOSE_PROFILES=observability \
+docker compose -f infra/docker-compose.yml up --build
+```
+
+Для полного локального контура с `Ollama + Prometheus + Grafana`:
+
+```bash
+COMPOSE_PROFILES=local-ai,observability \
+XAI_APP_EMBEDDING_PROVIDER=ollama \
+XAI_APP_LLM_PROVIDER=ollama \
+docker compose -f infra/docker-compose.yml up --build
+```
+
 ## Доступные сервисы
 
 - API: `http://localhost:8000`
@@ -313,6 +329,8 @@ docker compose -f infra/docker-compose.yml up --build
 - Frontend: `http://localhost:5173`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
+- Prometheus: `http://localhost:9090` (`COMPOSE_PROFILES=observability`)
+- Grafana: `http://localhost:3000` (`COMPOSE_PROFILES=observability`)
 
 Локальные bootstrap-учётные данные:
 
@@ -325,6 +343,11 @@ docker compose -f infra/docker-compose.yml up --build
 - `GET /api/system/health` — состояние базы, storage и runtime-конфигурации
 - `GET /api/system/metrics` — JSON snapshot request-метрик и Celery task lifecycle-метрик через общий Redis/fallback memory
 - `GET /api/system/metrics/prometheus` — Prometheus-compatible exposition для HTTP и фоновых задач
+
+Grafana bootstrap-учётные данные по умолчанию:
+
+- `admin`
+- `ChangeMe123!`
 
 ## Команды проверки
 
@@ -378,6 +401,7 @@ cd frontend && npm run e2e
 
 - системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
 - пользовательский путь: [docs/user-flow.md](docs/user-flow.md)
+- observability stack: [docs/observability-stack.md](docs/observability-stack.md)
 - описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
 - подробное объяснение моделей и XAI-блока: [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
 - архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)
