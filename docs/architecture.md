@@ -7,6 +7,7 @@
 - `postgres` — transactional store, FTS, `pgvector`
 - `redis` — task broker and result backend
 - `frontend` — React SPA
+- `alertmanager` — optional alert routing baseline for Prometheus alerts
 - `prometheus` — optional metrics scraper and alert rule evaluator
 - `grafana` — optional observability UI with provisioned dashboard
 

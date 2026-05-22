@@ -329,6 +329,7 @@ docker compose -f infra/docker-compose.yml up --build
 - Frontend: `http://localhost:5173`
 - PostgreSQL: `localhost:5432`
 - Redis: `localhost:6379`
+- Alertmanager: `http://localhost:9093` (`COMPOSE_PROFILES=observability`)
 - Prometheus: `http://localhost:9090` (`COMPOSE_PROFILES=observability`)
 - Grafana: `http://localhost:3000` (`COMPOSE_PROFILES=observability`)
 
@@ -385,6 +386,17 @@ cd frontend && npm run e2e
   --output docs/stress-baseline.json
 ```
 
+## Stress 4x benchmark с hybrid profiling
+
+```bash
+./.venv/bin/python backend/scripts/run_benchmark_profile.py stress-4x
+```
+
+Этот профиль пишет результат в `docs/stress-4x-baseline.json` и одновременно собирает:
+
+- Docker resource profile по `backend/worker/postgres/redis`;
+- host-level profile по внешнему `Ollama` process match `ollama`.
+
 ## Formal quality benchmark
 
 ```bash
@@ -402,6 +414,7 @@ cd frontend && npm run e2e
 - системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
 - пользовательский путь: [docs/user-flow.md](docs/user-flow.md)
 - observability stack: [docs/observability-stack.md](docs/observability-stack.md)
+- stress 4x runbook: [docs/stress-4x-runbook.md](docs/stress-4x-runbook.md)
 - описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
 - подробное объяснение моделей и XAI-блока: [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
 - архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)

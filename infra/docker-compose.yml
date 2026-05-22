@@ -116,6 +116,20 @@ services:
       - prometheus_data:/prometheus
     depends_on:
       - backend
+      - alertmanager
+
+  alertmanager:
+    profiles:
+      - observability
+    image: prom/alertmanager:v0.27.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
 
   grafana:
     profiles:
@@ -141,3 +155,4 @@ volumes:
   ollama_data:
   prometheus_data:
   grafana_data:
+  alertmanager_data:

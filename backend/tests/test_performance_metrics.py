@@ -4,6 +4,8 @@ from app.services.performance import (
     flatten_timing_metrics,
     parse_memory_to_mib,
     parse_percentage,
+    parse_process_snapshot_line,
+    parse_rss_kib_to_mib,
     percentile,
     success_rate,
     summarize_metric,
@@ -58,6 +60,23 @@ def test_parse_percentage_and_memory_helpers():
     assert parse_memory_to_mib("1GiB") == 1024.0
     assert parse_memory_to_mib("512MiB") == 512.0
     assert parse_memory_to_mib("1024KiB") == 1.0
+    assert parse_rss_kib_to_mib("2048") == 2.0
+
+
+def test_parse_process_snapshot_line_returns_structured_payload():
+    payload = parse_process_snapshot_line("123 1 42.5 204800 /usr/local/bin/ollama serve")
+
+    assert payload == {
+        "pid": 123,
+        "ppid": 1,
+        "cpu_percent": 42.5,
+        "memory_mib": 200.0,
+        "command": "/usr/local/bin/ollama serve",
+    }
+
+
+def test_parse_process_snapshot_line_rejects_invalid_rows():
+    assert parse_process_snapshot_line("not-a-process-row") is None
 
 
 def test_summarize_resource_samples_groups_by_service():

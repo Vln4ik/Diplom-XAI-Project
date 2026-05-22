@@ -12,6 +12,7 @@ BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://localhost:8000/api/system/healt
 FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173/login}"
 PROMETHEUS_READY_URL="${PROMETHEUS_READY_URL:-http://localhost:9090/-/ready}"
 GRAFANA_HEALTH_URL="${GRAFANA_HEALTH_URL:-http://localhost:3000/api/health}"
+ALERTMANAGER_READY_URL="${ALERTMANAGER_READY_URL:-http://localhost:9093/-/ready}"
 EMBED_MODEL="${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}"
 LLM_MODEL="${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}"
 DOCKER_WAIT_ATTEMPTS="${DOCKER_WAIT_ATTEMPTS:-180}"
@@ -112,7 +113,7 @@ start_backend_services() {
   fi
 
   if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
-    services+=(prometheus grafana)
+    services+=(alertmanager prometheus grafana)
     compose_profiles="$compose_profiles,observability"
   fi
 
@@ -134,6 +135,8 @@ start_backend_services() {
   fi
 
   if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$ALERTMANAGER_READY_URL'" "Alertmanager"
+    echo "Alertmanager готов."
     wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$PROMETHEUS_READY_URL'" "Prometheus"
     echo "Prometheus готов."
     wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$GRAFANA_HEALTH_URL'" "Grafana"
@@ -167,6 +170,7 @@ print_summary() {
     echo "  Frontend: http://localhost:5173/login"
   fi
   if [[ "$XAI_INCLUDE_OBSERVABILITY" == "1" ]]; then
+    echo "  Alertmanager: http://localhost:9093"
     echo "  Prometheus: http://localhost:9090"
     echo "  Grafana:    http://localhost:3000"
   fi

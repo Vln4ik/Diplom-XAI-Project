@@ -5,6 +5,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import mimetypes
+import os
 import subprocess
 import sys
 import threading
@@ -25,6 +26,7 @@ from app.services.performance import (  # noqa: E402
     flatten_timing_metrics,
     parse_memory_to_mib,
     parse_percentage,
+    parse_process_snapshot_line,
     success_rate,
     summarize_resource_samples,
     throughput_per_minute,
@@ -151,6 +153,180 @@ class DockerResourceSampler:
         }
         if include_samples:
             payload["samples"] = self.samples
+        if self.errors:
+            payload["errors"] = self.errors
+        return payload
+
+
+class HostProcessResourceSampler:
+    def __init__(
+        self,
+        *,
+        process_match: str,
+        resource_alias: str,
+        interval_seconds: float,
+    ) -> None:
+        self.process_match = process_match.strip()
+        self.resource_alias = resource_alias.strip()
+        self.interval_seconds = interval_seconds
+        self.samples: list[dict[str, object]] = []
+        self.errors: list[str] = []
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._last_matched_processes: list[dict[str, object]] = self._discover_matching_processes()
+
+    def _discover_matching_processes(self) -> list[dict[str, object]]:
+        command = ["ps", "-axo", "pid=,ppid=,%cpu=,rss=,command="]
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        matched_processes: list[dict[str, object]] = []
+        normalized_match = self.process_match.lower()
+        excluded_pids = {os.getpid(), os.getppid()}
+
+        for raw_line in result.stdout.splitlines():
+            parsed = parse_process_snapshot_line(raw_line)
+            if parsed is None:
+                continue
+            if int(parsed["pid"]) in excluded_pids:
+                continue
+            process_command = str(parsed["command"]).lower()
+            if "benchmark_live_api.py" in process_command or "run_benchmark_profile.py" in process_command:
+                continue
+            if normalized_match in process_command:
+                matched_processes.append(parsed)
+
+        if not matched_processes:
+            raise RuntimeError(f"No host processes matched substring '{self.process_match}'")
+        return matched_processes
+
+    def _collect_once(self) -> dict[str, object]:
+        matched_processes = self._discover_matching_processes()
+        self._last_matched_processes = matched_processes
+        cpu_percent = round(sum(float(process["cpu_percent"]) for process in matched_processes), 4)
+        memory_mib = round(sum(float(process["memory_mib"]) for process in matched_processes), 4)
+        process_count = float(len(matched_processes))
+
+        return {
+            "captured_at": datetime.now(UTC).isoformat(),
+            "containers": {
+                self.resource_alias: {
+                    "cpu_percent": cpu_percent,
+                    "memory_mib": memory_mib,
+                    "process_count": process_count,
+                }
+            },
+        }
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                self.samples.append(self._collect_once())
+            except Exception as exc:  # pragma: no cover - runtime protection
+                self.errors.append(str(exc))
+            if self._stop_event.wait(self.interval_seconds):
+                break
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, name="host-process-resource-sampler", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=max(2.0, self.interval_seconds * 2))
+
+    def to_payload(self, *, include_samples: bool) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "mode": "host-process",
+            "process_match": self.process_match,
+            "resource_alias": self.resource_alias,
+            "sample_interval_seconds": self.interval_seconds,
+            "sample_count": len(self.samples),
+            "summary": summarize_resource_samples(self.samples),
+            "last_matched_pids": [int(process["pid"]) for process in self._last_matched_processes],
+        }
+        if include_samples:
+            payload["samples"] = self.samples
+            payload["last_matched_processes"] = self._last_matched_processes
+        if self.errors:
+            payload["errors"] = self.errors
+        return payload
+
+
+class HybridResourceSampler:
+    def __init__(
+        self,
+        *,
+        compose_file: Path,
+        services: list[str],
+        interval_seconds: float,
+        process_match: str,
+        resource_alias: str,
+    ) -> None:
+        self.compose_file = compose_file
+        self.services = services
+        self.interval_seconds = interval_seconds
+        self.process_match = process_match
+        self.resource_alias = resource_alias
+        self.samples: list[dict[str, object]] = []
+        self.errors: list[str] = []
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._docker_sampler = DockerResourceSampler(
+            compose_file=self.compose_file,
+            services=self.services,
+            interval_seconds=self.interval_seconds,
+        )
+        self._host_sampler = HostProcessResourceSampler(
+            process_match=self.process_match,
+            resource_alias=self.resource_alias,
+            interval_seconds=self.interval_seconds,
+        )
+
+    def _collect_once(self) -> dict[str, object]:
+        docker_sample = self._docker_sampler._collect_once()
+        host_sample = self._host_sampler._collect_once()
+        return {
+            "captured_at": datetime.now(UTC).isoformat(),
+            "containers": {
+                **dict(docker_sample.get("containers") or {}),
+                **dict(host_sample.get("containers") or {}),
+            },
+        }
+
+    def _run(self) -> None:
+        while not self._stop_event.is_set():
+            try:
+                self.samples.append(self._collect_once())
+            except Exception as exc:  # pragma: no cover - runtime protection
+                self.errors.append(str(exc))
+            if self._stop_event.wait(self.interval_seconds):
+                break
+
+    def start(self) -> None:
+        self._thread = threading.Thread(target=self._run, name="hybrid-resource-sampler", daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._thread is not None:
+            self._thread.join(timeout=max(2.0, self.interval_seconds * 2))
+
+    def to_payload(self, *, include_samples: bool) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "mode": "hybrid",
+            "compose_file": str(self.compose_file),
+            "services": self.services,
+            "resolved_containers": self._docker_sampler._containers,
+            "process_match": self.process_match,
+            "resource_alias": self.resource_alias,
+            "sample_interval_seconds": self.interval_seconds,
+            "sample_count": len(self.samples),
+            "summary": summarize_resource_samples(self.samples),
+            "last_matched_pids": [int(process["pid"]) for process in self._host_sampler._last_matched_processes],
+        }
+        if include_samples:
+            payload["samples"] = self.samples
+            payload["last_matched_processes"] = self._host_sampler._last_matched_processes
         if self.errors:
             payload["errors"] = self.errors
         return payload
@@ -496,7 +672,7 @@ def _collect_runs(args: argparse.Namespace) -> tuple[list[dict[str, object]], li
 def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
     started = time.perf_counter()
     ai_status = _request(method="GET", url=_api_url(args.base_url, "/api/system/ai-status"), timeout=args.request_timeout)
-    resource_sampler: DockerResourceSampler | None = None
+    resource_sampler: DockerResourceSampler | HostProcessResourceSampler | HybridResourceSampler | None = None
     resource_profile: dict[str, object] | None = None
 
     if args.resource_profile == "docker":
@@ -504,6 +680,22 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
             compose_file=args.compose_file,
             services=[service.strip() for service in args.resource_services.split(",") if service.strip()],
             interval_seconds=args.resource_interval,
+        )
+        resource_sampler.start()
+    elif args.resource_profile == "host-ollama":
+        resource_sampler = HostProcessResourceSampler(
+            process_match=args.host_process_match,
+            resource_alias=args.host_resource_alias,
+            interval_seconds=args.resource_interval,
+        )
+        resource_sampler.start()
+    elif args.resource_profile == "hybrid":
+        resource_sampler = HybridResourceSampler(
+            compose_file=args.compose_file,
+            services=[service.strip() for service in args.resource_services.split(",") if service.strip()],
+            interval_seconds=args.resource_interval,
+            process_match=args.host_process_match,
+            resource_alias=args.host_resource_alias,
         )
         resource_sampler.start()
 
@@ -556,10 +748,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--request-timeout", type=float, default=60.0)
     parser.add_argument("--pipeline-timeout", type=float, default=240.0)
     parser.add_argument("--poll-interval", type=float, default=1.0)
-    parser.add_argument("--resource-profile", choices=("none", "docker"), default="none")
+    parser.add_argument("--resource-profile", choices=("none", "docker", "host-ollama", "hybrid"), default="none")
     parser.add_argument("--compose-file", type=Path, default=PROJECT_ROOT / "infra" / "docker-compose.yml")
     parser.add_argument("--resource-services", default="backend,worker,postgres,redis,ollama")
     parser.add_argument("--resource-interval", type=float, default=1.0)
+    parser.add_argument("--host-process-match", default="ollama")
+    parser.add_argument("--host-resource-alias", default="host_ollama")
     parser.add_argument("--include-resource-samples", action="store_true")
     parser.add_argument("--output", type=Path)
     return parser.parse_args()

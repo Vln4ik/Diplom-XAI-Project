@@ -113,6 +113,39 @@ def parse_memory_to_mib(value: str | int | float | None) -> float:
     return round(amount * factor, 4)
 
 
+def parse_rss_kib_to_mib(value: str | int | float | None) -> float:
+    if isinstance(value, (int, float)):
+        return round(float(value) / 1024.0, 4)
+    if not value:
+        return 0.0
+
+    normalized = str(value).strip().replace(",", ".")
+    try:
+        return round(float(normalized) / 1024.0, 4)
+    except ValueError:
+        return 0.0
+
+
+def parse_process_snapshot_line(line: str) -> dict[str, object] | None:
+    parts = line.strip().split(None, 4)
+    if len(parts) != 5:
+        return None
+
+    try:
+        pid = int(parts[0])
+        ppid = int(parts[1])
+    except ValueError:
+        return None
+
+    return {
+        "pid": pid,
+        "ppid": ppid,
+        "cpu_percent": parse_percentage(parts[2]),
+        "memory_mib": parse_rss_kib_to_mib(parts[3]),
+        "command": parts[4],
+    }
+
+
 def summarize_named_numeric_series(series: dict[str, list[float]]) -> dict[str, dict[str, float | int]]:
     return {key: summarize_metric(values) for key, values in sorted(series.items())}
 

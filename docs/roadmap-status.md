@@ -226,6 +226,7 @@
 - базовый production-hardening слой: `CI`, `health`, `metrics`
 - Celery lifecycle diagnostics через Redis-backed metrics: queued/started/succeeded/failed events, recent task history, task latency metrics
 - observability profile на `Prometheus + Grafana` с provisioned dashboard и alert rules
+- `Alertmanager` baseline для alert routing внутри observability profile
 - `3x` stress baseline с Docker resource profiling
 
 Ещё не доведено:
@@ -250,15 +251,17 @@
 - Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
 - runtime metrics endpoint-ы для HTTP и фоновых Celery-задач, включая shared task state между API и worker через Redis
 - optional `Prometheus/Grafana` stack для накопления и визуализации runtime-метрик
+- host-level profiling support для внешнего `Ollama` через `benchmark_live_api.py`
+- named benchmark preset для `stress-4x`
 - CI workflow для backend/frontend
 
 Ещё нет:
 
 - `4x+` stress профилей
-- host-level `CPU/RAM` профиля для внешнего `Ollama`
 - больших документных наборов
 - separate comparison `fallback` vs `Ollama model`
-- `Alertmanager`, long-retention metrics store и полноценная notification routing поверх observability stack
+- committed real `4x+` benchmark artifacts на расширенном наборе запусков
+- long-retention metrics store и полноценная external notification routing поверх `Alertmanager`
 
 ## 6. Что сознательно отложено
 
