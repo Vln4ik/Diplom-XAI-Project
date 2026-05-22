@@ -19,6 +19,8 @@
 - тип организации: образовательная организация
 - корпус входных данных: committed demo corpus, включающий базовый текстовый пакет и OCR-augmented сценарии
 
+Дополнительно в проекте теперь есть pilot `real_corpus` слой из `3` redacted/synthetic кейсов. Он используется не как основной regression-baseline, а как промежуточный уровень реалистичности между committed demo corpus и будущим большим real-world benchmark архивом.
+
 ## 3. Сравниваемые сценарии
 
 В эксперименте сравниваются два сценария:
@@ -61,6 +63,9 @@
 - formal quality benchmark
 - extended quality benchmark suite
 - calibration sweep по профилям reranker/confidence
+- pilot real-corpus validation
+- pilot real-corpus quality suite
+- pilot real-corpus calibration sweep
 - доля обработанных документов
 - доля требований с evidence
 - доля требований с XAI
@@ -144,6 +149,14 @@
 ./.venv/bin/python backend/scripts/run_calibration_sweep.py
 ```
 
+Pilot `real_corpus` воспроизводится через:
+
+```bash
+./.venv/bin/python backend/scripts/validate_real_corpus.py
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json --output-json docs/real-corpus-quality-suite-results.json --output-md docs/real-corpus-quality-suite-results.md
+./.venv/bin/python backend/scripts/run_calibration_sweep.py --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json --output-json docs/real-corpus-calibration-sweep.json --output-md docs/real-corpus-calibration-sweep.md
+```
+
 Скрипт читает:
 
 - `docs/performance-baseline.json`
@@ -159,6 +172,7 @@
 
 - сравнение построено на малом demo dataset;
 - formal benchmark-часть уже расширена до OCR-augmented committed corpus, но не до большого реального архива кейсов;
+- pilot `real_corpus` уже введён, но пока содержит только `3` кейса и не является широким статистически репрезентативным корпусом;
 - часть временных и качественных оценок носит экспертный характер;
 - результаты не следует интерпретировать как окончательно доказанные научные метрики точности;
 - для строгой научной валидации нужен следующий этап с размеченным корпусом и экспертной проверкой.

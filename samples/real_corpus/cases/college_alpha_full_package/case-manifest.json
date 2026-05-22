@@ -1,0 +1,40 @@
+{
+  "case_id": "college_alpha_full_package",
+  "scenario": "Рособрнадзор + колледж + redacted full package",
+  "regulator": "Рособрнадзор",
+  "organization_type": "educational",
+  "report_type": "readiness_report",
+  "status": "benchmark_ready",
+  "redaction_level": "synthetic",
+  "tags": ["pilot", "full-package", "text", "structured"],
+  "documents": [
+    {
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/normative_order_excerpt.txt",
+      "category": "normative",
+      "source_type": "regulatory_excerpt",
+      "description": "Фрагмент нормативной базы с требованиями для readiness-отчета."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/official_site_snapshot.txt",
+      "category": "evidence",
+      "source_type": "website_snapshot",
+      "description": "Текстовый срез разделов официального сайта организации."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/organization_profile.json",
+      "category": "other",
+      "source_type": "organization_profile",
+      "description": "Профиль организации в redacted JSON-форме."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/student_contingent.csv",
+      "category": "data_table",
+      "source_type": "metrics_export",
+      "description": "Табличный экспорт с показателями контингента и публикаций."
+    }
+  ],
+  "annotations": {
+    "benchmark_path": "samples/real_corpus/cases/college_alpha_full_package/annotations/quality_benchmark.json",
+    "review_notes_path": "samples/real_corpus/cases/college_alpha_full_package/annotations/review-notes.md"
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "name": "real_corpus_college_alpha_full_package",
+  "scenario": "Рособрнадзор + колледж + redacted full package",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "normative_order_excerpt.txt",
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/normative_order_excerpt.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "official_site_snapshot.txt",
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/official_site_snapshot.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "student_contingent.csv",
+      "path": "samples/real_corpus/cases/college_alpha_full_package/documents/student_contingent.csv",
+      "category": "data_table"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах и учебных планах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте опубликованы сведения о реализуемых образовательных программах и учебных планах."
+      ]
+    },
+    {
+      "id": "req_license_staff",
+      "title": "Необходимо предоставить сведения о лицензии, государственной аккредитации и педагогических работниках.",
+      "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Размещены сведения о лицензии на образовательную деятельность и государственной аккредитации.",
+        "Сведения о педагогических работниках размещены на официальном сайте."
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты и правила приема.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты и правила приема.",
+        "local_acts_published | 2026 | 24"
+      ]
+    },
+    {
+      "id": "req_students",
+      "title": "Организация обязана раскрывать сведения о численности обучающихся.",
+      "category": "Контингент обучающихся",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "students_total | 2026 | 1280"
+      ]
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts",
+        "req_students"
+      ],
+      "min_source_requirements": 4,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Сведения, подтверждающие выполнение требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts",
+        "req_students"
+      ],
+      "min_source_requirements": 4,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}

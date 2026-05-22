@@ -198,6 +198,7 @@
 - formal quality benchmark для `requirement extraction`, `applicability`, `evidence linking` и section coverage
 - benchmark-suite из `7` committed сценариев, включая OCR-augmented cases
 - calibration sweep по `evidence reranker + confidence thresholds`
+- pilot `real_corpus` слой с manifest-ами, case-annotation и readiness validation
 - docs по demo и приёмке
 - формальная методика экспериментальной оценки
 - автоматически генерируемый experimental report
@@ -223,6 +224,7 @@
 - initial gold benchmark с `precision/recall/F1`
 - benchmark-suite с позитивными, mixed-scope, gap и OCR-augmented сценариями
 - calibration sweep на расширенном committed corpus
+- pilot `real_corpus` слой из `3` benchmark-ready кейсов с отдельным suite/calibration baseline
 - базовый OCR-контур на `Tesseract` для image-файлов и image-only PDF
 - OCR benchmark на committed image/PDF corpus
 - multi-pass OCR с несколькими `PSM` и image-variants
@@ -238,6 +240,7 @@
 
 - domain fine-tuning
 - calibration на расширенном корпусе реальных кейсов пользователей
+- расширение pilot `real_corpus` по количеству кейсов и глубине разметки
 - reranking quality на репрезентативной выборке
 - benchmark на большом реальном корпусе для generated sections и applicability classification
 - layout-aware OCR/vision pipeline для сложных сканов и mixed-layout PDF
@@ -324,6 +327,7 @@
 - stronger local model
 - better embeddings
 - calibration and validation of reranker on larger corpus
+- расширение pilot `real_corpus` до более широкой redacted выборки
 - richer requirement extraction
 - более сильный reasoning layer по explanations
 

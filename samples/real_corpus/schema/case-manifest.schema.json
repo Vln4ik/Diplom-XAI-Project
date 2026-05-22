@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Real Corpus Case Manifest",
+  "type": "object",
+  "required": [
+    "case_id",
+    "scenario",
+    "regulator",
+    "organization_type",
+    "report_type",
+    "status",
+    "redaction_level",
+    "documents",
+    "annotations"
+  ],
+  "properties": {
+    "case_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scenario": {
+      "type": "string",
+      "minLength": 1
+    },
+    "regulator": {
+      "type": "string",
+      "minLength": 1
+    },
+    "organization_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "report_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "pilot", "benchmark_ready"]
+    },
+    "redaction_level": {
+      "type": "string",
+      "enum": ["synthetic", "redacted_real_like", "anonymized_real"]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "category", "source_type", "description"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_type": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "annotations": {
+      "type": "object",
+      "required": ["benchmark_path"],
+      "properties": {
+        "benchmark_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "review_notes_path": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

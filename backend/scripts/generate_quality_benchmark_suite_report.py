@@ -14,6 +14,7 @@ if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.services.quality_benchmark import load_benchmark_paths_from_manifest, run_quality_benchmark_suite  # noqa: E402
+from app.services.real_corpus import load_benchmark_paths_from_real_corpus_manifest  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,6 +24,22 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="Optional benchmark suite manifest with relative benchmark paths.",
+    )
+    parser.add_argument(
+        "--real-corpus-manifest",
+        type=Path,
+        default=None,
+        help="Optional real corpus manifest with case manifests and benchmark annotations.",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.json",
+    )
+    parser.add_argument(
+        "--output-md",
+        type=Path,
+        default=PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.md",
     )
     return parser.parse_args()
 
@@ -103,18 +120,20 @@ def render_markdown(report: dict[str, object]) -> str:
 
 def main() -> int:
     args = parse_args()
-    if args.suite_manifest is not None:
+    if args.suite_manifest is not None and args.real_corpus_manifest is not None:
+        raise ValueError("Use either --suite-manifest or --real-corpus-manifest, not both")
+    if args.real_corpus_manifest is not None:
+        benchmark_paths = load_benchmark_paths_from_real_corpus_manifest(args.real_corpus_manifest)
+    elif args.suite_manifest is not None:
         benchmark_paths = load_benchmark_paths_from_manifest(args.suite_manifest)
     else:
         benchmark_dir = PROJECT_ROOT / "samples" / "benchmarks"
         benchmark_paths = sorted(benchmark_dir.glob("*.json"))
     report = run_quality_benchmark_suite(benchmark_paths)
-    output_json = PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.json"
-    output_md = PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.md"
-    output_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    output_md.write_text(render_markdown(report) + "\n", encoding="utf-8")
-    print(f"Written {output_json}")
-    print(f"Written {output_md}")
+    args.output_json.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    args.output_md.write_text(render_markdown(report) + "\n", encoding="utf-8")
+    print(f"Written {args.output_json}")
+    print(f"Written {args.output_md}")
     return 0
 
 

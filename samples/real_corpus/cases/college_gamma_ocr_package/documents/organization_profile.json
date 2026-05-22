@@ -1,0 +1,15 @@
+{
+  "organization_name": "Колледж цифрового сервиса",
+  "organization_type": "educational",
+  "website": "https://gamma-college.example.edu",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Государственная аккредитация"
+  ],
+  "programs": [
+    "Право и организация социального обеспечения",
+    "Информационные системы"
+  ],
+  "has_official_website": true,
+  "has_accreditation": true
+}

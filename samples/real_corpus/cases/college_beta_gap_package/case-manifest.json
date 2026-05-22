@@ -1,0 +1,34 @@
+{
+  "case_id": "college_beta_gap_package",
+  "scenario": "Рособрнадзор + колледж + redacted gap package",
+  "regulator": "Рособрнадзор",
+  "organization_type": "educational",
+  "report_type": "readiness_report",
+  "status": "benchmark_ready",
+  "redaction_level": "redacted_real_like",
+  "tags": ["pilot", "gap", "mixed-status", "text"],
+  "documents": [
+    {
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/normative_gap_excerpt.txt",
+      "category": "normative",
+      "source_type": "regulatory_excerpt",
+      "description": "Нормативный фрагмент с обязательными и спорными требованиями."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/site_snapshot_gap.txt",
+      "category": "evidence",
+      "source_type": "website_snapshot",
+      "description": "Неполный snapshot официального сайта."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/organization_profile.json",
+      "category": "other",
+      "source_type": "organization_profile",
+      "description": "Redacted профиль организации для gap-сценария."
+    }
+  ],
+  "annotations": {
+    "benchmark_path": "samples/real_corpus/cases/college_beta_gap_package/annotations/quality_benchmark.json",
+    "review_notes_path": "samples/real_corpus/cases/college_beta_gap_package/annotations/review-notes.md"
+  }
+}

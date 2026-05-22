@@ -1,0 +1,105 @@
+{
+  "name": "real_corpus_college_beta_gap_package",
+  "scenario": "Рособрнадзор + колледж + redacted gap package",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "normative_gap_excerpt.txt",
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/normative_gap_excerpt.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "site_snapshot_gap.txt",
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/site_snapshot_gap.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "path": "samples/real_corpus/cases/college_beta_gap_package/documents/organization_profile.json",
+      "category": "other"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте опубликованы сведения о реализуемых образовательных программах."
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты."
+      ]
+    },
+    {
+      "id": "req_graduates",
+      "title": "Организация обязана раскрывать сведения о выпускниках и их трудоустройстве.",
+      "category": "Сведения о выпускниках",
+      "expected_applicability": "applicable",
+      "expected_status": "data_missing",
+      "expected_evidence": []
+    },
+    {
+      "id": "req_server_room",
+      "title": "Организация обязана вести журнал контроля температуры серверной комнаты.",
+      "category": "Общие сведения об организации",
+      "expected_applicability": "needs_clarification",
+      "expected_status": "needs_clarification",
+      "expected_evidence": []
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_local_acts",
+        "req_graduates"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Выявленные несоответствия и недостающие данные",
+      "expected_requirement_ids": [
+        "req_graduates",
+        "req_server_room"
+      ],
+      "min_source_requirements": 2,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Риски",
+      "expected_requirement_ids": [
+        "req_graduates",
+        "req_server_room"
+      ],
+      "min_source_requirements": 2,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Рекомендации",
+      "expected_requirement_ids": [
+        "req_graduates",
+        "req_server_room"
+      ],
+      "min_source_requirements": 2,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}

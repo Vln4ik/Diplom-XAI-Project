@@ -1,0 +1,15 @@
+{
+  "organization_name": "Колледж сервисных технологий",
+  "organization_type": "educational",
+  "website": "https://beta-college.example.edu",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Лицензирование"
+  ],
+  "programs": [
+    "Туризм",
+    "Гостиничное дело"
+  ],
+  "has_official_website": true,
+  "has_accreditation": false
+}

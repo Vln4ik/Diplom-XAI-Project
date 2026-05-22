@@ -168,6 +168,36 @@
 
 Практически это означает, что на текущем committed расширенном корпусе baseline-профиль уже находится в устойчивой зоне, а дополнительные overrides не дают воспроизводимого выигрыша.
 
+### Pilot real corpus baseline
+
+Поверх committed corpus теперь добавлен отдельный `pilot real_corpus` слой из `3` кейсов:
+
+- `college_alpha_full_package`
+- `college_beta_gap_package`
+- `college_gamma_ocr_package`
+
+Его текущие агрегированные показатели:
+
+- `requirement extraction precision`: `1.0000`
+- `requirement extraction recall`: `1.0000`
+- `requirement extraction F1`: `1.0000`
+- `status_accuracy_mean`: `0.6944`
+- `applicability accuracy mean`: `1.0000`
+- `evidence linking precision`: `0.5714`
+- `evidence linking recall`: `0.6154`
+- `evidence linking F1`: `0.5926`
+- `report sections source coverage mean`: `0.8472`
+
+Подробная фиксация вынесена в [docs/real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md).
+
+Это нужно интерпретировать правильно:
+
+- committed corpus остаётся regression-baseline;
+- pilot `real_corpus` не должен давать такие же “чистые” цифры, потому что его задача — выявлять слабые места на более реалистичных и менее шаблонных кейсах;
+- отдельный real-corpus calibration sweep уже показывает, что на этом слое может быть полезен более `coverage-oriented` профиль.
+
+Подробная фиксация sweep вынесена в [docs/real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md).
+
 ### OCR benchmark
 
 Для OCR-контура теперь есть отдельный benchmark на committed corpus из пяти сценариев:
@@ -228,6 +258,7 @@
 
 - расширенный annotated benchmark для requirement extraction и evidence linking
 - расширенный annotated benchmark для applicability и section quality
+- расширение pilot `real_corpus` от `3` кейсов к более широкой redacted выборке
 - OCR benchmark на большем и более сложном image-heavy корпусе
 - `precision/recall/F1` на большем наборе кейсов
 - сравнение качества между fallback и local model runtime
@@ -244,11 +275,15 @@
 - Отдельно через `3x` stress profile с Docker resource metrics: [docs/stress-baseline.md](stress-baseline.md).
 - Отдельно через formal benchmark report: [docs/quality-benchmark-results.md](quality-benchmark-results.md).
 - Отдельно через benchmark-suite report: [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+- Отдельно через pilot real-corpus status report: [docs/real-corpus-status.md](real-corpus-status.md).
+- Отдельно через pilot real-corpus suite report: [docs/real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md).
+- Отдельно через pilot real-corpus calibration report: [docs/real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md).
 - Отдельно через OCR benchmark report: [docs/ocr-benchmark-results.md](ocr-benchmark-results.md).
 
 ## Ограничения текущей фиксации
 
 - Benchmark-suite уже расширен OCR-augmented committed сценариями, но всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
+- Pilot `real_corpus` уже введён, но это пока только `3` кейса, а не широкий размеченный массив организаций.
 - OCR benchmark пока тоже построен на synthetic committed corpus, а не на реальном массиве noisy-сканов от пользователей.
 - Формальные метрики уже покрывают `requirement extraction`, `applicability`, `evidence linking`, section coverage и базовый OCR-corpus.
 - Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` load profile и `3x` stress profile с Docker `CPU/RAM` замерами.

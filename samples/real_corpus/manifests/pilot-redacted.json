@@ -1,0 +1,9 @@
+{
+  "name": "real-corpus-pilot-redacted",
+  "description": "Pilot real-world corpus layer built from synthetic and redacted-real-like educational readiness cases.",
+  "cases": [
+    "samples/real_corpus/cases/college_alpha_full_package/case-manifest.json",
+    "samples/real_corpus/cases/college_beta_gap_package/case-manifest.json",
+    "samples/real_corpus/cases/college_gamma_ocr_package/case-manifest.json"
+  ]
+}

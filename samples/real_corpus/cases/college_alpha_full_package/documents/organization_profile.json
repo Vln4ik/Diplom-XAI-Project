@@ -1,0 +1,16 @@
+{
+  "organization_name": "Колледж прикладных цифровых систем",
+  "organization_type": "educational",
+  "website": "https://alpha-college.example.edu",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Государственная аккредитация",
+    "Лицензирование"
+  ],
+  "programs": [
+    "Информационные системы и программирование",
+    "Экономика и бухгалтерский учет"
+  ],
+  "has_official_website": true,
+  "has_accreditation": true
+}

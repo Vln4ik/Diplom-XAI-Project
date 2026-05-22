@@ -187,6 +187,34 @@
 
 Практический вывод здесь важный: после добавления OCR-augmented сценариев различия между профилями на текущем committed corpus исчезли, поэтому дополнительных production overrides пока не требуется. Детализация вынесена в [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md).
 
+### Pilot real corpus layer
+
+Следующий слой после committed demo corpus теперь тоже заведён в репозитории: `samples/real_corpus/`.
+
+Что в него входит сейчас:
+
+- `3` pilot-кейса;
+- corpus-level manifest;
+- case-manifest для каждого кейса;
+- redacted/synthetic документы;
+- benchmark-аннотации;
+- readiness validation;
+- отдельный real-corpus suite report;
+- отдельный real-corpus calibration sweep.
+
+Это важно методически: committed corpus остаётся стабильным regression-baseline, а `real_corpus` используется как мост к будущему большому размеченному архиву более реалистичных кейсов.
+
+Текущий pilot real-corpus baseline:
+
+- `case_total`: `3`
+- `benchmark_ready_cases`: `3`
+- `requirement extraction F1`: `1.0000`
+- `status_accuracy_mean`: `0.6944`
+- `evidence linking F1`: `0.5926`
+- `source_requirement_coverage_mean`: `0.8472`
+
+Эти цифры сознательно ниже, чем на committed corpus. Это не регрессия committed suite, а индикатор того, что pilot `real_corpus` уже содержит более сложные и менее “подогнанные” кейсы, особенно по evidence linking и OCR-backed traces. Детализация вынесена в [docs/real-corpus-status.md](docs/real-corpus-status.md), [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md) и [docs/real-corpus-calibration-sweep.md](docs/real-corpus-calibration-sweep.md).
+
 ### OCR benchmark
 
 Для нового OCR-контура добавлен отдельный benchmark на committed corpus из пяти сценариев:
@@ -471,6 +499,30 @@ cd frontend && npm run e2e
 ./.venv/bin/python backend/scripts/run_calibration_sweep.py --suite-manifest samples/benchmark_suites/core.json
 ```
 
+## Real corpus validation
+
+```bash
+./.venv/bin/python backend/scripts/validate_real_corpus.py
+```
+
+## Real corpus benchmark suite
+
+```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py \
+  --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json \
+  --output-json docs/real-corpus-quality-suite-results.json \
+  --output-md docs/real-corpus-quality-suite-results.md
+```
+
+## Real corpus calibration sweep
+
+```bash
+./.venv/bin/python backend/scripts/run_calibration_sweep.py \
+  --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json \
+  --output-json docs/real-corpus-calibration-sweep.json \
+  --output-md docs/real-corpus-calibration-sweep.md
+```
+
 ## Документация проекта
 
 - системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
@@ -490,10 +542,13 @@ cd frontend && npm run e2e
 - calibration sweep: [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md)
 - quality benchmark report: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
 - quality benchmark suite: [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md)
+- real corpus status: [docs/real-corpus-status.md](docs/real-corpus-status.md)
+- real corpus quality suite: [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md)
+- real corpus calibration sweep: [docs/real-corpus-calibration-sweep.md](docs/real-corpus-calibration-sweep.md)
 - performance baseline: [docs/performance-baseline.md](docs/performance-baseline.md)
 - load baseline: [docs/load-baseline.md](docs/load-baseline.md)
 - stress baseline: [docs/stress-baseline.md](docs/stress-baseline.md)
 
 ## Статус проекта
 
-Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, расширенным 7-сценарным quality benchmark suite, calibration sweep, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с валидацией на большом реальном корпусе, усилением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
+Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, расширенным 7-сценарным committed quality benchmark suite, calibration sweep, pilot `real_corpus` слоем, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с расширением pilot `real_corpus` до большого размеченного набора кейсов, усилением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.

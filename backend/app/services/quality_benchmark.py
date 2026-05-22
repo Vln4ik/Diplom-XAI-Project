@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.db.session import get_engine, get_session_factory
+from app.services.real_corpus import infer_project_root
 from app.services.analysis import clear_analysis_calibration_cache, requirement_similarity, significant_token_roots
 from app.services.auth import create_user
 
@@ -69,7 +70,7 @@ def load_benchmark_paths_from_manifest(manifest_path: Path) -> list[Path]:
     if not isinstance(benchmark_entries, list) or not benchmark_entries:
         raise ValueError("Benchmark suite manifest must contain non-empty 'benchmarks' list")
 
-    project_root = manifest_path.resolve().parents[2]
+    project_root = infer_project_root(manifest_path)
     benchmark_paths: list[Path] = []
     for entry in benchmark_entries:
         relative_path = str(entry).strip()
@@ -458,7 +459,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
     from app.workers.celery_app import celery_app
 
     benchmark = _load_json(benchmark_path)
-    project_root = benchmark_path.resolve().parents[2]
+    project_root = infer_project_root(benchmark_path)
     backend_root = project_root / "backend"
     document_root = project_root / "samples" / "documents"
 

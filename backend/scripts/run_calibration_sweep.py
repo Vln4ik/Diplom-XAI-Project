@@ -17,6 +17,7 @@ if str(BACKEND_ROOT) not in sys.path:
 from app.core.config import get_settings  # noqa: E402
 from app.services.analysis import clear_analysis_calibration_cache  # noqa: E402
 from app.services.quality_benchmark import load_benchmark_paths_from_manifest, run_quality_benchmark_suite  # noqa: E402
+from app.services.real_corpus import load_benchmark_paths_from_real_corpus_manifest  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -41,6 +42,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=None,
         help="Optional benchmark suite manifest with relative benchmark paths.",
+    )
+    parser.add_argument(
+        "--real-corpus-manifest",
+        type=Path,
+        default=None,
+        help="Optional real corpus manifest with case manifests and benchmark annotations.",
     )
     parser.add_argument("--timezone", default="Europe/Moscow")
     return parser.parse_args()
@@ -280,8 +287,12 @@ def render_markdown(report: dict[str, object], *, timezone_name: str) -> str:
 def main() -> int:
     args = parse_args()
     profiles_payload = _load_json(args.profiles_file)
+    if args.suite_manifest is not None and args.real_corpus_manifest is not None:
+        raise ValueError("Use either --suite-manifest or --real-corpus-manifest, not both")
     benchmark_paths = (
-        load_benchmark_paths_from_manifest(args.suite_manifest)
+        load_benchmark_paths_from_real_corpus_manifest(args.real_corpus_manifest)
+        if args.real_corpus_manifest is not None
+        else load_benchmark_paths_from_manifest(args.suite_manifest)
         if args.suite_manifest is not None
         else sorted((PROJECT_ROOT / "samples" / "benchmarks").glob("*.json"))
     )

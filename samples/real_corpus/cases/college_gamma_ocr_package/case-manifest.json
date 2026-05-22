@@ -1,0 +1,46 @@
+{
+  "case_id": "college_gamma_ocr_package",
+  "scenario": "Рособрнадзор + колледж + OCR-backed package",
+  "regulator": "Рособрнадзор",
+  "organization_type": "educational",
+  "report_type": "readiness_report",
+  "status": "benchmark_ready",
+  "redaction_level": "synthetic",
+  "tags": ["pilot", "ocr", "mixed-format", "benchmark-ready"],
+  "documents": [
+    {
+      "path": "samples/real_corpus/cases/college_gamma_ocr_package/documents/normative_ocr_excerpt.txt",
+      "category": "normative",
+      "source_type": "regulatory_excerpt",
+      "description": "Нормативный фрагмент для OCR-backed readiness кейса."
+    },
+    {
+      "path": "samples/real_corpus/cases/college_gamma_ocr_package/documents/organization_profile.json",
+      "category": "other",
+      "source_type": "organization_profile",
+      "description": "Профиль организации для OCR-backed кейса."
+    },
+    {
+      "path": "samples/ocr_benchmarks/site_scan.pdf",
+      "category": "evidence",
+      "source_type": "scanned_pdf",
+      "description": "Image-only PDF с OCR evidence по лицензии и кадрам."
+    },
+    {
+      "path": "samples/ocr_benchmarks/clean_notice.png",
+      "category": "evidence",
+      "source_type": "scanned_notice",
+      "description": "Чистое OCR-изображение с лицензией, аккредитацией и локальными актами."
+    },
+    {
+      "path": "samples/ocr_benchmarks/noisy_notice.png",
+      "category": "evidence",
+      "source_type": "scanned_notice",
+      "description": "Шумное OCR-изображение с программами обучения и локальными актами."
+    }
+  ],
+  "annotations": {
+    "benchmark_path": "samples/real_corpus/cases/college_gamma_ocr_package/annotations/quality_benchmark.json",
+    "review_notes_path": "samples/real_corpus/cases/college_gamma_ocr_package/annotations/review-notes.md"
+  }
+}

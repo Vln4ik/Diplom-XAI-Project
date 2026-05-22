@@ -1,0 +1,94 @@
+{
+  "name": "real_corpus_college_gamma_ocr_package",
+  "scenario": "Рособрнадзор + колледж + OCR-backed package",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "normative_ocr_excerpt.txt",
+      "path": "samples/real_corpus/cases/college_gamma_ocr_package/documents/normative_ocr_excerpt.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "organization_profile.json",
+      "path": "samples/real_corpus/cases/college_gamma_ocr_package/documents/organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "site_scan.pdf",
+      "path": "samples/ocr_benchmarks/site_scan.pdf",
+      "category": "evidence"
+    },
+    {
+      "filename": "clean_notice.png",
+      "path": "samples/ocr_benchmarks/clean_notice.png",
+      "category": "evidence"
+    },
+    {
+      "filename": "noisy_notice.png",
+      "path": "samples/ocr_benchmarks/noisy_notice.png",
+      "category": "evidence"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_license_staff",
+      "title": "Необходимо предоставить сведения о лицензии, государственной аккредитации и кадровом составе.",
+      "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Официальный сайт содержит сведения о лицензии и кадрах.",
+        "Лицензия и аккредитация размещены на сайте."
+      ]
+    },
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Программы обучения опубликованы."
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На сайте размещены локальные нормативные акты.",
+        "Локальные акты опубликованы."
+      ]
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_license_staff",
+        "req_programs",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Сведения, подтверждающие выполнение требований",
+      "expected_requirement_ids": [
+        "req_license_staff",
+        "req_programs",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}
