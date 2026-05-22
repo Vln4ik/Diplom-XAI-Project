@@ -134,14 +134,16 @@
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `0.9167`
+- `status_accuracy_mean`: `1.0000`
 - `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8421`
+- `evidence linking precision`: `0.8889`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9143`
-- `report sections source coverage mean`: `0.9583`
+- `evidence linking F1`: `0.9412`
+- `report sections source coverage mean`: `1.0000`
 
 Подробная фиксация вынесена в [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+
+Рост suite-метрик здесь связан не с заменой LLM, а с усилением отдельного evidence reranker. То есть выигрыш получен именно на слое `candidate evidence -> reranking -> final selection`.
 
 ### OCR benchmark
 

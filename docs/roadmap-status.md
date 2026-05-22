@@ -217,6 +217,7 @@
 - local embeddings
 - local LLM
 - hybrid retrieval
+- evidence reranker с focus/hint-aware rescoring
 - structured XAI
 - initial gold benchmark с `precision/recall/F1`
 - benchmark-suite с позитивными, mixed-scope и gap-сценариями
@@ -229,6 +230,7 @@
 - `Alertmanager` baseline для alert routing внутри observability profile
 - `3x` stress baseline с Docker resource profiling
 - `4x` stress baseline с hybrid profiling и host-level `Ollama` sampling
+- runtime comparison `fallback vs Ollama`
 
 Ещё не доведено:
 
@@ -239,7 +241,6 @@
 - layout-aware OCR/vision pipeline для сложных сканов и mixed-layout PDF
 - большой OCR benchmark на реальном corpus noisy-сканов
 - внешние интеграции и ЭП
-- host-level profiling для внешнего `Ollama`
 - полноценный stress/observability contour production-уровня
 
 ### 5.2. Performance and load
@@ -320,7 +321,7 @@
 
 - stronger local model
 - better embeddings
-- reranker
+- calibration and validation of reranker on larger corpus
 - richer requirement extraction
 - более сильный reasoning layer по explanations
 

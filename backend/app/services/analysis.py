@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from sqlalchemy.orm import Session
 
 from app.models import ApplicabilityStatus, DocumentFragment
-from app.services.retrieval import keyword_overlap_score, rank_fragments, tokenize
+from app.services.retrieval import RankedFragment, keyword_overlap_score, rank_fragments, tokenize
 
 REQUIREMENT_MARKERS = ("должен", "обязан", "требуется", "необходимо", "предоставить", "разместить")
 STOPWORDS = {
@@ -44,6 +44,20 @@ CATEGORY_MARKERS = {
     "Сведения о выпускниках": {"выпуск", "трудоустр"},
 }
 HIGH_SIGNAL_TOKENS = {"лиценз", "аккред", "сайт", "кадр", "программ", "локальн", "норматив", "официал"}
+GENERIC_CONTEXT_WORDS = {
+    "организация",
+    "образовательный",
+    "официальный",
+    "сайт",
+    "сведения",
+    "требуется",
+    "необходимо",
+    "предоставить",
+    "разместить",
+    "опубликовать",
+    "раздел",
+    "доступны",
+}
 TEXT_HINT_MARKERS = {
     "website_sections_published": {"официал", "сайт", "опублик", "раздел"},
     "local_acts_published": {"локальн", "норматив", "акты", "опублик"},
@@ -126,6 +140,12 @@ class EvidenceCandidate:
     lexical_score: float
     coverage_score: float
     matched_count: int
+    direct_coverage_score: float
+    focus_coverage_score: float
+    direct_matched_count: int
+    focus_matched_count: int
+    aligned_hint_markers: tuple[str, ...]
+    evidence_kind: str
 
 
 def _roots_match(left: str, right: str) -> bool:
@@ -166,6 +186,9 @@ def normalize_token_root(token: str) -> str:
             normalized = normalized[: -len(suffix)]
             break
     return normalized[:8]
+
+
+GENERIC_CONTEXT_ROOTS = {normalize_token_root(word) for word in GENERIC_CONTEXT_WORDS}
 
 
 def significant_token_roots(text: str) -> list[str]:
@@ -217,6 +240,19 @@ def category_for_text(text: str) -> str:
 
 def required_data_from_text(text: str) -> list[str]:
     return significant_token_roots(text)[:8]
+
+
+def requirement_focus_roots(text: str, category: str) -> list[str]:
+    base_roots = required_data_from_text(text)
+    focus_roots = [root for root in base_roots if root not in GENERIC_CONTEXT_ROOTS]
+    if len(focus_roots) < 2:
+        category_roots = CATEGORY_MARKERS.get(category, set())
+        for root in base_roots:
+            if any(_roots_match(root, marker) for marker in category_roots) and root not in focus_roots:
+                focus_roots.append(root)
+    if len(focus_roots) < 2:
+        return base_roots
+    return focus_roots[:8]
 
 
 def allowed_source_tokens(organization_profile: dict, report_type: str) -> set[str]:
@@ -342,6 +378,95 @@ def fragment_hint_markers(text: str) -> set[str]:
     return {marker for marker in TEXT_HINT_MARKERS if marker in lowered}
 
 
+def expected_hint_markers(requirement_text: str, category: str) -> set[str]:
+    requirement_roots = set(required_data_from_text(requirement_text))
+    expected = {
+        marker
+        for marker, hinted_roots in TEXT_HINT_MARKERS.items()
+        if overlapping_roots(requirement_roots, set(hinted_roots))
+    }
+    category_markers = CATEGORY_HINT_MARKERS.get(category, set())
+    if category_markers:
+        expected.update(marker for marker in category_markers if marker in TEXT_HINT_MARKERS)
+    return expected
+
+
+def aligned_hint_markers(requirement_text: str, fragment_text: str, category: str) -> set[str]:
+    return fragment_hint_markers(fragment_text) & expected_hint_markers(requirement_text, category)
+
+
+def focus_evidence_match_metrics(requirement_text: str, fragment_text: str, category: str) -> tuple[float, int, float]:
+    focus_roots = set(requirement_focus_roots(requirement_text, category))
+    fragment_tokens = set(significant_token_roots(fragment_text))
+    if not focus_roots or not fragment_tokens:
+        return 0.0, 0, 0.0
+
+    overlap = overlapping_roots(focus_roots, fragment_tokens)
+    coverage = len(overlap) / len(focus_roots)
+    precision = len(overlap) / len(fragment_tokens)
+    harmonic = 0.0 if coverage == 0.0 or precision == 0.0 else 2 * coverage * precision / (coverage + precision)
+    return round(coverage, 4), len(overlap), round(harmonic, 4)
+
+
+def fragment_evidence_kind(fragment_text: str) -> str:
+    normalized = fragment_text.strip()
+    trimmed = normalized.rstrip(",")
+    lowered = normalized.lower()
+    if normalized in {"{", "}", "[", "]"}:
+        return "structural"
+    if normalized.endswith(": [") or normalized.endswith('": [') or normalized.endswith(": {") or normalized.endswith('": {'):
+        return "structural"
+    if '": true' in lowered or '": false' in lowered:
+        return "boolean_flag"
+    if trimmed.startswith('"') and trimmed.endswith('"') and ":" not in trimmed:
+        return "quoted_value"
+    if "|" in normalized:
+        return "structured_row"
+    return "narrative"
+
+
+def generic_context_penalty(
+    requirement_text: str,
+    fragment_text: str,
+    category: str,
+    *,
+    direct_focus_matches: int,
+    aligned_marker_count: int,
+) -> float:
+    if direct_focus_matches > 0 or aligned_marker_count > 0:
+        return 0.0
+
+    requirement_generic_roots = set(required_data_from_text(requirement_text)) & GENERIC_CONTEXT_ROOTS
+    fragment_roots = set(significant_token_roots(fragment_text))
+    generic_overlap = overlapping_roots(requirement_generic_roots, fragment_roots)
+    if not generic_overlap:
+        return 0.0
+
+    focus_roots = set(requirement_focus_roots(requirement_text, category))
+    focus_overlap = overlapping_roots(focus_roots, fragment_roots)
+    if focus_overlap:
+        return 0.0
+    return round(min(0.2, 0.1 + 0.02 * len(generic_overlap)), 4)
+
+
+def fragment_quality_adjustment(
+    fragment_text: str,
+    *,
+    evidence_kind: str,
+    direct_focus_matches: int,
+    aligned_marker_count: int,
+) -> float:
+    if evidence_kind == "structural":
+        return -0.18
+    if evidence_kind == "boolean_flag":
+        return -0.14 if direct_focus_matches == 0 else -0.06
+    if evidence_kind == "quoted_value":
+        return 0.08 if direct_focus_matches > 0 else 0.02
+    if evidence_kind == "structured_row":
+        return 0.06 if aligned_marker_count > 0 else -0.02
+    return 0.05 if direct_focus_matches > 0 else 0.02
+
+
 def fragment_specificity_penalty(
     fragment_text: str,
     category: str,
@@ -410,6 +535,53 @@ def _evidence_bonus(fragment: DocumentFragment, query_tokens: set[str], category
     return round(category_bonus + signal_bonus + density_bonus, 4)
 
 
+def _priority_ranked_candidates(
+    requirement_text: str,
+    fragments: list[DocumentFragment],
+    category: str,
+    *,
+    limit: int,
+) -> list[RankedFragment]:
+    priority: list[RankedFragment] = []
+    expected_markers = expected_hint_markers(requirement_text, category)
+    for fragment in fragments:
+        direct_coverage, direct_matched_count, _direct_harmonic = direct_evidence_match_metrics(
+            requirement_text,
+            fragment.fragment_text,
+        )
+        focus_coverage, focus_matched_count, _focus_harmonic = focus_evidence_match_metrics(
+            requirement_text,
+            fragment.fragment_text,
+            category,
+        )
+        hint_markers = fragment_hint_markers(fragment.fragment_text) & expected_markers
+        if direct_matched_count == 0 and focus_matched_count == 0 and not hint_markers:
+            continue
+        bootstrap_score = round(
+            min(
+                0.74,
+                0.08
+                + direct_coverage * 0.28
+                + focus_coverage * 0.24
+                + min(0.09, 0.04 * len(hint_markers))
+                + min(0.08, 0.03 * focus_matched_count)
+                + min(0.05, 0.02 * direct_matched_count),
+            ),
+            4,
+        )
+        priority.append(
+            RankedFragment(
+                fragment=fragment,
+                score=max(0.12, bootstrap_score),
+                keyword_score=round(max(direct_coverage, focus_coverage, keyword_overlap_score(requirement_text, fragment.fragment_text)), 4),
+                vector_score=0.0,
+            )
+        )
+
+    priority.sort(key=lambda item: (item.score, item.keyword_score), reverse=True)
+    return priority[: max(limit * 4, 16)]
+
+
 def rank_evidence_candidates(
     db: Session,
     requirement_text: str,
@@ -434,6 +606,12 @@ def rank_evidence_candidates(
         max_per_document=3,
         bonus_resolver=lambda fragment, query_tokens: _evidence_bonus(fragment, query_tokens, category),
     )
+    ranked_by_id = {item.fragment.id: item for item in ranked}
+    for item in _priority_ranked_candidates(requirement_text, candidates, category, limit=limit):
+        if item.fragment.id in ranked_by_id:
+            continue
+        ranked.append(item)
+        ranked_by_id[item.fragment.id] = item
 
     rescored: list[EvidenceCandidate] = []
     for item in ranked:
@@ -443,23 +621,55 @@ def rank_evidence_candidates(
             requirement_text,
             item.fragment.fragment_text,
         )
+        focus_coverage, focus_matched_count, focus_harmonic = focus_evidence_match_metrics(
+            requirement_text,
+            item.fragment.fragment_text,
+            category,
+        )
+        hint_markers = aligned_hint_markers(requirement_text, item.fragment.fragment_text, category)
+        evidence_kind = fragment_evidence_kind(item.fragment.fragment_text)
         specificity_penalty = fragment_specificity_penalty(
             item.fragment.fragment_text,
             category,
             direct_matched_count=direct_matched_count,
             contextual_matched_count=matched_count,
         )
+        generic_penalty = generic_context_penalty(
+            requirement_text,
+            item.fragment.fragment_text,
+            category,
+            direct_focus_matches=focus_matched_count,
+            aligned_marker_count=len(hint_markers),
+        )
+        quality_adjustment = fragment_quality_adjustment(
+            item.fragment.fragment_text,
+            evidence_kind=evidence_kind,
+            direct_focus_matches=focus_matched_count,
+            aligned_marker_count=len(hint_markers),
+        )
+        hint_bonus = min(0.12, 0.06 * len(hint_markers))
+        focus_bonus = min(0.05, 0.02 * focus_matched_count)
         final_score = round(
-            min(
-                0.99,
-                item.score * 0.48
-                + lexical_score * 0.28
-                + coverage_score * 0.16
-                + harmonic * 0.08
-                + min(0.04, 0.01 * matched_count),
-            )
-            - specificity_penalty
-            + min(0.04, 0.02 * direct_harmonic),
+            max(
+                0.0,
+                min(
+                    0.99,
+                    item.score * 0.34
+                    + lexical_score * 0.16
+                    + coverage_score * 0.1
+                    + harmonic * 0.06
+                    + direct_coverage * 0.12
+                    + direct_harmonic * 0.08
+                    + focus_coverage * 0.14
+                    + focus_harmonic * 0.08
+                    + hint_bonus
+                    + focus_bonus
+                    + min(0.04, 0.01 * matched_count)
+                    + quality_adjustment,
+                )
+                - specificity_penalty
+                - generic_penalty,
+            ),
             2,
         )
         rescored.append(
@@ -470,11 +680,25 @@ def rank_evidence_candidates(
                 lexical_score=lexical_score,
                 coverage_score=coverage_score,
                 matched_count=matched_count,
+                direct_coverage_score=direct_coverage,
+                focus_coverage_score=focus_coverage,
+                direct_matched_count=direct_matched_count,
+                focus_matched_count=focus_matched_count,
+                aligned_hint_markers=tuple(sorted(hint_markers)),
+                evidence_kind=evidence_kind,
             )
         )
 
     rescored.sort(
-        key=lambda item: (item.score, item.coverage_score, item.matched_count, item.lexical_score, item.retrieval_score),
+        key=lambda item: (
+            item.score,
+            item.focus_coverage_score,
+            item.direct_coverage_score,
+            item.coverage_score,
+            item.matched_count,
+            item.lexical_score,
+            item.retrieval_score,
+        ),
         reverse=True,
     )
     if not rescored:
@@ -488,33 +712,49 @@ def rank_evidence_candidates(
     deferred: list[EvidenceCandidate] = []
     diversity_target = min(limit, 3)
     covered_requirement_roots: set[str] = set()
+    covered_focus_roots: set[str] = set()
     requirement_roots = set(contextual_token_roots(requirement_text))
+    focus_roots = set(requirement_focus_roots(requirement_text, category))
     for candidate in rescored:
         fragment_roots = set(contextual_token_roots(candidate.fragment.fragment_text))
         overlap_roots = overlapping_roots(requirement_roots, fragment_roots)
         new_roots = overlap_roots - covered_requirement_roots
-        direct_coverage, direct_matched_count, _direct_harmonic = direct_evidence_match_metrics(
-            requirement_text,
-            candidate.fragment.fragment_text,
-        )
+        focus_fragment_roots = set(significant_token_roots(candidate.fragment.fragment_text))
+        focus_overlap = overlapping_roots(focus_roots, focus_fragment_roots)
+        new_focus_roots = focus_overlap - covered_focus_roots
 
-        if candidate.score < score_floor and candidate.coverage_score < 0.2 and direct_coverage < 0.15 and candidate.matched_count == 0:
+        if (
+            candidate.score < score_floor
+            and candidate.coverage_score < 0.2
+            and candidate.direct_coverage_score < 0.15
+            and candidate.focus_coverage_score < 0.15
+            and candidate.matched_count == 0
+        ):
             continue
         if candidate.score < 0.1:
             continue
-        if not new_roots and candidate.score < 0.32 and direct_coverage < 0.2:
+        if candidate.evidence_kind == "boolean_flag" and candidate.focus_matched_count == 0 and not new_focus_roots:
             continue
-        if direct_matched_count == 0 and not new_roots and candidate.coverage_score < 0.25:
+        if not new_roots and not new_focus_roots and not candidate.aligned_hint_markers and candidate.score < 0.34:
+            continue
+        if (
+            candidate.direct_matched_count == 0
+            and candidate.focus_matched_count == 0
+            and not new_roots
+            and not candidate.aligned_hint_markers
+            and candidate.coverage_score < 0.25
+        ):
             continue
         if any(requirement_similarity(candidate.fragment.fragment_text, item.fragment.fragment_text) >= 0.9 for item in selected):
             continue
         document_hits = per_document.get(candidate.fragment.document_id, 0)
-        if document_hits >= 1 and len(selected) < diversity_target:
+        if document_hits >= 1 and len(selected) < diversity_target and not new_focus_roots and not candidate.aligned_hint_markers:
             deferred.append(candidate)
             continue
         selected.append(candidate)
         per_document[candidate.fragment.document_id] = document_hits + 1
         covered_requirement_roots.update(overlap_roots)
+        covered_focus_roots.update(focus_overlap)
         if len(selected) >= limit:
             break
 
@@ -527,15 +767,22 @@ def rank_evidence_candidates(
             fragment_roots = set(contextual_token_roots(candidate.fragment.fragment_text))
             overlap_roots = overlapping_roots(requirement_roots, fragment_roots)
             new_roots = overlap_roots - covered_requirement_roots
-            direct_coverage, direct_matched_count, _direct_harmonic = direct_evidence_match_metrics(
-                requirement_text,
-                candidate.fragment.fragment_text,
-            )
+            focus_fragment_roots = set(significant_token_roots(candidate.fragment.fragment_text))
+            focus_overlap = overlapping_roots(focus_roots, focus_fragment_roots)
+            new_focus_roots = focus_overlap - covered_focus_roots
             if candidate.score < score_floor:
                 continue
-            if not new_roots and candidate.score < 0.38:
+            if candidate.evidence_kind == "boolean_flag" and candidate.focus_matched_count == 0 and not new_focus_roots:
                 continue
-            if direct_matched_count == 0 and candidate.coverage_score < 0.25 and direct_coverage < 0.15:
+            if not new_roots and not new_focus_roots and not candidate.aligned_hint_markers and candidate.score < 0.38:
+                continue
+            if (
+                candidate.direct_matched_count == 0
+                and candidate.focus_matched_count == 0
+                and candidate.coverage_score < 0.25
+                and candidate.direct_coverage_score < 0.15
+                and not candidate.aligned_hint_markers
+            ):
                 continue
             document_hits = per_document.get(candidate.fragment.document_id, 0)
             if document_hits >= 2:
@@ -543,6 +790,7 @@ def rank_evidence_candidates(
             selected.append(candidate)
             per_document[candidate.fragment.document_id] = document_hits + 1
             covered_requirement_roots.update(overlap_roots)
+            covered_focus_roots.update(focus_overlap)
 
     return [(item.fragment, item.score) for item in selected[:limit]]
 

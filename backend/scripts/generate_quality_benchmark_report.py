@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_ROOT.parent
@@ -21,6 +23,10 @@ def _format_ratio(value: float) -> str:
     return f"{value:.4f}"
 
 
+def _captured_date() -> str:
+    return f"{datetime.now(ZoneInfo('Europe/Moscow')):%Y-%m-%d}"
+
+
 def render_markdown(report: dict[str, object]) -> str:
     extraction = report["requirement_extraction"]
     applicability = report["applicability"]
@@ -29,7 +35,7 @@ def render_markdown(report: dict[str, object]) -> str:
     lines = [
         "# Quality Benchmark Results",
         "",
-        "Дата фиксации: `2026-05-07`",
+        f"Дата фиксации: `{_captured_date()}`",
         "",
         "## 1. Назначение документа",
         "",

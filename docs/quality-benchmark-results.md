@@ -1,6 +1,6 @@
 # Quality Benchmark Results
 
-Дата фиксации: `2026-05-07`
+Дата фиксации: `2026-05-22`
 
 ## 1. Назначение документа
 
@@ -33,9 +33,9 @@
 
 | Метрика | Значение |
 |---|---:|
-| `precision` | `0.8571` |
+| `precision` | `0.7500` |
 | `recall` | `1.0000` |
-| `f1` | `0.9231` |
+| `f1` | `0.8571` |
 | `grounded_requirements_share` | `100.00%` |
 | `matched_evidence_pairs` | `6` |
 
@@ -60,7 +60,7 @@
 
 ### req_local_acts
 
-- `precision`: `0.6667`
+- `precision`: `1.0000`
 - `recall`: `1.0000`
 - `matched_total`: `2` из `2` ожидаемых evidence
 
@@ -69,7 +69,7 @@
 
 ### req_license_staff
 
-- `precision`: `1.0000`
+- `precision`: `0.7500`
 - `recall`: `1.0000`
 - `matched_total`: `3` из `3` ожидаемых evidence
 
@@ -79,7 +79,7 @@
 
 ### req_programs
 
-- `precision`: `1.0000`
+- `precision`: `0.5000`
 - `recall`: `1.0000`
 - `matched_total`: `1` из `1` ожидаемых evidence
 

@@ -3,7 +3,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.models import DocumentFragment, RequirementStatus, RiskLevel
-from app.services.analysis import significant_token_roots, unique_significant_tokens
+from app.services.analysis import (
+    aligned_hint_markers,
+    direct_evidence_match_metrics,
+    focus_evidence_match_metrics,
+    fragment_evidence_kind,
+    significant_token_roots,
+    unique_significant_tokens,
+)
 
 
 @dataclass
@@ -94,6 +101,9 @@ def build_requirement_artifacts(
 
     evidence_payload: list[dict[str, object]] = []
     for fragment, score in ranked_evidence:
+        direct_ratio, direct_count, _direct_harmonic = direct_evidence_match_metrics(requirement_text, fragment.fragment_text)
+        focus_ratio, focus_count, _focus_harmonic = focus_evidence_match_metrics(requirement_text, fragment.fragment_text, category)
+        hint_markers = sorted(aligned_hint_markers(requirement_text, fragment.fragment_text, category))
         evidence_payload.append(
             {
                 "document_id": fragment.document_id,
@@ -102,6 +112,12 @@ def build_requirement_artifacts(
                 "confidence_score": score,
                 "matched_keywords": _matched_keywords(requirement_text, fragment.fragment_text),
                 "matched_token_ratio": _matched_token_ratio(requirement_text, fragment.fragment_text),
+                "direct_match_ratio": direct_ratio,
+                "direct_match_count": direct_count,
+                "focus_match_ratio": focus_ratio,
+                "focus_match_count": focus_count,
+                "aligned_hint_markers": hint_markers,
+                "evidence_kind": fragment_evidence_kind(fragment.fragment_text),
             }
         )
 

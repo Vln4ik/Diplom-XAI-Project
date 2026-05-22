@@ -149,7 +149,7 @@
 - `evidence linking F1`: `0.9231`
 - `report sections source coverage`: `1.0000`
 
-Эти значения показывают, что текущий MVP уже устойчиво извлекает сами требования, но слой подбора и ранжирования evidence всё ещё требует дальнейшей калибровки. Детализация вынесена в [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md).
+Эти значения показывают, что текущий MVP уже устойчиво извлекает сами требования, а после внедрения отдельного reranker точнее подбирает подтверждения для составных требований. При этом дальнейшая калибровка evidence linking на большом реальном корпусе всё ещё нужна. Детализация вынесена в [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md).
 
 ### Расширенный benchmark-suite
 
@@ -163,12 +163,12 @@
 Агрегированные результаты suite:
 
 - `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `0.9167`
+- `status_accuracy_mean`: `1.0000`
 - `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8421`
+- `evidence linking precision`: `0.8889`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9143`
-- `report sections source coverage mean`: `0.9583`
+- `evidence linking F1`: `0.9412`
+- `report sections source coverage mean`: `1.0000`
 
 Детализация вынесена в [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md).
 
@@ -462,4 +462,4 @@ cd frontend && npm run e2e
 
 ## Статус проекта
 
-Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, экспортом, acceptance-сценарием, browser e2e, quality benchmark, load baseline и `3x` stress baseline с container-level profiling. Следующий этап развития связан с повышением качества evidence linking, расширением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
+Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, quality benchmark, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с калибровкой на большом реальном корпусе, расширением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
