@@ -59,10 +59,10 @@
 - По сравнению с последовательным baseline генерация выросла примерно с `~7.1s` до `~13.2s`.
 - `process` и `analyze` деградируют слабо: их профиль остаётся почти стабильным.
 - На текущем local MVP параллельная конкуренция в основном упирается в генерацию разделов отчёта и shared local LLM runtime.
+- Отдельное сравнение runtime-стоимости `fallback` и `Ollama` вынесено в [docs/runtime-comparison-performance.md](runtime-comparison-performance.md).
 
 ## Что ещё не покрыто
 
 - Профиль выше `2x` concurrency теперь вынесен отдельно в [docs/stress-baseline.md](stress-baseline.md).
 - Нет отдельного стресс-теста на длинные документы и большие наборы evidence.
 - Нет host-level корреляции с `CPU/RAM` внешнего `Ollama` runtime.
-- Нет сравнительного профиля `fallback` vs `Ollama model` под одной и той же нагрузкой.

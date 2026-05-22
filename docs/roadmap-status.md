@@ -256,13 +256,13 @@
 - host-level profiling support для внешнего `Ollama` через `benchmark_live_api.py`
 - named benchmark preset для `stress-4x`
 - committed benchmark artifacts: `performance`, `load`, `stress`, `stress-4x`
+- committed runtime comparison `fallback vs Ollama` на одном профиле
 - CI workflow для backend/frontend
 
 Ещё нет:
 
 - stress профилей выше `4x`
 - больших документных наборов
-- separate comparison `fallback` vs `Ollama model`
 - benchmark artifacts на расширенном реальном корпусе документов
 - long-retention metrics store и полноценная external notification routing поверх `Alertmanager`
 

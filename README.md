@@ -401,6 +401,31 @@ cd frontend && npm run e2e
 
 - [docs/stress-4x-baseline.md](docs/stress-4x-baseline.md)
 
+## Runtime comparison: fallback vs Ollama
+
+```bash
+./.venv/bin/python backend/scripts/compare_runtime_profiles.py performance
+```
+
+Команда поочерёдно:
+
+- переводит `backend/worker` в `fallback` runtime;
+- запускает тот же benchmark-профиль;
+- переводит стек в `Ollama` runtime;
+- повторяет benchmark;
+- сохраняет отдельные raw-артефакты и объединённый comparison report.
+
+Сохраняемые файлы по умолчанию:
+
+- `docs/runtime-comparison-performance-fallback.json`
+- `docs/runtime-comparison-performance-ollama.json`
+- `docs/runtime-comparison-performance.json`
+- `docs/runtime-comparison-performance.md`
+
+Последний зафиксированный comparison:
+
+- [docs/runtime-comparison-performance.md](docs/runtime-comparison-performance.md)
+
 ## Formal quality benchmark
 
 ```bash
@@ -419,6 +444,7 @@ cd frontend && npm run e2e
 - пользовательский путь: [docs/user-flow.md](docs/user-flow.md)
 - observability stack: [docs/observability-stack.md](docs/observability-stack.md)
 - stress 4x runbook: [docs/stress-4x-runbook.md](docs/stress-4x-runbook.md)
+- runtime comparison report: [docs/runtime-comparison-performance.md](docs/runtime-comparison-performance.md)
 - описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
 - подробное объяснение моделей и XAI-блока: [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
 - архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)

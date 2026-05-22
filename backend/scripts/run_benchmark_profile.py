@@ -58,6 +58,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--email", default="admin@example.com")
     parser.add_argument("--password", default="ChangeMe123!")
+    parser.add_argument("--output", type=Path)
     parser.add_argument("--host-process-match", default="ollama")
     parser.add_argument("--host-resource-alias", default="host_ollama")
     parser.add_argument("--pipeline-timeout", type=float, default=240.0)
@@ -66,6 +67,19 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--include-resource-samples", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
+
+
+def _profile_args(profile: str, *, output_override: Path | None) -> list[str]:
+    profile_args = list(PROFILE_PRESETS[profile])
+    if output_override is None:
+        return profile_args
+
+    for index, value in enumerate(profile_args[:-1]):
+        if value == "--output":
+            profile_args[index + 1] = str(output_override)
+            return profile_args
+    profile_args.extend(["--output", str(output_override)])
+    return profile_args
 
 
 def build_command(args: argparse.Namespace) -> list[str]:
@@ -88,7 +102,7 @@ def build_command(args: argparse.Namespace) -> list[str]:
         args.host_process_match,
         "--host-resource-alias",
         args.host_resource_alias,
-        *PROFILE_PRESETS[args.profile],
+        *_profile_args(args.profile, output_override=args.output),
     ]
     if args.include_resource_samples:
         command.append("--include-resource-samples")

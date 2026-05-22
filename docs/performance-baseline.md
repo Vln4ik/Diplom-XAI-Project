@@ -63,9 +63,9 @@ Benchmark проходит живой пользовательский конт�
 - Экспортный контур остаётся быстрым: все типы экспорта укладываются менее чем в `0.05s`.
 - На момент фиксации и `embeddings`, и `llm` были в режиме `model`, а не `fallback`.
 - Отдельный параллельный профиль вынесен в [docs/load-baseline.md](/Users/vinchik/Desktop/Diplom/docs/load-baseline.md).
+- Отдельное сравнение `fallback` vs `Ollama` теперь вынесено в [docs/runtime-comparison-performance.md](runtime-comparison-performance.md).
 
 ## Что baseline пока не покрывает
 
 - Container-level `CPU/RAM` профиль теперь вынесен отдельно в [docs/stress-baseline.md](stress-baseline.md).
 - Нет benchmark-набора на больших документах и длинных разделах отчёта.
-- Нет отдельного профиля для сравнения `fallback` vs `Ollama model`.

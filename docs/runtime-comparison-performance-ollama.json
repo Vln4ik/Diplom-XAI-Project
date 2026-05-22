@@ -1,0 +1,355 @@
+{
+  "captured_at": "2026-05-22T10:48:00.994205+00:00",
+  "base_url": "http://localhost:8000",
+  "requested_runs": 2,
+  "completed_runs": 2,
+  "failed_runs": 0,
+  "concurrency": 1,
+  "total_wall_time_seconds": 17.9265,
+  "throughput_runs_per_minute": 6.694,
+  "success_rate": 1.0,
+  "runs": [
+    {
+      "run_index": 1,
+      "organization_id": "ab645129-2b65-4102-992d-bbca1649673b",
+      "report_id": "c171201f-aa88-41e9-ad56-0406c2eb31f0",
+      "document_ids": [
+        "f87c8fb5-f7ee-4a3c-8842-b965b0f3cf6d",
+        "ba21cdbc-e7ad-4ff3-8e57-ac36c30c2ac5",
+        "934bc13f-429f-4442-9d50-050eb5e5521d",
+        "7a7fa341-5a12-414f-b84d-e0adce8baa21"
+      ],
+      "document_statuses": {
+        "rosobrnadzor_sample.txt": "processed",
+        "rosobrnadzor_evidence_site.txt": "processed",
+        "organization_profile.json": "processed",
+        "education_metrics.csv": "processed"
+      },
+      "report_status_after_analyze": "requires_review",
+      "readiness_percent_after_analyze": 100.0,
+      "search_results_count": 8,
+      "requirements_count": 3,
+      "matrix_rows_count": 3,
+      "sections_count": 9,
+      "export_statuses": {
+        "docx": "ready",
+        "matrix": "ready",
+        "package": "ready",
+        "explanations": "ready"
+      },
+      "timings_seconds": {
+        "login": 0.0648,
+        "create_organization": 0.0083,
+        "upload_rosobrnadzor_sample.txt": 0.0071,
+        "upload_rosobrnadzor_evidence_site.txt": 0.0037,
+        "upload_organization_profile.json": 0.0032,
+        "upload_education_metrics.csv": 0.0033,
+        "upload_total": 0.0183,
+        "process_rosobrnadzor_sample.txt": 1.0206,
+        "process_rosobrnadzor_evidence_site.txt": 1.0227,
+        "process_organization_profile.json": 1.0214,
+        "process_education_metrics.csv": 1.0234,
+        "process_total": 4.137,
+        "search": 0.0562,
+        "create_report": 0.0126,
+        "analyze": 1.0166,
+        "fetch_requirements": 0.0099,
+        "fetch_matrix": 0.013,
+        "generate": 4.0618,
+        "export_docx": 0.0333,
+        "export_matrix": 0.0111,
+        "export_package": 0.0251,
+        "export_explanations": 0.0049
+      },
+      "run_wall_time_seconds": 9.4889
+    },
+    {
+      "run_index": 2,
+      "organization_id": "0b634a3f-5267-4d6a-a71b-8c33fad84fef",
+      "report_id": "a66b62f1-8282-4d87-b896-07603c671dfb",
+      "document_ids": [
+        "7aa812a8-662f-47ea-aacf-9bcd4521cef1",
+        "715a3300-a2e2-48c9-ad6e-add280c3be39",
+        "d2be9267-c208-4470-a1f7-7340cc28d19c",
+        "a9bb779b-fb92-4104-a93c-c41512b67172"
+      ],
+      "document_statuses": {
+        "rosobrnadzor_sample.txt": "processed",
+        "rosobrnadzor_evidence_site.txt": "processed",
+        "organization_profile.json": "processed",
+        "education_metrics.csv": "processed"
+      },
+      "report_status_after_analyze": "requires_review",
+      "readiness_percent_after_analyze": 100.0,
+      "search_results_count": 8,
+      "requirements_count": 3,
+      "matrix_rows_count": 3,
+      "sections_count": 9,
+      "export_statuses": {
+        "docx": "ready",
+        "matrix": "ready",
+        "package": "ready",
+        "explanations": "ready"
+      },
+      "timings_seconds": {
+        "login": 0.0433,
+        "create_organization": 0.005,
+        "upload_rosobrnadzor_sample.txt": 0.0049,
+        "upload_rosobrnadzor_evidence_site.txt": 0.0039,
+        "upload_organization_profile.json": 0.0035,
+        "upload_education_metrics.csv": 0.0034,
+        "upload_total": 0.0159,
+        "process_rosobrnadzor_sample.txt": 1.0192,
+        "process_rosobrnadzor_evidence_site.txt": 1.0207,
+        "process_organization_profile.json": 1.0202,
+        "process_education_metrics.csv": 1.0235,
+        "process_total": 4.12,
+        "search": 0.0526,
+        "create_report": 0.0093,
+        "analyze": 1.0203,
+        "fetch_requirements": 0.0065,
+        "fetch_matrix": 0.0085,
+        "generate": 3.046,
+        "export_docx": 0.031,
+        "export_matrix": 0.0079,
+        "export_package": 0.0273,
+        "export_explanations": 0.004
+      },
+      "run_wall_time_seconds": 8.4132
+    }
+  ],
+  "summary": {
+    "analyze": {
+      "count": 2,
+      "min": 1.0166,
+      "max": 1.0203,
+      "mean": 1.0185,
+      "p50": 1.0185,
+      "p95": 1.0201
+    },
+    "create_organization": {
+      "count": 2,
+      "min": 0.005,
+      "max": 0.0083,
+      "mean": 0.0066,
+      "p50": 0.0066,
+      "p95": 0.0081
+    },
+    "create_report": {
+      "count": 2,
+      "min": 0.0093,
+      "max": 0.0126,
+      "mean": 0.0109,
+      "p50": 0.0109,
+      "p95": 0.0124
+    },
+    "export_docx": {
+      "count": 2,
+      "min": 0.031,
+      "max": 0.0333,
+      "mean": 0.0321,
+      "p50": 0.0321,
+      "p95": 0.0332
+    },
+    "export_explanations": {
+      "count": 2,
+      "min": 0.004,
+      "max": 0.0049,
+      "mean": 0.0044,
+      "p50": 0.0044,
+      "p95": 0.0049
+    },
+    "export_matrix": {
+      "count": 2,
+      "min": 0.0079,
+      "max": 0.0111,
+      "mean": 0.0095,
+      "p50": 0.0095,
+      "p95": 0.0109
+    },
+    "export_package": {
+      "count": 2,
+      "min": 0.0251,
+      "max": 0.0273,
+      "mean": 0.0262,
+      "p50": 0.0262,
+      "p95": 0.0272
+    },
+    "fetch_matrix": {
+      "count": 2,
+      "min": 0.0085,
+      "max": 0.013,
+      "mean": 0.0107,
+      "p50": 0.0107,
+      "p95": 0.0128
+    },
+    "fetch_requirements": {
+      "count": 2,
+      "min": 0.0065,
+      "max": 0.0099,
+      "mean": 0.0082,
+      "p50": 0.0082,
+      "p95": 0.0097
+    },
+    "generate": {
+      "count": 2,
+      "min": 3.046,
+      "max": 4.0618,
+      "mean": 3.5539,
+      "p50": 3.5539,
+      "p95": 4.011
+    },
+    "login": {
+      "count": 2,
+      "min": 0.0433,
+      "max": 0.0648,
+      "mean": 0.0541,
+      "p50": 0.0541,
+      "p95": 0.0637
+    },
+    "process_education_metrics.csv": {
+      "count": 2,
+      "min": 1.0234,
+      "max": 1.0235,
+      "mean": 1.0234,
+      "p50": 1.0234,
+      "p95": 1.0235
+    },
+    "process_organization_profile.json": {
+      "count": 2,
+      "min": 1.0202,
+      "max": 1.0214,
+      "mean": 1.0208,
+      "p50": 1.0208,
+      "p95": 1.0213
+    },
+    "process_rosobrnadzor_evidence_site.txt": {
+      "count": 2,
+      "min": 1.0207,
+      "max": 1.0227,
+      "mean": 1.0217,
+      "p50": 1.0217,
+      "p95": 1.0226
+    },
+    "process_rosobrnadzor_sample.txt": {
+      "count": 2,
+      "min": 1.0192,
+      "max": 1.0206,
+      "mean": 1.0199,
+      "p50": 1.0199,
+      "p95": 1.0205
+    },
+    "process_total": {
+      "count": 2,
+      "min": 4.12,
+      "max": 4.137,
+      "mean": 4.1285,
+      "p50": 4.1285,
+      "p95": 4.1361
+    },
+    "search": {
+      "count": 2,
+      "min": 0.0526,
+      "max": 0.0562,
+      "mean": 0.0544,
+      "p50": 0.0544,
+      "p95": 0.056
+    },
+    "upload_education_metrics.csv": {
+      "count": 2,
+      "min": 0.0033,
+      "max": 0.0034,
+      "mean": 0.0033,
+      "p50": 0.0033,
+      "p95": 0.0034
+    },
+    "upload_organization_profile.json": {
+      "count": 2,
+      "min": 0.0032,
+      "max": 0.0035,
+      "mean": 0.0034,
+      "p50": 0.0034,
+      "p95": 0.0035
+    },
+    "upload_rosobrnadzor_evidence_site.txt": {
+      "count": 2,
+      "min": 0.0037,
+      "max": 0.0039,
+      "mean": 0.0038,
+      "p50": 0.0038,
+      "p95": 0.0039
+    },
+    "upload_rosobrnadzor_sample.txt": {
+      "count": 2,
+      "min": 0.0049,
+      "max": 0.0071,
+      "mean": 0.006,
+      "p50": 0.006,
+      "p95": 0.007
+    },
+    "upload_total": {
+      "count": 2,
+      "min": 0.0159,
+      "max": 0.0183,
+      "mean": 0.0171,
+      "p50": 0.0171,
+      "p95": 0.0182
+    }
+  },
+  "ai_status": {
+    "embeddings": {
+      "provider": "ollama",
+      "configured_model": "all-minilm",
+      "base_url": "http://host.docker.internal:11434/api",
+      "vector_size": 32,
+      "reachable": true,
+      "model_available": true,
+      "available_models": [
+        "all-minilm:latest",
+        "gemma3:270m"
+      ],
+      "mode": "model",
+      "fallback_provider": "hash-fallback",
+      "load_error": null
+    },
+    "llm": {
+      "provider": "ollama",
+      "configured_model": "gemma3:270m",
+      "base_url": "http://host.docker.internal:11434/api",
+      "reachable": true,
+      "model_available": true,
+      "available_models": [
+        "all-minilm:latest",
+        "gemma3:270m"
+      ],
+      "mode": "model",
+      "fallback_provider": "template-fallback",
+      "load_error": null
+    },
+    "ocr": {
+      "provider": "tesseract",
+      "mode": "model",
+      "available": true,
+      "tesseract_cmd": "/usr/bin/tesseract",
+      "psm_candidates": [
+        3,
+        4,
+        11
+      ],
+      "variants": [
+        "original",
+        "threshold"
+      ],
+      "configured_provider": "tesseract",
+      "languages": "rus+eng"
+    }
+  },
+  "samples": [
+    "rosobrnadzor_sample.txt",
+    "rosobrnadzor_evidence_site.txt",
+    "organization_profile.json",
+    "education_metrics.csv"
+  ],
+  "query": "лицензия локальные акты",
+  "expected_section_count": 9
+}

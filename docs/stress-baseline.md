@@ -101,4 +101,5 @@
 
 - Текущий resource sampler фиксирует только Docker-контейнеры.
 - В этом профиле `Ollama` не вошёл в контейнерный снимок, потому что runtime был подключён через `host.docker.internal:11434`, то есть фактически работал как внешний host service.
-- Следующий инженерный шаг для более полного профиля: host-level sampling для `Ollama`, а также сравнение `fallback` vs `model` под одинаковой нагрузкой.
+- Host-level sampling для `Ollama` уже добран отдельно в [docs/stress-4x-baseline.md](stress-4x-baseline.md).
+- Отдельное runtime-сравнение `fallback` vs `Ollama` вынесено в [docs/runtime-comparison-performance.md](runtime-comparison-performance.md).
