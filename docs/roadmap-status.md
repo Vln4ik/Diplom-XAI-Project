@@ -228,6 +228,7 @@
 - observability profile на `Prometheus + Grafana` с provisioned dashboard и alert rules
 - `Alertmanager` baseline для alert routing внутри observability profile
 - `3x` stress baseline с Docker resource profiling
+- `4x` stress baseline с hybrid profiling и host-level `Ollama` sampling
 
 Ещё не доведено:
 
@@ -248,19 +249,21 @@
 - sequential performance baseline
 - `2x` concurrency load baseline
 - `3x` stress baseline
+- `4x` stress baseline
 - Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
 - runtime metrics endpoint-ы для HTTP и фоновых Celery-задач, включая shared task state между API и worker через Redis
 - optional `Prometheus/Grafana` stack для накопления и визуализации runtime-метрик
 - host-level profiling support для внешнего `Ollama` через `benchmark_live_api.py`
 - named benchmark preset для `stress-4x`
+- committed benchmark artifacts: `performance`, `load`, `stress`, `stress-4x`
 - CI workflow для backend/frontend
 
 Ещё нет:
 
-- `4x+` stress профилей
+- stress профилей выше `4x`
 - больших документных наборов
 - separate comparison `fallback` vs `Ollama model`
-- committed real `4x+` benchmark artifacts на расширенном наборе запусков
+- benchmark artifacts на расширенном реальном корпусе документов
 - long-retention metrics store и полноценная external notification routing поверх `Alertmanager`
 
 ## 6. Что сознательно отложено

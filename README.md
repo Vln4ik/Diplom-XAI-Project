@@ -397,6 +397,10 @@ cd frontend && npm run e2e
 - Docker resource profile по `backend/worker/postgres/redis`;
 - host-level profile по внешнему `Ollama` process match `ollama`.
 
+Последний зафиксированный артефакт:
+
+- [docs/stress-4x-baseline.md](docs/stress-4x-baseline.md)
+
 ## Formal quality benchmark
 
 ```bash
