@@ -1,0 +1,41 @@
+{
+  "profiles": [
+    {
+      "name": "baseline_current",
+      "description": "Текущий production-профиль без дополнительных overrides.",
+      "env": {}
+    },
+    {
+      "name": "strict_precision",
+      "description": "Более строгий профиль для срезания сомнительных evidence за счет повышенного confidence threshold и усиленного штрафа за boolean noise.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.58",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.18",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.05",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.05"
+      }
+    },
+    {
+      "name": "balanced_focus",
+      "description": "Баланс между precision и coverage с чуть более сильным focus bonus и умеренно строгими structured-row сигналами.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.55",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.16",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.07",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.06",
+        "XAI_APP_EVIDENCE_FOCUS_BONUS_UNIT": "0.025"
+      }
+    },
+    {
+      "name": "coverage_plus",
+      "description": "Профиль для более агрессивного добора structured evidence и чуть более низкого статуса partial/data_found.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.52",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.12",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.08",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.07",
+        "XAI_APP_EVIDENCE_FOCUS_BONUS_UNIT": "0.03"
+      }
+    }
+  ]
+}

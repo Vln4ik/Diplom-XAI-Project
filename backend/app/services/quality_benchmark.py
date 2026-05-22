@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.db.session import get_engine, get_session_factory
-from app.services.analysis import requirement_similarity, significant_token_roots
+from app.services.analysis import clear_analysis_calibration_cache, requirement_similarity, significant_token_roots
 from app.services.auth import create_user
 
 
@@ -61,6 +61,27 @@ class RequirementMatch:
 
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def load_benchmark_paths_from_manifest(manifest_path: Path) -> list[Path]:
+    payload = _load_json(manifest_path)
+    benchmark_entries = payload.get("benchmarks", [])
+    if not isinstance(benchmark_entries, list) or not benchmark_entries:
+        raise ValueError("Benchmark suite manifest must contain non-empty 'benchmarks' list")
+
+    project_root = manifest_path.resolve().parents[2]
+    benchmark_paths: list[Path] = []
+    for entry in benchmark_entries:
+        relative_path = str(entry).strip()
+        if not relative_path:
+            continue
+        benchmark_path = (project_root / relative_path).resolve()
+        if not benchmark_path.exists():
+            raise FileNotFoundError(f"Benchmark file not found: {benchmark_path}")
+        benchmark_paths.append(benchmark_path)
+    if not benchmark_paths:
+        raise ValueError("Benchmark suite manifest did not resolve any benchmark files")
+    return benchmark_paths
 
 
 def _round(value: float) -> float:
@@ -484,6 +505,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
             os.environ["XAI_APP_CELERY_TASK_ALWAYS_EAGER"] = "1"
 
             get_settings.cache_clear()
+            clear_analysis_calibration_cache()
             get_engine.cache_clear()
             get_session_factory.cache_clear()
             celery_app.conf.task_always_eager = True
@@ -505,12 +527,19 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
 
                 document_ids: list[str] = []
                 for document in benchmark["documents"]:
-                    file_path = document_root / document["filename"]
+                    relative_path = str(document.get("path") or "").strip()
+                    file_path = (project_root / relative_path).resolve() if relative_path else document_root / document["filename"]
                     upload = test_client.post(
                         f"/api/organizations/{organization_id}/documents",
                         headers=headers,
                         data={"category": document["category"]},
-                        files={"files": (document["filename"], file_path.read_bytes(), "application/octet-stream")},
+                        files={
+                            "files": (
+                                str(document.get("upload_filename") or document["filename"] or file_path.name),
+                                file_path.read_bytes(),
+                                "application/octet-stream",
+                            )
+                        },
                     )
                     upload.raise_for_status()
                     document_id = upload.json()[0]["id"]
@@ -539,6 +568,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
         finally:
             get_engine().dispose()
             get_settings.cache_clear()
+            clear_analysis_calibration_cache()
             get_engine.cache_clear()
             get_session_factory.cache_clear()
 
@@ -546,6 +576,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
                 os.environ[key] = value
             celery_app.conf.task_always_eager = previous_celery_eager
             get_settings.cache_clear()
+            clear_analysis_calibration_cache()
             get_engine.cache_clear()
             get_session_factory.cache_clear()
 

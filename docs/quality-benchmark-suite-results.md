@@ -2,7 +2,7 @@
 
 Дата фиксации: `2026-05-22`
 
-- сценариев в suite: `4`
+- сценариев в suite: `7`
 
 ## 1. Агрегированные метрики
 
@@ -20,10 +20,10 @@
 
 ### Evidence linking
 
-- `precision`: `0.8889`
+- `precision`: `0.8718`
 - `recall`: `1.0000`
-- `f1`: `0.9412`
-- `grounded_requirements_share_mean`: `68.75%`
+- `f1`: `0.9315`
+- `grounded_requirements_share_mean`: `82.14%`
 
 ### Report sections
 
@@ -72,5 +72,35 @@
 - evidence F1: `0.0000`
 - evidence precision: `0.0000`
 - evidence recall: `0.0000`
+- section coverage: `100.00%`
+
+### rosobrnadzor_ocr_augmented_mixed_layout_benchmark
+
+- scenario: `Рособрнадзор + образовательная организация + OCR mixed-layout PDF evidence`
+- extraction F1: `1.0000`
+- applicability accuracy: `100.00%`
+- evidence F1: `0.9231`
+- evidence precision: `0.8571`
+- evidence recall: `1.0000`
+- section coverage: `100.00%`
+
+### rosobrnadzor_ocr_augmented_notice_benchmark
+
+- scenario: `Рособрнадзор + образовательная организация + OCR notice evidence`
+- extraction F1: `1.0000`
+- applicability accuracy: `100.00%`
+- evidence F1: `0.9231`
+- evidence precision: `0.8571`
+- evidence recall: `1.0000`
+- section coverage: `100.00%`
+
+### rosobrnadzor_ocr_augmented_site_scan_benchmark
+
+- scenario: `Рособрнадзор + образовательная организация + OCR image-only PDF evidence`
+- extraction F1: `1.0000`
+- applicability accuracy: `100.00%`
+- evidence F1: `0.9231`
+- evidence precision: `0.8571`
+- evidence recall: `1.0000`
 - section coverage: `100.00%`
 

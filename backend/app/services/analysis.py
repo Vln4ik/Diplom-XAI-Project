@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
+from app.core.config import get_settings
 from sqlalchemy.orm import Session
 
 from app.models import ApplicabilityStatus, DocumentFragment
@@ -146,6 +148,67 @@ class EvidenceCandidate:
     focus_matched_count: int
     aligned_hint_markers: tuple[str, ...]
     evidence_kind: str
+
+
+@dataclass(frozen=True)
+class AnalysisCalibrationProfile:
+    data_found_confidence_threshold: float
+    confidence_not_applicable_floor: float
+    confidence_penalty_missing_evidence: float
+    confidence_penalty_low_score_threshold: float
+    confidence_penalty_low_score: float
+    confidence_penalty_low_coverage_threshold: float
+    confidence_penalty_low_coverage: float
+    confidence_penalty_single_source: float
+    evidence_score_floor_min: float
+    evidence_score_floor_multiplier: float
+    evidence_hint_bonus_unit: float
+    evidence_focus_bonus_unit: float
+    evidence_structural_penalty: float
+    evidence_boolean_penalty: float
+    evidence_boolean_focus_penalty: float
+    evidence_structured_row_hint_bonus: float
+    evidence_structured_row_generic_penalty: float
+    evidence_narrative_focus_bonus: float
+    evidence_narrative_generic_bonus: float
+
+
+@lru_cache(maxsize=1)
+def get_analysis_calibration() -> AnalysisCalibrationProfile:
+    settings = get_settings()
+    return AnalysisCalibrationProfile(
+        data_found_confidence_threshold=settings.requirement_data_found_confidence_threshold,
+        confidence_not_applicable_floor=settings.confidence_not_applicable_floor,
+        confidence_penalty_missing_evidence=settings.confidence_penalty_missing_evidence,
+        confidence_penalty_low_score_threshold=settings.confidence_penalty_low_score_threshold,
+        confidence_penalty_low_score=settings.confidence_penalty_low_score,
+        confidence_penalty_low_coverage_threshold=settings.confidence_penalty_low_coverage_threshold,
+        confidence_penalty_low_coverage=settings.confidence_penalty_low_coverage,
+        confidence_penalty_single_source=settings.confidence_penalty_single_source,
+        evidence_score_floor_min=settings.evidence_score_floor_min,
+        evidence_score_floor_multiplier=settings.evidence_score_floor_multiplier,
+        evidence_hint_bonus_unit=settings.evidence_hint_bonus_unit,
+        evidence_focus_bonus_unit=settings.evidence_focus_bonus_unit,
+        evidence_structural_penalty=settings.evidence_structural_penalty,
+        evidence_boolean_penalty=settings.evidence_boolean_penalty,
+        evidence_boolean_focus_penalty=settings.evidence_boolean_focus_penalty,
+        evidence_structured_row_hint_bonus=settings.evidence_structured_row_hint_bonus,
+        evidence_structured_row_generic_penalty=settings.evidence_structured_row_generic_penalty,
+        evidence_narrative_focus_bonus=settings.evidence_narrative_focus_bonus,
+        evidence_narrative_generic_bonus=settings.evidence_narrative_generic_bonus,
+    )
+
+
+def clear_analysis_calibration_cache() -> None:
+    get_analysis_calibration.cache_clear()
+
+
+def data_found_confidence_threshold() -> float:
+    return get_analysis_calibration().data_found_confidence_threshold
+
+
+def confidence_not_applicable_floor() -> float:
+    return get_analysis_calibration().confidence_not_applicable_floor
 
 
 def _roots_match(left: str, right: str) -> bool:
@@ -456,15 +519,20 @@ def fragment_quality_adjustment(
     direct_focus_matches: int,
     aligned_marker_count: int,
 ) -> float:
+    profile = get_analysis_calibration()
     if evidence_kind == "structural":
-        return -0.18
+        return -profile.evidence_structural_penalty
     if evidence_kind == "boolean_flag":
-        return -0.14 if direct_focus_matches == 0 else -0.06
+        return -profile.evidence_boolean_penalty if direct_focus_matches == 0 else -profile.evidence_boolean_focus_penalty
     if evidence_kind == "quoted_value":
         return 0.08 if direct_focus_matches > 0 else 0.02
     if evidence_kind == "structured_row":
-        return 0.06 if aligned_marker_count > 0 else -0.02
-    return 0.05 if direct_focus_matches > 0 else 0.02
+        return (
+            profile.evidence_structured_row_hint_bonus
+            if aligned_marker_count > 0
+            else -profile.evidence_structured_row_generic_penalty
+        )
+    return profile.evidence_narrative_focus_bonus if direct_focus_matches > 0 else profile.evidence_narrative_generic_bonus
 
 
 def fragment_specificity_penalty(
@@ -592,6 +660,7 @@ def rank_evidence_candidates(
     exclude_document_ids: set[str] | None = None,
     limit: int = 5,
 ) -> list[tuple[DocumentFragment, float]]:
+    profile = get_analysis_calibration()
     candidates = [
         fragment
         for fragment in fragments
@@ -647,8 +716,8 @@ def rank_evidence_candidates(
             direct_focus_matches=focus_matched_count,
             aligned_marker_count=len(hint_markers),
         )
-        hint_bonus = min(0.12, 0.06 * len(hint_markers))
-        focus_bonus = min(0.05, 0.02 * focus_matched_count)
+        hint_bonus = min(0.12, profile.evidence_hint_bonus_unit * len(hint_markers))
+        focus_bonus = min(0.05, profile.evidence_focus_bonus_unit * focus_matched_count)
         final_score = round(
             max(
                 0.0,
@@ -705,7 +774,7 @@ def rank_evidence_candidates(
         return []
 
     best_score = rescored[0].score
-    score_floor = max(0.14, round(best_score * 0.42, 2))
+    score_floor = max(profile.evidence_score_floor_min, round(best_score * profile.evidence_score_floor_multiplier, 2))
 
     selected: list[EvidenceCandidate] = []
     per_document: dict[str | None, int] = {}
@@ -800,8 +869,9 @@ def derive_requirement_confidence(
     requirement_text: str,
     ranked_evidence: list[tuple[DocumentFragment, float]],
 ) -> float:
+    profile = get_analysis_calibration()
     if applicability_status == ApplicabilityStatus.not_applicable:
-        return 0.9
+        return round(min(0.99, max(0.05, profile.confidence_not_applicable_floor)), 2)
 
     evidence_count = len(ranked_evidence)
     average_score = sum(score for _fragment, score in ranked_evidence) / evidence_count if evidence_count else 0.0
@@ -824,13 +894,13 @@ def derive_requirement_confidence(
         + 0.06 * diversity_ratio
     )
     if evidence_count == 0:
-        confidence -= 0.12
-    if strongest_score < 0.42:
-        confidence -= 0.08
-    if best_coverage < 0.25:
-        confidence -= 0.08
+        confidence -= profile.confidence_penalty_missing_evidence
+    if strongest_score < profile.confidence_penalty_low_score_threshold:
+        confidence -= profile.confidence_penalty_low_score
+    if best_coverage < profile.confidence_penalty_low_coverage_threshold:
+        confidence -= profile.confidence_penalty_low_coverage
     if evidence_count > 1 and document_diversity == 1:
-        confidence -= 0.04
+        confidence -= profile.confidence_penalty_single_source
 
     confidence = min(
         0.99,

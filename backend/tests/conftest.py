@@ -30,8 +30,10 @@ def client(tmp_path, monkeypatch) -> Generator[tuple[TestClient, object], None, 
 
     from app.core.config import get_settings
     from app.db.session import get_engine, get_session_factory
+    from app.services.analysis import clear_analysis_calibration_cache
 
     get_settings.cache_clear()
+    clear_analysis_calibration_cache()
     get_engine.cache_clear()
     get_session_factory.cache_clear()
     command.upgrade(build_alembic_config(), "head")
@@ -44,5 +46,6 @@ def client(tmp_path, monkeypatch) -> Generator[tuple[TestClient, object], None, 
     get_engine().dispose()
 
     get_settings.cache_clear()
+    clear_analysis_calibration_cache()
     get_engine.cache_clear()
     get_session_factory.cache_clear()

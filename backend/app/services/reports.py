@@ -27,6 +27,8 @@ from app.services.analysis import (
     applicability_for_report,
     build_requirement_title,
     category_for_text,
+    confidence_not_applicable_floor,
+    data_found_confidence_threshold,
     derive_requirement_confidence,
     rank_evidence_candidates,
     required_data_from_text,
@@ -91,13 +93,14 @@ def _requirement_status(
     found_count: int,
     confidence: float,
 ) -> RequirementStatus:
+    threshold = data_found_confidence_threshold()
     if applicability_status == ApplicabilityStatus.not_applicable:
         return RequirementStatus.not_applicable
     if applicability_status == ApplicabilityStatus.needs_clarification and found_count == 0:
         return RequirementStatus.needs_clarification
     if found_count == 0:
         return RequirementStatus.data_missing
-    if confidence < 0.55:
+    if confidence < threshold:
         return RequirementStatus.data_partial
     return RequirementStatus.data_found
 
@@ -107,11 +110,12 @@ def _risk_level(
     confidence: float,
     applicability_status: ApplicabilityStatus,
 ) -> RiskLevel:
+    threshold = data_found_confidence_threshold()
     if applicability_status == ApplicabilityStatus.not_applicable:
         return RiskLevel.low
     if status == RequirementStatus.data_missing:
         return RiskLevel.high
-    if status in {RequirementStatus.data_partial, RequirementStatus.needs_clarification} or confidence < 0.55:
+    if status in {RequirementStatus.data_partial, RequirementStatus.needs_clarification} or confidence < threshold:
         return RiskLevel.medium
     return RiskLevel.low
 

@@ -129,21 +129,44 @@
 
 Подробная фиксация вынесена в [docs/quality-benchmark-results.md](quality-benchmark-results.md).
 
-Дополнительно в проекте теперь есть `benchmark-suite` из четырёх сценариев. Его агрегированные показатели:
+Дополнительно в проекте теперь есть `benchmark-suite` из семи сценариев. В него входят:
+
+- базовый full-package сценарий;
+- compact package;
+- mixed-scope applicability;
+- normative-only gap;
+- три OCR-augmented сценария на `clean_notice.png`, `site_scan.pdf` и `mixed_layout_scan.pdf`.
+
+Его агрегированные показатели:
 
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `1.0000`
 - `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8889`
+- `evidence linking precision`: `0.8718`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9412`
+- `evidence linking F1`: `0.9315`
 - `report sections source coverage mean`: `1.0000`
 
 Подробная фиксация вынесена в [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
 
-Рост suite-метрик здесь связан не с заменой LLM, а с усилением отдельного evidence reranker. То есть выигрыш получен именно на слое `candidate evidence -> reranking -> final selection`.
+Это важный инженерный вывод: после расширения корпуса OCR-augmented сценариями quality-suite остаётся стабильным по `requirement extraction`, `applicability` и section coverage. Небольшое снижение aggregate precision относительно core-suite объясняется не регрессией extraction, а тем, что в расширенном корпусе стало больше конкурирующих evidence-кандидатов.
+
+### Calibration sweep
+
+Для того же расширенного suite теперь есть отдельный calibration sweep по профилям `evidence reranker + confidence thresholds`.
+
+Результат текущего sweep:
+
+- `benchmark scenarios`: `7`
+- `evaluated profiles`: `4`
+- `recommended profile`: `baseline_current`
+- `objective_score`: `0.9470`
+
+Подробная фиксация вынесена в [docs/calibration-sweep-results.md](calibration-sweep-results.md).
+
+Практически это означает, что на текущем committed расширенном корпусе baseline-профиль уже находится в устойчивой зоне, а дополнительные overrides не дают воспроизводимого выигрыша.
 
 ### OCR benchmark
 
@@ -189,14 +212,14 @@
 
 У нас пока нет:
 
-- benchmark на расширенном и репрезентативном корпусе реальных кейсов
+- benchmark на расширенном и репрезентативном корпусе реальных кейсов пользователей
 - устойчивой formal accuracy-оценки для `applicability classification` на большом реальном корпусе
 - устойчивой formal accuracy-оценки для итоговых generated report sections на большом реальном корпусе
 - экспертной межразметочной проверки на большом наборе кейсов
 
 Поэтому корректная формулировка сейчас такая:
 
-- у нас уже есть измеримый functional quality и расширенный formal benchmark по `requirement extraction`, `applicability`, `evidence linking` и section coverage
+- у нас уже есть измеримый functional quality, расширенный formal benchmark по `requirement extraction`, `applicability`, `evidence linking` и section coverage, а также calibration sweep на committed расширенном корпусе
 - у нас ещё нет формально доказанной semantic accuracy на широкой репрезентативной выборке
 
 ## Что планируется добавить дальше
@@ -225,7 +248,7 @@
 
 ## Ограничения текущей фиксации
 
-- Benchmark-suite всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
+- Benchmark-suite уже расширен OCR-augmented committed сценариями, но всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
 - OCR benchmark пока тоже построен на synthetic committed corpus, а не на реальном массиве noisy-сканов от пользователей.
 - Формальные метрики уже покрывают `requirement extraction`, `applicability`, `evidence linking`, section coverage и базовый OCR-corpus.
 - Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` load profile и `3x` stress profile с Docker `CPU/RAM` замерами.

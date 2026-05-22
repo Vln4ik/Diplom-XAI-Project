@@ -1,0 +1,12 @@
+{
+  "name": "extended-quality-suite",
+  "benchmarks": [
+    "samples/benchmarks/rosobrnadzor_quality_benchmark.json",
+    "samples/benchmarks/rosobrnadzor_quality_compact.json",
+    "samples/benchmarks/rosobrnadzor_quality_mixed_scope.json",
+    "samples/benchmarks/rosobrnadzor_quality_normative_only.json",
+    "samples/benchmarks/rosobrnadzor_quality_ocr_augmented_notice.json",
+    "samples/benchmarks/rosobrnadzor_quality_ocr_augmented_site_scan.json",
+    "samples/benchmarks/rosobrnadzor_quality_ocr_augmented_mixed_layout.json"
+  ]
+}

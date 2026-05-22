@@ -5,7 +5,13 @@ from enum import Enum
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.services.analysis import derive_requirement_confidence, rank_evidence_candidates, required_data_from_text
+from app.services.analysis import (
+    confidence_not_applicable_floor,
+    data_found_confidence_threshold,
+    derive_requirement_confidence,
+    rank_evidence_candidates,
+    required_data_from_text,
+)
 from app.services.xai import build_requirement_artifacts, recommended_action_for_status
 from app.models import (
     ApplicabilityStatus,
@@ -50,6 +56,7 @@ def _derive_requirement_status(
     related_count: int,
     confidence: float,
 ) -> RequirementStatus:
+    threshold = data_found_confidence_threshold()
     if current_status in MANUAL_STATUS_LOCKS:
         return current_status
     if applicability_status == ApplicabilityStatus.not_applicable:
@@ -58,7 +65,7 @@ def _derive_requirement_status(
         return RequirementStatus.needs_clarification
     if related_count == 0:
         return RequirementStatus.data_missing
-    if confidence < 0.5:
+    if confidence < threshold:
         return RequirementStatus.data_partial
     return RequirementStatus.data_found
 
@@ -68,13 +75,14 @@ def _derive_risk_level(
     confidence: float,
     applicability_status: ApplicabilityStatus,
 ) -> RiskLevel:
+    threshold = data_found_confidence_threshold()
     if applicability_status == ApplicabilityStatus.not_applicable:
         return RiskLevel.low
     if requirement_status in {RequirementStatus.confirmed, RequirementStatus.included_in_report}:
         return RiskLevel.low
     if requirement_status in {RequirementStatus.data_missing, RequirementStatus.rejected}:
         return RiskLevel.high
-    if requirement_status in {RequirementStatus.needs_clarification, RequirementStatus.data_partial} or confidence < 0.5:
+    if requirement_status in {RequirementStatus.needs_clarification, RequirementStatus.data_partial} or confidence < threshold:
         return RiskLevel.medium
     return RiskLevel.low
 
@@ -151,7 +159,7 @@ def sync_requirement_artifacts(
     )
     confidence = derive_requirement_confidence(requirement.applicability_status, requirement.text, ranked_evidence)
     if requirement.applicability_status == ApplicabilityStatus.not_applicable:
-        confidence = max(confidence, 0.85)
+        confidence = max(confidence, confidence_not_applicable_floor())
 
     derived_status = _derive_requirement_status(
         requirement.status,

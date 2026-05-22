@@ -1,0 +1,9 @@
+{
+  "name": "core-quality-suite",
+  "benchmarks": [
+    "samples/benchmarks/rosobrnadzor_quality_benchmark.json",
+    "samples/benchmarks/rosobrnadzor_quality_compact.json",
+    "samples/benchmarks/rosobrnadzor_quality_mixed_scope.json",
+    "samples/benchmarks/rosobrnadzor_quality_normative_only.json"
+  ]
+}

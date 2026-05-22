@@ -12,6 +12,7 @@ from app.services.quality_benchmark import (
     evaluate_evidence_linking,
     evaluate_requirement_extraction,
     evaluate_report_sections,
+    load_benchmark_paths_from_manifest,
     precision_recall_f1,
     run_quality_benchmark,
     run_quality_benchmark_suite,
@@ -214,3 +215,13 @@ def test_run_quality_benchmark_suite_aggregates_multiple_scenarios():
     assert report["aggregate"]["applicability"]["accuracy_mean"] >= 0.75
     assert report["aggregate"]["evidence_linking"]["recall"] >= 0.5
     assert report["aggregate"]["report_sections"]["presence_rate_mean"] >= 0.5
+
+
+def test_load_benchmark_paths_from_manifest_resolves_relative_entries():
+    manifest_path = Path(__file__).resolve().parents[2] / "samples" / "benchmark_suites" / "extended.json"
+
+    benchmark_paths = load_benchmark_paths_from_manifest(manifest_path)
+
+    assert len(benchmark_paths) == 7
+    assert benchmark_paths[0].name == "rosobrnadzor_quality_benchmark.json"
+    assert benchmark_paths[-1].name == "rosobrnadzor_quality_ocr_augmented_mixed_layout.json"

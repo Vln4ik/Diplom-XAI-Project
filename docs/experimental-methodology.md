@@ -17,7 +17,7 @@
 
 - регулятор: `Рособрнадзор`
 - тип организации: образовательная организация
-- корпус входных данных: малый пакет документов из demo dataset
+- корпус входных данных: committed demo corpus, включающий базовый текстовый пакет и OCR-augmented сценарии
 
 ## 3. Сравниваемые сценарии
 
@@ -58,6 +58,9 @@
 - время `generate`
 - время export
 - `2x` load profile
+- formal quality benchmark
+- extended quality benchmark suite
+- calibration sweep по профилям reranker/confidence
 - доля обработанных документов
 - доля требований с evidence
 - доля требований с XAI
@@ -98,24 +101,32 @@
 - `export_success_rate`
 - наличие дедупликации требований
 
-### 5.3. Предварительные качественные эффекты
+### 5.3. Формальные quality-метрики текущего committed corpus
+
+- `requirement extraction precision/recall/F1`
+- `applicability accuracy`
+- `evidence linking precision/recall/F1`
+- `report sections source coverage`
+- `status_accuracy_mean` по benchmark-suite
+
+### 5.4. Предварительные качественные эффекты
 
 - снижение риска пропуска требования;
 - улучшение полноты evidence-покрытия;
 - повышение воспроизводимости проверки.
 
-## 6. Почему метрики качества пока являются proxy-метриками
+## 6. Почему часть метрик качества всё ещё остаётся proxy-метриками
 
-На текущем этапе проект ещё не имеет:
+На текущем этапе у проекта уже есть формальные `precision / recall / F1` на committed benchmark corpus, но пока ещё нет:
 
-- gold dataset с экспертной разметкой;
-- формальных `precision / recall / F1`;
-- отдельного benchmark для correctness generated report sections.
+- большого real-world gold dataset с экспертной разметкой;
+- отдельного benchmark для semantic correctness generated report sections на реальном архиве кейсов;
+- широкой экспертной межразметочной проверки по нескольким организациям.
 
 Поэтому в эксперименте текущей итерации корректно использовать:
 
-- functional metrics;
-- coverage metrics;
+- formal benchmark-метрики на committed corpus;
+- functional и coverage metrics;
 - экспертно-инженерные интервальные оценки.
 
 ## 7. Воспроизводимость
@@ -124,6 +135,13 @@
 
 ```bash
 ./.venv/bin/python backend/scripts/generate_experimental_report.py
+```
+
+Качество committed corpus воспроизводится через:
+
+```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py
+./.venv/bin/python backend/scripts/run_calibration_sweep.py
 ```
 
 Скрипт читает:
@@ -140,6 +158,7 @@
 ## 8. Ограничения методики
 
 - сравнение построено на малом demo dataset;
+- formal benchmark-часть уже расширена до OCR-augmented committed corpus, но не до большого реального архива кейсов;
 - часть временных и качественных оценок носит экспертный характер;
 - результаты не следует интерпретировать как окончательно доказанные научные метрики точности;
 - для строгой научной валидации нужен следующий этап с размеченным корпусом и экспертной проверкой.
@@ -149,6 +168,7 @@
 Несмотря на ограничения, текущая методика уже позволяет:
 
 - формально показать измеримый выигрыш по времени;
+- показать formal quality-метрики на committed benchmark corpus и calibration sweep на расширенном suite;
 - показать покрытие evidence/XAI/export;
 - связать инженерные baseline-данные с прикладным пользовательским эффектом;
 - подготовить воспроизводимую основу для защиты и дальнейшего исследования.

@@ -42,6 +42,25 @@ class Settings(BaseSettings):
     ollama_request_timeout_seconds: float = 15.0
     ollama_keep_alive: str = "15m"
     embedding_size: int = 32
+    requirement_data_found_confidence_threshold: float = 0.55
+    confidence_not_applicable_floor: float = 0.85
+    confidence_penalty_missing_evidence: float = 0.12
+    confidence_penalty_low_score_threshold: float = 0.42
+    confidence_penalty_low_score: float = 0.08
+    confidence_penalty_low_coverage_threshold: float = 0.25
+    confidence_penalty_low_coverage: float = 0.08
+    confidence_penalty_single_source: float = 0.04
+    evidence_score_floor_min: float = 0.14
+    evidence_score_floor_multiplier: float = 0.42
+    evidence_hint_bonus_unit: float = 0.06
+    evidence_focus_bonus_unit: float = 0.02
+    evidence_structural_penalty: float = 0.18
+    evidence_boolean_penalty: float = 0.14
+    evidence_boolean_focus_penalty: float = 0.06
+    evidence_structured_row_hint_bonus: float = 0.06
+    evidence_structured_row_generic_penalty: float = 0.02
+    evidence_narrative_focus_bonus: float = 0.05
+    evidence_narrative_generic_bonus: float = 0.02
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8000"]
     )

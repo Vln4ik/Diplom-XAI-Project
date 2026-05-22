@@ -1,0 +1,91 @@
+{
+  "name": "rosobrnadzor_ocr_augmented_site_scan_benchmark",
+  "scenario": "Рособрнадзор + образовательная организация + OCR image-only PDF evidence",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "rosobrnadzor_sample.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "rosobrnadzor_evidence_site.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "education_metrics.csv",
+      "category": "data_table"
+    },
+    {
+      "filename": "site_scan.pdf",
+      "path": "samples/ocr_benchmarks/site_scan.pdf",
+      "category": "evidence"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе."
+      ]
+    },
+    {
+      "id": "req_license_staff",
+      "title": "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+      "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+        "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+        "\"Государственная аккредитация\""
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты и сведения о контингенте.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
+        "website_sections_published | 2026 | 12"
+      ]
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Сведения, подтверждающие выполнение требований",
+      "expected_requirement_ids": [
+        "req_programs",
+        "req_license_staff",
+        "req_local_acts"
+      ],
+      "min_source_requirements": 3,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}

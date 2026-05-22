@@ -196,7 +196,8 @@
 - performance baseline
 - load baseline
 - formal quality benchmark для `requirement extraction`, `applicability`, `evidence linking` и section coverage
-- benchmark-suite из нескольких сценариев
+- benchmark-suite из `7` committed сценариев, включая OCR-augmented cases
+- calibration sweep по `evidence reranker + confidence thresholds`
 - docs по demo и приёмке
 - формальная методика экспериментальной оценки
 - автоматически генерируемый experimental report
@@ -220,7 +221,8 @@
 - evidence reranker с focus/hint-aware rescoring
 - structured XAI
 - initial gold benchmark с `precision/recall/F1`
-- benchmark-suite с позитивными, mixed-scope и gap-сценариями
+- benchmark-suite с позитивными, mixed-scope, gap и OCR-augmented сценариями
+- calibration sweep на расширенном committed corpus
 - базовый OCR-контур на `Tesseract` для image-файлов и image-only PDF
 - OCR benchmark на committed image/PDF corpus
 - multi-pass OCR с несколькими `PSM` и image-variants
@@ -235,7 +237,7 @@
 Ещё не доведено:
 
 - domain fine-tuning
-- calibration на расширенном корпусе реальных кейсов
+- calibration на расширенном корпусе реальных кейсов пользователей
 - reranking quality на репрезентативной выборке
 - benchmark на большом реальном корпусе для generated sections и applicability classification
 - layout-aware OCR/vision pipeline для сложных сканов и mixed-layout PDF

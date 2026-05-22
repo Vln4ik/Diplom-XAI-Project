@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -12,7 +13,18 @@ PROJECT_ROOT = BACKEND_ROOT.parent
 if str(BACKEND_ROOT) not in sys.path:
     sys.path.insert(0, str(BACKEND_ROOT))
 
-from app.services.quality_benchmark import run_quality_benchmark_suite  # noqa: E402
+from app.services.quality_benchmark import load_benchmark_paths_from_manifest, run_quality_benchmark_suite  # noqa: E402
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate aggregate quality benchmark suite report.")
+    parser.add_argument(
+        "--suite-manifest",
+        type=Path,
+        default=None,
+        help="Optional benchmark suite manifest with relative benchmark paths.",
+    )
+    return parser.parse_args()
 
 
 def _format_ratio(value: float) -> str:
@@ -90,8 +102,12 @@ def render_markdown(report: dict[str, object]) -> str:
 
 
 def main() -> int:
-    benchmark_dir = PROJECT_ROOT / "samples" / "benchmarks"
-    benchmark_paths = sorted(benchmark_dir.glob("*.json"))
+    args = parse_args()
+    if args.suite_manifest is not None:
+        benchmark_paths = load_benchmark_paths_from_manifest(args.suite_manifest)
+    else:
+        benchmark_dir = PROJECT_ROOT / "samples" / "benchmarks"
+        benchmark_paths = sorted(benchmark_dir.glob("*.json"))
     report = run_quality_benchmark_suite(benchmark_paths)
     output_json = PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.json"
     output_md = PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.md"

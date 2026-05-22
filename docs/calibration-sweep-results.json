@@ -1,0 +1,190 @@
+{
+  "captured_at": "2026-05-22T16:08:15.474422+03:00",
+  "benchmark_count": 7,
+  "profile_count": 4,
+  "baseline_profile": "baseline_current",
+  "best_profile": "baseline_current",
+  "profiles": [
+    {
+      "name": "baseline_current",
+      "description": "Текущий production-профиль без дополнительных overrides.",
+      "env": {},
+      "aggregate": {
+        "requirement_extraction": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "category_accuracy_mean": 1.0,
+          "status_accuracy_mean": 1.0
+        },
+        "applicability": {
+          "accuracy_mean": 1.0
+        },
+        "evidence_linking": {
+          "precision": 0.8718,
+          "recall": 1.0,
+          "f1": 0.9315,
+          "grounded_requirements_share_mean": 0.8214
+        },
+        "report_sections": {
+          "presence_rate_mean": 1.0,
+          "non_empty_content_share_mean": 1.0,
+          "source_requirement_coverage_mean": 1.0,
+          "min_source_requirement_pass_share_mean": 1.0
+        }
+      },
+      "objective_score": 0.947,
+      "delta": {
+        "objective_score": 0.0,
+        "evidence_precision": 0.0,
+        "evidence_recall": 0.0,
+        "evidence_f1": 0.0,
+        "status_accuracy_mean": 0.0,
+        "section_coverage_mean": 0.0
+      }
+    },
+    {
+      "name": "strict_precision",
+      "description": "Более строгий профиль для срезания сомнительных evidence за счет повышенного confidence threshold и усиленного штрафа за boolean noise.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.58",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.18",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.05",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.05"
+      },
+      "aggregate": {
+        "requirement_extraction": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "category_accuracy_mean": 1.0,
+          "status_accuracy_mean": 1.0
+        },
+        "applicability": {
+          "accuracy_mean": 1.0
+        },
+        "evidence_linking": {
+          "precision": 0.8718,
+          "recall": 1.0,
+          "f1": 0.9315,
+          "grounded_requirements_share_mean": 0.8214
+        },
+        "report_sections": {
+          "presence_rate_mean": 1.0,
+          "non_empty_content_share_mean": 1.0,
+          "source_requirement_coverage_mean": 1.0,
+          "min_source_requirement_pass_share_mean": 1.0
+        }
+      },
+      "objective_score": 0.947,
+      "delta": {
+        "objective_score": 0.0,
+        "evidence_precision": 0.0,
+        "evidence_recall": 0.0,
+        "evidence_f1": 0.0,
+        "status_accuracy_mean": 0.0,
+        "section_coverage_mean": 0.0
+      }
+    },
+    {
+      "name": "balanced_focus",
+      "description": "Баланс между precision и coverage с чуть более сильным focus bonus и умеренно строгими structured-row сигналами.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.55",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.16",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.07",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.06",
+        "XAI_APP_EVIDENCE_FOCUS_BONUS_UNIT": "0.025"
+      },
+      "aggregate": {
+        "requirement_extraction": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "category_accuracy_mean": 1.0,
+          "status_accuracy_mean": 1.0
+        },
+        "applicability": {
+          "accuracy_mean": 1.0
+        },
+        "evidence_linking": {
+          "precision": 0.8718,
+          "recall": 1.0,
+          "f1": 0.9315,
+          "grounded_requirements_share_mean": 0.8214
+        },
+        "report_sections": {
+          "presence_rate_mean": 1.0,
+          "non_empty_content_share_mean": 1.0,
+          "source_requirement_coverage_mean": 1.0,
+          "min_source_requirement_pass_share_mean": 1.0
+        }
+      },
+      "objective_score": 0.947,
+      "delta": {
+        "objective_score": 0.0,
+        "evidence_precision": 0.0,
+        "evidence_recall": 0.0,
+        "evidence_f1": 0.0,
+        "status_accuracy_mean": 0.0,
+        "section_coverage_mean": 0.0
+      }
+    },
+    {
+      "name": "coverage_plus",
+      "description": "Профиль для более агрессивного добора structured evidence и чуть более низкого статуса partial/data_found.",
+      "env": {
+        "XAI_APP_REQUIREMENT_DATA_FOUND_CONFIDENCE_THRESHOLD": "0.52",
+        "XAI_APP_EVIDENCE_BOOLEAN_PENALTY": "0.12",
+        "XAI_APP_EVIDENCE_STRUCTURED_ROW_HINT_BONUS": "0.08",
+        "XAI_APP_EVIDENCE_HINT_BONUS_UNIT": "0.07",
+        "XAI_APP_EVIDENCE_FOCUS_BONUS_UNIT": "0.03"
+      },
+      "aggregate": {
+        "requirement_extraction": {
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "category_accuracy_mean": 1.0,
+          "status_accuracy_mean": 1.0
+        },
+        "applicability": {
+          "accuracy_mean": 1.0
+        },
+        "evidence_linking": {
+          "precision": 0.8718,
+          "recall": 1.0,
+          "f1": 0.9315,
+          "grounded_requirements_share_mean": 0.8214
+        },
+        "report_sections": {
+          "presence_rate_mean": 1.0,
+          "non_empty_content_share_mean": 1.0,
+          "source_requirement_coverage_mean": 1.0,
+          "min_source_requirement_pass_share_mean": 1.0
+        }
+      },
+      "objective_score": 0.947,
+      "delta": {
+        "objective_score": 0.0,
+        "evidence_precision": 0.0,
+        "evidence_recall": 0.0,
+        "evidence_f1": 0.0,
+        "status_accuracy_mean": 0.0,
+        "section_coverage_mean": 0.0
+      }
+    }
+  ],
+  "ranked_profiles": [
+    "baseline_current",
+    "strict_precision",
+    "balanced_focus",
+    "coverage_plus"
+  ],
+  "recommendation": {
+    "name": "baseline_current",
+    "description": "Текущий production-профиль без дополнительных overrides.",
+    "env": {},
+    "objective_score": 0.947
+  }
+}

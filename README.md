@@ -153,24 +153,39 @@
 
 ### Расширенный benchmark-suite
 
-Дополнительно в проекте собран `benchmark-suite` из четырёх сценариев:
+Дополнительно в проекте собран `benchmark-suite` из семи сценариев:
 
 - полный пакет документов;
 - компактный пакет `нормативная база + evidence`;
 - mixed-scope сценарий с требованием, требующим ручной проверки применимости;
 - gap-сценарий `только нормативная база`.
+- OCR-augmented сценарий с `clean_notice.png`;
+- OCR-augmented сценарий с `site_scan.pdf`;
+- OCR-augmented сценарий с `mixed_layout_scan.pdf`.
 
 Агрегированные результаты suite:
 
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `1.0000`
 - `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8889`
+- `evidence linking precision`: `0.8718`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9412`
+- `evidence linking F1`: `0.9315`
 - `report sections source coverage mean`: `1.0000`
 
 Детализация вынесена в [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md).
+
+### Calibration sweep
+
+Для слоя `evidence reranker + confidence thresholds` в проекте есть отдельный автоматический calibration sweep по расширенному 7-сценарному suite.
+
+На текущем committed corpus sweep показал:
+
+- `benchmark scenarios`: `7`
+- `evaluated profiles`: `4`
+- `recommended profile`: `baseline_current`
+
+Практический вывод здесь важный: после добавления OCR-augmented сценариев различия между профилями на текущем committed corpus исчезли, поэтому дополнительных production overrides пока не требуется. Детализация вынесена в [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md).
 
 ### OCR benchmark
 
@@ -438,6 +453,24 @@ cd frontend && npm run e2e
 ./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py
 ```
 
+Для core-набора без OCR-augmented сценариев:
+
+```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --suite-manifest samples/benchmark_suites/core.json
+```
+
+## Calibration sweep
+
+```bash
+./.venv/bin/python backend/scripts/run_calibration_sweep.py
+```
+
+Для core-набора без OCR-augmented сценариев:
+
+```bash
+./.venv/bin/python backend/scripts/run_calibration_sweep.py --suite-manifest samples/benchmark_suites/core.json
+```
+
 ## Документация проекта
 
 - системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
@@ -454,6 +487,7 @@ cd frontend && npm run e2e
 - ручной demo-сценарий: [docs/demo-scenario.md](docs/demo-scenario.md)
 - acceptance-checklist: [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
 - метрики качества: [docs/quality-metrics.md](docs/quality-metrics.md)
+- calibration sweep: [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md)
 - quality benchmark report: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
 - quality benchmark suite: [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md)
 - performance baseline: [docs/performance-baseline.md](docs/performance-baseline.md)
@@ -462,4 +496,4 @@ cd frontend && npm run e2e
 
 ## Статус проекта
 
-Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, quality benchmark, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с калибровкой на большом реальном корпусе, расширением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
+Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, расширенным 7-сценарным quality benchmark suite, calibration sweep, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с валидацией на большом реальном корпусе, усилением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
