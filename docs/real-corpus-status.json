@@ -2,47 +2,73 @@
   "manifest_name": "real-corpus-pilot-redacted",
   "description": "Pilot real-world corpus layer built from synthetic and redacted-real-like educational readiness cases.",
   "project_root": "/Users/vinchik/Desktop/Diplom",
-  "case_total": 3,
-  "benchmark_ready_case_total": 3,
+  "case_total": 5,
+  "benchmark_ready_case_total": 5,
   "issue_total": 0,
   "case_status_counts": {
-    "benchmark_ready": 3
+    "benchmark_ready": 5
   },
   "redaction_level_counts": {
-    "redacted_real_like": 1,
+    "redacted_real_like": 3,
     "synthetic": 2
+  },
+  "difficulty_counts": {
+    "high": 2,
+    "medium": 3
   },
   "tag_counts": {
     "benchmark-ready": 1,
     "full-package": 1,
     "gap": 1,
+    "graduates": 1,
+    "metrics": 1,
     "mixed-format": 1,
+    "mixed-gap": 1,
     "mixed-status": 1,
     "ocr": 1,
-    "pilot": 3,
-    "structured": 1,
+    "pilot": 5,
+    "registry": 2,
+    "structured": 2,
     "text": 2
   },
+  "focus_counts": {
+    "applicability": 1,
+    "evidence_linking": 1,
+    "gap_detection": 1,
+    "graduates_category": 1,
+    "mixed_positive_gap": 1,
+    "ocr_evidence": 1,
+    "registry_rows": 1,
+    "retrieval_recall": 1,
+    "risk_sections": 1,
+    "section_coverage": 1,
+    "section_generation": 2,
+    "status_accuracy": 1,
+    "structured_evidence": 1,
+    "structured_rows": 1
+  },
   "document_category_counts": {
-    "data_table": 1,
-    "evidence": 5,
-    "normative": 3,
-    "other": 3
+    "data_table": 3,
+    "evidence": 7,
+    "normative": 5,
+    "other": 5
   },
   "document_source_type_counts": {
+    "graduate_export": 1,
     "metrics_export": 1,
-    "organization_profile": 3,
-    "regulatory_excerpt": 3,
+    "organization_profile": 5,
+    "registry_export": 1,
+    "regulatory_excerpt": 5,
     "scanned_notice": 2,
     "scanned_pdf": 1,
-    "website_snapshot": 2
+    "website_snapshot": 4
   },
   "document_format_counts": {
-    "csv": 1,
-    "json": 3,
+    "csv": 3,
+    "json": 5,
     "pdf": 1,
     "png": 2,
-    "txt": 5
+    "txt": 9
   },
   "cases": [
     {
@@ -53,12 +79,24 @@
       "report_type": "readiness_report",
       "status": "benchmark_ready",
       "redaction_level": "synthetic",
+      "difficulty": "medium",
       "tags": [
         "pilot",
         "full-package",
         "text",
         "structured"
       ],
+      "analysis_focus": [
+        "evidence_linking",
+        "section_generation",
+        "structured_rows"
+      ],
+      "quality_targets": {
+        "requirement_f1_min": 0.95,
+        "status_accuracy_min": 0.7,
+        "evidence_f1_min": 0.6,
+        "section_coverage_min": 0.85
+      },
       "document_total": 4,
       "documents": [
         {
@@ -126,12 +164,24 @@
       "report_type": "readiness_report",
       "status": "benchmark_ready",
       "redaction_level": "redacted_real_like",
+      "difficulty": "medium",
       "tags": [
         "pilot",
         "gap",
         "mixed-status",
         "text"
       ],
+      "analysis_focus": [
+        "gap_detection",
+        "applicability",
+        "risk_sections"
+      ],
+      "quality_targets": {
+        "requirement_f1_min": 0.95,
+        "status_accuracy_min": 0.9,
+        "evidence_f1_min": 0.75,
+        "section_coverage_min": 0.95
+      },
       "document_total": 3,
       "documents": [
         {
@@ -188,12 +238,24 @@
       "report_type": "readiness_report",
       "status": "benchmark_ready",
       "redaction_level": "synthetic",
+      "difficulty": "high",
       "tags": [
         "pilot",
         "ocr",
         "mixed-format",
         "benchmark-ready"
       ],
+      "analysis_focus": [
+        "ocr_evidence",
+        "retrieval_recall",
+        "section_generation"
+      ],
+      "quality_targets": {
+        "requirement_f1_min": 0.95,
+        "status_accuracy_min": 0.7,
+        "evidence_f1_min": 0.35,
+        "section_coverage_min": 0.65
+      },
       "document_total": 5,
       "documents": [
         {
@@ -257,6 +319,176 @@
         "pdf": 1,
         "png": 2,
         "txt": 1
+      },
+      "benchmark_ready": true,
+      "issues": []
+    },
+    {
+      "case_id": "college_delta_structured_registry",
+      "scenario": "Рособрнадзор + колледж + structured registry package",
+      "regulator": "Рособрнадзор",
+      "organization_type": "educational",
+      "report_type": "readiness_report",
+      "status": "benchmark_ready",
+      "redaction_level": "redacted_real_like",
+      "difficulty": "medium",
+      "tags": [
+        "pilot",
+        "structured",
+        "registry",
+        "metrics"
+      ],
+      "analysis_focus": [
+        "structured_evidence",
+        "registry_rows",
+        "status_accuracy"
+      ],
+      "quality_targets": {
+        "requirement_f1_min": 0.95,
+        "status_accuracy_min": 0.75,
+        "evidence_f1_min": 0.6,
+        "section_coverage_min": 0.85
+      },
+      "document_total": 4,
+      "documents": [
+        {
+          "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/normative_structured_excerpt.txt",
+          "exists": true,
+          "category": "normative",
+          "source_type": "regulatory_excerpt",
+          "format": "txt"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/site_registry_snapshot.txt",
+          "exists": true,
+          "category": "evidence",
+          "source_type": "website_snapshot",
+          "format": "txt"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/organization_profile.json",
+          "exists": true,
+          "category": "other",
+          "source_type": "organization_profile",
+          "format": "json"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/registry_metrics.csv",
+          "exists": true,
+          "category": "data_table",
+          "source_type": "registry_export",
+          "format": "csv"
+        }
+      ],
+      "benchmark_path": "samples/real_corpus/cases/college_delta_structured_registry/annotations/quality_benchmark.json",
+      "review_notes_path": "samples/real_corpus/cases/college_delta_structured_registry/annotations/review-notes.md",
+      "benchmark_document_paths": [
+        "samples/real_corpus/cases/college_delta_structured_registry/documents/normative_structured_excerpt.txt",
+        "samples/real_corpus/cases/college_delta_structured_registry/documents/site_registry_snapshot.txt",
+        "samples/real_corpus/cases/college_delta_structured_registry/documents/organization_profile.json",
+        "samples/real_corpus/cases/college_delta_structured_registry/documents/registry_metrics.csv"
+      ],
+      "category_counts": {
+        "data_table": 1,
+        "evidence": 1,
+        "normative": 1,
+        "other": 1
+      },
+      "source_type_counts": {
+        "organization_profile": 1,
+        "registry_export": 1,
+        "regulatory_excerpt": 1,
+        "website_snapshot": 1
+      },
+      "format_counts": {
+        "csv": 1,
+        "json": 1,
+        "txt": 2
+      },
+      "benchmark_ready": true,
+      "issues": []
+    },
+    {
+      "case_id": "college_epsilon_graduate_registry",
+      "scenario": "Рособрнадзор + колледж + graduate registry package",
+      "regulator": "Рособрнадзор",
+      "organization_type": "educational",
+      "report_type": "readiness_report",
+      "status": "benchmark_ready",
+      "redaction_level": "redacted_real_like",
+      "difficulty": "high",
+      "tags": [
+        "pilot",
+        "graduates",
+        "registry",
+        "mixed-gap"
+      ],
+      "analysis_focus": [
+        "graduates_category",
+        "mixed_positive_gap",
+        "section_coverage"
+      ],
+      "quality_targets": {
+        "requirement_f1_min": 0.95,
+        "status_accuracy_min": 0.7,
+        "evidence_f1_min": 0.5,
+        "section_coverage_min": 0.8
+      },
+      "document_total": 4,
+      "documents": [
+        {
+          "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/normative_graduate_excerpt.txt",
+          "exists": true,
+          "category": "normative",
+          "source_type": "regulatory_excerpt",
+          "format": "txt"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/site_graduate_snapshot.txt",
+          "exists": true,
+          "category": "evidence",
+          "source_type": "website_snapshot",
+          "format": "txt"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/organization_profile.json",
+          "exists": true,
+          "category": "other",
+          "source_type": "organization_profile",
+          "format": "json"
+        },
+        {
+          "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/graduate_registry.csv",
+          "exists": true,
+          "category": "data_table",
+          "source_type": "graduate_export",
+          "format": "csv"
+        }
+      ],
+      "benchmark_path": "samples/real_corpus/cases/college_epsilon_graduate_registry/annotations/quality_benchmark.json",
+      "review_notes_path": "samples/real_corpus/cases/college_epsilon_graduate_registry/annotations/review-notes.md",
+      "benchmark_document_paths": [
+        "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/normative_graduate_excerpt.txt",
+        "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/site_graduate_snapshot.txt",
+        "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/organization_profile.json",
+        "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/graduate_registry.csv"
+      ],
+      "category_counts": {
+        "data_table": 1,
+        "evidence": 1,
+        "normative": 1,
+        "other": 1
+      },
+      "source_type_counts": {
+        "graduate_export": 1,
+        "organization_profile": 1,
+        "regulatory_excerpt": 1,
+        "website_snapshot": 1
+      },
+      "format_counts": {
+        "csv": 1,
+        "json": 1,
+        "txt": 2
       },
       "benchmark_ready": true,
       "issues": []

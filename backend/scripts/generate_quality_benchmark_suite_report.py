@@ -96,6 +96,11 @@ def render_markdown(report: dict[str, object]) -> str:
         f"- `non_empty_content_share_mean`: `{_format_percent(sections['non_empty_content_share_mean'])}`",
         f"- `source_requirement_coverage_mean`: `{_format_percent(sections['source_requirement_coverage_mean'])}`",
         f"- `min_source_requirement_pass_share_mean`: `{_format_percent(sections['min_source_requirement_pass_share_mean'])}`",
+        f"- `requirement_content_coverage_mean`: `{_format_percent(sections['requirement_content_coverage_mean'])}`",
+        f"- `content_marker_coverage_mean`: `{_format_percent(sections['content_marker_coverage_mean'])}`",
+        f"- `min_content_marker_pass_share_mean`: `{_format_percent(sections['min_content_marker_pass_share_mean'])}`",
+        f"- `quality_score_mean`: `{_format_percent(sections['quality_score_mean'])}`",
+        f"- `quality_pass_share_mean`: `{_format_percent(sections['quality_pass_share_mean'])}`",
         "",
         "## 2. Результаты по сценариям",
         "",
@@ -112,6 +117,8 @@ def render_markdown(report: dict[str, object]) -> str:
                 f"- evidence precision: `{_format_ratio(benchmark['evidence_linking']['precision'])}`",
                 f"- evidence recall: `{_format_ratio(benchmark['evidence_linking']['recall'])}`",
                 f"- section coverage: `{_format_percent(benchmark['report_sections']['source_requirement_coverage'])}`",
+                f"- section quality score: `{_format_percent(benchmark['report_sections']['quality_score_mean'])}`",
+                f"- section quality pass share: `{_format_percent(benchmark['report_sections']['quality_pass_share'])}`",
                 "",
             ]
         )

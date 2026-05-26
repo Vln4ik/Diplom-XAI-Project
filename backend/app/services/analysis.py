@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import lru_cache
+import re
 
 from app.core.config import get_settings
 from sqlalchemy.orm import Session
@@ -9,7 +10,20 @@ from sqlalchemy.orm import Session
 from app.models import ApplicabilityStatus, DocumentFragment
 from app.services.retrieval import RankedFragment, keyword_overlap_score, rank_fragments, tokenize
 
-REQUIREMENT_MARKERS = ("должен", "обязан", "требуется", "необходимо", "предоставить", "разместить")
+REQUIREMENT_MARKERS = (
+    "должен",
+    "должна",
+    "должны",
+    "обязан",
+    "обязана",
+    "обязаны",
+    "требуется",
+    "необходимо",
+    "необходима",
+    "необходимы",
+    "предоставить",
+    "разместить",
+)
 STOPWORDS = {
     "будет",
     "быть",
@@ -319,7 +333,19 @@ def requirement_focus_roots(text: str, category: str) -> list[str]:
 
 
 def allowed_source_tokens(organization_profile: dict, report_type: str) -> set[str]:
-    allowed = {"образователь", "обуча", "лиценз", "сайт", "кадр", "континг", "выпуск", "программ"}
+    allowed = {
+        "образователь",
+        "обуча",
+        "лиценз",
+        "сайт",
+        "кадр",
+        "педагог",
+        "преподав",
+        "работник",
+        "континг",
+        "выпуск",
+        "программ",
+    }
     profile_text = " ".join(str(value).lower() for value in organization_profile.values() if value)
     if "аккред" in profile_text:
         allowed.add("аккред")
@@ -378,14 +404,18 @@ def requirement_signature(text: str, category: str | None = None) -> tuple[str, 
     return (category or "", tuple(sorted(focus[:5])))
 
 
+def requirement_marker_hits(text: str) -> int:
+    lowered = text.lower()
+    return sum(marker in lowered for marker in REQUIREMENT_MARKERS)
+
+
 def select_requirement_fragments(fragments: list[DocumentFragment], *, limit: int = 25) -> list[DocumentFragment]:
-    candidates = [fragment for fragment in fragments if any(marker in fragment.fragment_text.lower() for marker in REQUIREMENT_MARKERS)]
+    candidates = [fragment for fragment in fragments if requirement_marker_hits(fragment.fragment_text) > 0]
     if not candidates:
         candidates = fragments[:10]
 
     def sort_key(fragment: DocumentFragment) -> tuple[int, int, int]:
-        lowered = fragment.fragment_text.lower()
-        marker_hits = sum(marker in lowered for marker in REQUIREMENT_MARKERS)
+        marker_hits = requirement_marker_hits(fragment.fragment_text)
         token_count = len(unique_significant_tokens(fragment.fragment_text))
         return marker_hits, token_count, len(fragment.fragment_text)
 
@@ -448,6 +478,9 @@ def expected_hint_markers(requirement_text: str, category: str) -> set[str]:
         for marker, hinted_roots in TEXT_HINT_MARKERS.items()
         if overlapping_roots(requirement_roots, set(hinted_roots))
     }
+    if expected:
+        return expected
+
     category_markers = CATEGORY_HINT_MARKERS.get(category, set())
     if category_markers:
         expected.update(marker for marker in category_markers if marker in TEXT_HINT_MARKERS)
@@ -469,6 +502,40 @@ def focus_evidence_match_metrics(requirement_text: str, fragment_text: str, cate
     precision = len(overlap) / len(fragment_tokens)
     harmonic = 0.0 if coverage == 0.0 or precision == 0.0 else 2 * coverage * precision / (coverage + precision)
     return round(coverage, 4), len(overlap), round(harmonic, 4)
+
+
+def split_fragment_clauses(fragment_text: str) -> list[str]:
+    clauses = [part.strip() for part in re.split(r"[.;:\n]+", fragment_text) if part.strip()]
+    return [clause for clause in clauses if len(clause) >= 12]
+
+
+def best_clause_match_metrics(
+    requirement_text: str,
+    fragment_text: str,
+    category: str,
+) -> tuple[tuple[float, int, float], tuple[float, int, float], tuple[float, int, float]]:
+    clauses = split_fragment_clauses(fragment_text)
+    if len(clauses) <= 1:
+        return (
+            evidence_match_metrics(requirement_text, fragment_text),
+            direct_evidence_match_metrics(requirement_text, fragment_text),
+            focus_evidence_match_metrics(requirement_text, fragment_text, category),
+        )
+
+    best_contextual = (0.0, 0, 0.0)
+    best_direct = (0.0, 0, 0.0)
+    best_focus = (0.0, 0, 0.0)
+    for clause in clauses:
+        contextual = evidence_match_metrics(requirement_text, clause)
+        direct = direct_evidence_match_metrics(requirement_text, clause)
+        focus = focus_evidence_match_metrics(requirement_text, clause, category)
+        if contextual > best_contextual:
+            best_contextual = contextual
+        if direct > best_direct:
+            best_direct = direct
+        if focus > best_focus:
+            best_focus = focus
+    return best_contextual, best_direct, best_focus
 
 
 def fragment_evidence_kind(fragment_text: str) -> str:
@@ -561,6 +628,130 @@ def fragment_specificity_penalty(
     if lowered.startswith('"') and lowered.endswith('",') and direct_matched_count == 0 and not (markers & allowed_markers):
         penalty += 0.05
     return round(min(0.35, penalty), 4)
+
+
+def cross_category_noise_penalty(
+    requirement_text: str,
+    fragment_text: str,
+    category: str,
+    *,
+    direct_matched_count: int,
+    focus_matched_count: int,
+    aligned_marker_count: int,
+) -> float:
+    if aligned_marker_count > 0:
+        return 0.0
+
+    fragment_roots = set(significant_token_roots(fragment_text))
+    if len(fragment_roots) < 5:
+        return 0.0
+
+    requirement_roots = set(contextual_token_roots(requirement_text))
+    relevant_roots = overlapping_roots(requirement_roots, fragment_roots)
+    fragment_signal_roots = overlapping_roots(HIGH_SIGNAL_TOKENS, fragment_roots)
+    requirement_signal_roots = overlapping_roots(HIGH_SIGNAL_TOKENS, requirement_roots)
+    extra_signal_roots = {
+        root
+        for root in fragment_signal_roots - requirement_signal_roots
+        if root not in {"сайт", "официал"}
+    }
+    unrelated_signal_groups = 0
+    for other_category, markers in CATEGORY_MARKERS.items():
+        if other_category == category:
+            continue
+        if overlapping_roots(set(markers), fragment_roots):
+            unrelated_signal_groups += 1
+
+    contains_ocr_noise = any(char.isdigit() for char in fragment_text) or any("a" <= char.lower() <= "z" for char in fragment_text)
+    has_mixed_domain_tail = (
+        unrelated_signal_groups >= 1
+        and bool(extra_signal_roots)
+        and len(fragment_text) >= 80
+        and contains_ocr_noise
+    )
+    if unrelated_signal_groups < 2 and len(extra_signal_roots) < 2 and not has_mixed_domain_tail:
+        return 0.0
+    if focus_matched_count >= 3 and direct_matched_count >= 2 and len(relevant_roots) >= 3:
+        return 0.0
+
+    base_penalty = 0.08 if len(fragment_text) < 140 else 0.12
+    if has_mixed_domain_tail:
+        base_penalty += 0.08
+    if direct_matched_count == 0 or focus_matched_count <= 1:
+        base_penalty += 0.02
+    base_penalty += 0.02 * max(0, len(extra_signal_roots) - 1)
+    return round(min(0.24, base_penalty + 0.02 * max(0, unrelated_signal_groups - 2)), 4)
+
+
+def low_signal_quoted_value(
+    fragment_text: str,
+    *,
+    direct_matched_count: int,
+    focus_matched_count: int,
+    aligned_marker_count: int,
+) -> bool:
+    if fragment_evidence_kind(fragment_text) != "quoted_value":
+        return False
+    if aligned_marker_count > 0 or direct_matched_count > 1 or focus_matched_count > 1:
+        return False
+    return len(unique_significant_tokens(fragment_text)) <= 1
+
+
+def redundant_secondary_evidence(
+    candidate: EvidenceCandidate,
+    selected: list[EvidenceCandidate],
+    *,
+    requirement_text: str,
+    category: str,
+    new_roots: set[str],
+    new_focus_roots: set[str],
+) -> bool:
+    if not selected:
+        return False
+    if category == "Образовательные программы" and candidate.evidence_kind in {"quoted_value", "structured_row"}:
+        stronger_program_narrative = any(
+            item.evidence_kind == "narrative"
+            and item.score >= candidate.score - 0.08
+            and item.focus_matched_count >= 1
+            and item.direct_matched_count >= 1
+            and cross_category_noise_penalty(
+                requirement_text,
+                item.fragment.fragment_text,
+                category,
+                direct_matched_count=item.direct_matched_count,
+                focus_matched_count=item.focus_matched_count,
+                aligned_marker_count=len(item.aligned_hint_markers),
+            )
+            == 0.0
+            for item in selected
+        )
+        if stronger_program_narrative:
+            return True
+    if new_roots or new_focus_roots or candidate.aligned_hint_markers:
+        return False
+
+    stronger_narrative = any(
+        item.evidence_kind == "narrative"
+        and item.score >= candidate.score - 0.06
+        and item.focus_matched_count >= candidate.focus_matched_count
+        and item.direct_matched_count >= candidate.direct_matched_count
+        and len(item.fragment.fragment_text) <= len(candidate.fragment.fragment_text)
+        for item in selected
+    )
+    stronger_structured = any(
+        item.evidence_kind == "structured_row"
+        and item.score >= candidate.score - 0.05
+        and item.focus_matched_count >= candidate.focus_matched_count
+        for item in selected
+    )
+
+    if candidate.evidence_kind == "quoted_value":
+        return stronger_narrative or stronger_structured
+    if candidate.evidence_kind == "structured_row" and category == "Образовательные программы":
+        return stronger_narrative
+    if candidate.evidence_kind == "narrative" and len(candidate.fragment.fragment_text) >= 90:
+        return stronger_narrative
+    return False
 
 
 def score_evidence_candidate(requirement_text: str, fragment_text: str, category: str) -> float:
@@ -695,6 +886,11 @@ def rank_evidence_candidates(
             item.fragment.fragment_text,
             category,
         )
+        clause_contextual, clause_direct, clause_focus = best_clause_match_metrics(
+            requirement_text,
+            item.fragment.fragment_text,
+            category,
+        )
         hint_markers = aligned_hint_markers(requirement_text, item.fragment.fragment_text, category)
         evidence_kind = fragment_evidence_kind(item.fragment.fragment_text)
         specificity_penalty = fragment_specificity_penalty(
@@ -702,6 +898,41 @@ def rank_evidence_candidates(
             category,
             direct_matched_count=direct_matched_count,
             contextual_matched_count=matched_count,
+        )
+        noise_penalty = cross_category_noise_penalty(
+            requirement_text,
+            item.fragment.fragment_text,
+            category,
+            direct_matched_count=direct_matched_count,
+            focus_matched_count=focus_matched_count,
+            aligned_marker_count=len(hint_markers),
+        )
+        clause_contextual_coverage, _clause_contextual_matches, clause_contextual_harmonic = clause_contextual
+        clause_direct_coverage, clause_direct_matches, clause_direct_harmonic = clause_direct
+        clause_focus_coverage, clause_focus_matches, clause_focus_harmonic = clause_focus
+        clause_match_bonus = 0.0
+        if (
+            evidence_kind == "narrative"
+            and category == "Образовательные программы"
+            and len(split_fragment_clauses(item.fragment.fragment_text)) > 1
+        ):
+            if clause_direct_coverage >= 0.25 and clause_direct_harmonic >= 0.25:
+                clause_match_bonus += 0.05
+            if clause_focus_coverage >= 0.5 and clause_focus_harmonic >= 0.35:
+                clause_match_bonus += 0.08
+            if clause_contextual_coverage > coverage_score and clause_contextual_harmonic > harmonic:
+                clause_match_bonus += min(0.04, (clause_contextual_harmonic - harmonic) * 0.2)
+            if clause_focus_matches >= 1 and clause_direct_matches >= 1 and noise_penalty > 0.0:
+                noise_penalty = max(0.0, round(noise_penalty - 0.12, 4))
+        clean_narrative_bonus = (
+            0.05
+            if evidence_kind == "narrative"
+            and noise_penalty == 0.0
+            and not hint_markers
+            and direct_matched_count == 1
+            and focus_matched_count == 1
+            and len(item.fragment.fragment_text) <= 140
+            else 0.0
         )
         generic_penalty = generic_context_penalty(
             requirement_text,
@@ -734,9 +965,12 @@ def rank_evidence_candidates(
                     + hint_bonus
                     + focus_bonus
                     + min(0.04, 0.01 * matched_count)
+                    + clause_match_bonus
+                    + clean_narrative_bonus
                     + quality_adjustment,
                 )
                 - specificity_penalty
+                - noise_penalty
                 - generic_penalty,
             ),
             2,
@@ -804,6 +1038,13 @@ def rank_evidence_candidates(
             continue
         if candidate.evidence_kind == "boolean_flag" and candidate.focus_matched_count == 0 and not new_focus_roots:
             continue
+        if low_signal_quoted_value(
+            candidate.fragment.fragment_text,
+            direct_matched_count=candidate.direct_matched_count,
+            focus_matched_count=candidate.focus_matched_count,
+            aligned_marker_count=len(candidate.aligned_hint_markers),
+        ):
+            continue
         if not new_roots and not new_focus_roots and not candidate.aligned_hint_markers and candidate.score < 0.34:
             continue
         if (
@@ -814,7 +1055,20 @@ def rank_evidence_candidates(
             and candidate.coverage_score < 0.25
         ):
             continue
-        if any(requirement_similarity(candidate.fragment.fragment_text, item.fragment.fragment_text) >= 0.9 for item in selected):
+        if redundant_secondary_evidence(
+            candidate,
+            selected,
+            requirement_text=requirement_text,
+            category=category,
+            new_roots=new_roots,
+            new_focus_roots=new_focus_roots,
+        ):
+            continue
+        if any(
+            requirement_similarity(candidate.fragment.fragment_text, item.fragment.fragment_text) >= 0.9
+            and candidate.evidence_kind == item.evidence_kind
+            for item in selected
+        ):
             continue
         document_hits = per_document.get(candidate.fragment.document_id, 0)
         if document_hits >= 1 and len(selected) < diversity_target and not new_focus_roots and not candidate.aligned_hint_markers:
@@ -843,6 +1097,13 @@ def rank_evidence_candidates(
                 continue
             if candidate.evidence_kind == "boolean_flag" and candidate.focus_matched_count == 0 and not new_focus_roots:
                 continue
+            if low_signal_quoted_value(
+                candidate.fragment.fragment_text,
+                direct_matched_count=candidate.direct_matched_count,
+                focus_matched_count=candidate.focus_matched_count,
+                aligned_marker_count=len(candidate.aligned_hint_markers),
+            ):
+                continue
             if not new_roots and not new_focus_roots and not candidate.aligned_hint_markers and candidate.score < 0.38:
                 continue
             if (
@@ -853,7 +1114,22 @@ def rank_evidence_candidates(
                 and not candidate.aligned_hint_markers
             ):
                 continue
+            if redundant_secondary_evidence(
+                candidate,
+                selected,
+                requirement_text=requirement_text,
+                category=category,
+                new_roots=new_roots,
+                new_focus_roots=new_focus_roots,
+            ):
+                continue
             document_hits = per_document.get(candidate.fragment.document_id, 0)
+            if any(
+                requirement_similarity(candidate.fragment.fragment_text, item.fragment.fragment_text) >= 0.9
+                and candidate.evidence_kind == item.evidence_kind
+                for item in selected
+            ):
+                continue
             if document_hits >= 2:
                 continue
             selected.append(candidate)

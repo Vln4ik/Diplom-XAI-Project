@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-05-22T16:08:15.474422+03:00",
+  "captured_at": "2026-05-25T00:25:30.865829+03:00",
   "benchmark_count": 7,
   "profile_count": 4,
   "baseline_profile": "baseline_current",
@@ -21,19 +21,24 @@
           "accuracy_mean": 1.0
         },
         "evidence_linking": {
-          "precision": 0.8718,
+          "precision": 0.6415,
           "recall": 1.0,
-          "f1": 0.9315,
+          "f1": 0.7816,
           "grounded_requirements_share_mean": 0.8214
         },
         "report_sections": {
           "presence_rate_mean": 1.0,
           "non_empty_content_share_mean": 1.0,
           "source_requirement_coverage_mean": 1.0,
-          "min_source_requirement_pass_share_mean": 1.0
+          "min_source_requirement_pass_share_mean": 1.0,
+          "requirement_content_coverage_mean": 1.0,
+          "content_marker_coverage_mean": 1.0,
+          "min_content_marker_pass_share_mean": 1.0,
+          "quality_score_mean": 1.0,
+          "quality_pass_share_mean": 1.0
         }
       },
-      "objective_score": 0.947,
+      "objective_score": 0.8409,
       "delta": {
         "objective_score": 0.0,
         "evidence_precision": 0.0,
@@ -64,19 +69,24 @@
           "accuracy_mean": 1.0
         },
         "evidence_linking": {
-          "precision": 0.8718,
+          "precision": 0.6415,
           "recall": 1.0,
-          "f1": 0.9315,
+          "f1": 0.7816,
           "grounded_requirements_share_mean": 0.8214
         },
         "report_sections": {
           "presence_rate_mean": 1.0,
           "non_empty_content_share_mean": 1.0,
           "source_requirement_coverage_mean": 1.0,
-          "min_source_requirement_pass_share_mean": 1.0
+          "min_source_requirement_pass_share_mean": 1.0,
+          "requirement_content_coverage_mean": 1.0,
+          "content_marker_coverage_mean": 1.0,
+          "min_content_marker_pass_share_mean": 1.0,
+          "quality_score_mean": 1.0,
+          "quality_pass_share_mean": 1.0
         }
       },
-      "objective_score": 0.947,
+      "objective_score": 0.8409,
       "delta": {
         "objective_score": 0.0,
         "evidence_precision": 0.0,
@@ -108,19 +118,24 @@
           "accuracy_mean": 1.0
         },
         "evidence_linking": {
-          "precision": 0.8718,
+          "precision": 0.6415,
           "recall": 1.0,
-          "f1": 0.9315,
+          "f1": 0.7816,
           "grounded_requirements_share_mean": 0.8214
         },
         "report_sections": {
           "presence_rate_mean": 1.0,
           "non_empty_content_share_mean": 1.0,
           "source_requirement_coverage_mean": 1.0,
-          "min_source_requirement_pass_share_mean": 1.0
+          "min_source_requirement_pass_share_mean": 1.0,
+          "requirement_content_coverage_mean": 1.0,
+          "content_marker_coverage_mean": 1.0,
+          "min_content_marker_pass_share_mean": 1.0,
+          "quality_score_mean": 1.0,
+          "quality_pass_share_mean": 1.0
         }
       },
-      "objective_score": 0.947,
+      "objective_score": 0.8409,
       "delta": {
         "objective_score": 0.0,
         "evidence_precision": 0.0,
@@ -152,19 +167,24 @@
           "accuracy_mean": 1.0
         },
         "evidence_linking": {
-          "precision": 0.8718,
+          "precision": 0.6415,
           "recall": 1.0,
-          "f1": 0.9315,
+          "f1": 0.7816,
           "grounded_requirements_share_mean": 0.8214
         },
         "report_sections": {
           "presence_rate_mean": 1.0,
           "non_empty_content_share_mean": 1.0,
           "source_requirement_coverage_mean": 1.0,
-          "min_source_requirement_pass_share_mean": 1.0
+          "min_source_requirement_pass_share_mean": 1.0,
+          "requirement_content_coverage_mean": 1.0,
+          "content_marker_coverage_mean": 1.0,
+          "min_content_marker_pass_share_mean": 1.0,
+          "quality_score_mean": 1.0,
+          "quality_pass_share_mean": 1.0
         }
       },
-      "objective_score": 0.947,
+      "objective_score": 0.8409,
       "delta": {
         "objective_score": 0.0,
         "evidence_precision": 0.0,
@@ -185,6 +205,6 @@
     "name": "baseline_current",
     "description": "Текущий production-профиль без дополнительных overrides.",
     "env": {},
-    "objective_score": 0.947
+    "objective_score": 0.8409
   }
 }

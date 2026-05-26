@@ -1,0 +1,101 @@
+{
+  "name": "real_corpus_college_delta_structured_registry",
+  "scenario": "Рособрнадзор + колледж + structured registry package",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "normative_structured_excerpt.txt",
+      "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/normative_structured_excerpt.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "site_registry_snapshot.txt",
+      "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/site_registry_snapshot.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "registry_metrics.csv",
+      "path": "samples/real_corpus/cases/college_delta_structured_registry/documents/registry_metrics.csv",
+      "category": "data_table"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_students",
+      "title": "Организация обязана раскрывать сведения о численности обучающихся.",
+      "category": "Контингент обучающихся",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "students_total | 2026 | 940"
+      ]
+    },
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте опубликованы сведения о реализуемых образовательных программах."
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты.",
+        "local_acts_published | 2026 | 21"
+      ]
+    },
+    {
+      "id": "req_staff",
+      "title": "Организация должна раскрывать сведения о педагогических работниках.",
+      "category": "Кадровое обеспечение",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "Сведения о педагогических работниках размещены на официальном сайте.",
+        "teachers_total | 2026 | 84"
+      ]
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_students",
+        "req_programs",
+        "req_local_acts",
+        "req_staff"
+      ],
+      "min_source_requirements": 4,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Сведения, подтверждающие выполнение требований",
+      "expected_requirement_ids": [
+        "req_students",
+        "req_programs",
+        "req_local_acts",
+        "req_staff"
+      ],
+      "min_source_requirements": 4,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}

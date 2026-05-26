@@ -1,4 +1,6 @@
+import { PageGuide } from "../components/PageGuide";
 import type { NotificationItem } from "../lib/types";
+import { formatNotificationStatus } from "../lib/ui";
 
 type Props = {
   notifications: NotificationItem[];
@@ -9,6 +11,26 @@ type Props = {
 export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: Props) {
   return (
     <div className="stack">
+      <PageGuide
+        title="Уведомления"
+        summary="Раздел нужен для событий, которые требуют внимания пользователя: обновления статусов, переходы отчетов между этапами и сигналы о ручной проверке."
+        blocks={[
+          {
+            title: "Что отсюда получать",
+            points: [
+              "Список непрочитанных и прочитанных событий.",
+              "Быстрый обзор, что изменилось в рабочем контуре.",
+            ],
+          },
+          {
+            title: "Как оптимизировать",
+            points: [
+              "Использовать как журнал последних событий, а не как главный рабочий экран.",
+              "Если событие критично, переходить из уведомления в соответствующий раздел: документы, отчеты, риски.",
+            ],
+          },
+        ]}
+      />
       <section className="panel">
         <div className="section-header">
           <h2>Уведомления</h2>
@@ -25,7 +47,7 @@ export function NotificationsPage({ notifications, onMarkRead, onMarkAllRead }: 
               <div>
                 <div className="section-header">
                   <strong>{notification.title}</strong>
-                  <span className={`status-pill ${notification.status}`}>{notification.status}</span>
+                  <span className={`status-pill ${notification.status}`}>{formatNotificationStatus(notification.status)}</span>
                 </div>
                 <p>{notification.body}</p>
                 <p className="eyebrow">{new Date(notification.created_at).toLocaleString("ru-RU")}</p>

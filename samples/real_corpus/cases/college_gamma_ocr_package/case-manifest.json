@@ -6,7 +6,15 @@
   "report_type": "readiness_report",
   "status": "benchmark_ready",
   "redaction_level": "synthetic",
+  "difficulty": "high",
   "tags": ["pilot", "ocr", "mixed-format", "benchmark-ready"],
+  "analysis_focus": ["ocr_evidence", "retrieval_recall", "section_generation"],
+  "quality_targets": {
+    "requirement_f1_min": 0.95,
+    "status_accuracy_min": 0.70,
+    "evidence_f1_min": 0.35,
+    "section_coverage_min": 0.65
+  },
   "documents": [
     {
       "path": "samples/real_corpus/cases/college_gamma_ocr_package/documents/normative_ocr_excerpt.txt",

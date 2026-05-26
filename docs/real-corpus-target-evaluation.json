@@ -1,0 +1,225 @@
+{
+  "captured_at": "2026-05-26T10:41:04.524732+03:00",
+  "manifest_name": "real-corpus-pilot-redacted",
+  "case_total": 5,
+  "cases_passed": 5,
+  "target_total": 20,
+  "targets_passed": 20,
+  "cases": [
+    {
+      "case_id": "college_alpha_full_package",
+      "scenario": "Рособрнадзор + колледж + redacted full package",
+      "difficulty": "medium",
+      "analysis_focus": [
+        "evidence_linking",
+        "section_generation",
+        "structured_rows"
+      ],
+      "targets": [
+        {
+          "metric": "requirement_f1_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        },
+        {
+          "metric": "status_accuracy_min",
+          "actual": 1.0,
+          "target": 0.7,
+          "passed": true
+        },
+        {
+          "metric": "evidence_f1_min",
+          "actual": 0.8571,
+          "target": 0.6,
+          "passed": true
+        },
+        {
+          "metric": "section_coverage_min",
+          "actual": 1.0,
+          "target": 0.85,
+          "passed": true
+        }
+      ],
+      "case_passed": true,
+      "benchmark": {
+        "requirement_f1": 1.0,
+        "status_accuracy": 1.0,
+        "evidence_f1": 0.8571,
+        "section_coverage": 1.0
+      }
+    },
+    {
+      "case_id": "college_beta_gap_package",
+      "scenario": "Рособрнадзор + колледж + redacted gap package",
+      "difficulty": "medium",
+      "analysis_focus": [
+        "gap_detection",
+        "applicability",
+        "risk_sections"
+      ],
+      "targets": [
+        {
+          "metric": "requirement_f1_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        },
+        {
+          "metric": "status_accuracy_min",
+          "actual": 1.0,
+          "target": 0.9,
+          "passed": true
+        },
+        {
+          "metric": "evidence_f1_min",
+          "actual": 0.8,
+          "target": 0.75,
+          "passed": true
+        },
+        {
+          "metric": "section_coverage_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        }
+      ],
+      "case_passed": true,
+      "benchmark": {
+        "requirement_f1": 1.0,
+        "status_accuracy": 1.0,
+        "evidence_f1": 0.8,
+        "section_coverage": 1.0
+      }
+    },
+    {
+      "case_id": "college_gamma_ocr_package",
+      "scenario": "Рособрнадзор + колледж + OCR-backed package",
+      "difficulty": "high",
+      "analysis_focus": [
+        "ocr_evidence",
+        "retrieval_recall",
+        "section_generation"
+      ],
+      "targets": [
+        {
+          "metric": "requirement_f1_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        },
+        {
+          "metric": "status_accuracy_min",
+          "actual": 1.0,
+          "target": 0.7,
+          "passed": true
+        },
+        {
+          "metric": "evidence_f1_min",
+          "actual": 0.7742,
+          "target": 0.35,
+          "passed": true
+        },
+        {
+          "metric": "section_coverage_min",
+          "actual": 1.0,
+          "target": 0.65,
+          "passed": true
+        }
+      ],
+      "case_passed": true,
+      "benchmark": {
+        "requirement_f1": 1.0,
+        "status_accuracy": 1.0,
+        "evidence_f1": 0.7742,
+        "section_coverage": 1.0
+      }
+    },
+    {
+      "case_id": "college_delta_structured_registry",
+      "scenario": "Рособрнадзор + колледж + structured registry package",
+      "difficulty": "medium",
+      "analysis_focus": [
+        "structured_evidence",
+        "registry_rows",
+        "status_accuracy"
+      ],
+      "targets": [
+        {
+          "metric": "requirement_f1_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        },
+        {
+          "metric": "status_accuracy_min",
+          "actual": 1.0,
+          "target": 0.75,
+          "passed": true
+        },
+        {
+          "metric": "evidence_f1_min",
+          "actual": 0.8571,
+          "target": 0.6,
+          "passed": true
+        },
+        {
+          "metric": "section_coverage_min",
+          "actual": 1.0,
+          "target": 0.85,
+          "passed": true
+        }
+      ],
+      "case_passed": true,
+      "benchmark": {
+        "requirement_f1": 1.0,
+        "status_accuracy": 1.0,
+        "evidence_f1": 0.8571,
+        "section_coverage": 1.0
+      }
+    },
+    {
+      "case_id": "college_epsilon_graduate_registry",
+      "scenario": "Рособрнадзор + колледж + graduate registry package",
+      "difficulty": "high",
+      "analysis_focus": [
+        "graduates_category",
+        "mixed_positive_gap",
+        "section_coverage"
+      ],
+      "targets": [
+        {
+          "metric": "requirement_f1_min",
+          "actual": 1.0,
+          "target": 0.95,
+          "passed": true
+        },
+        {
+          "metric": "status_accuracy_min",
+          "actual": 1.0,
+          "target": 0.7,
+          "passed": true
+        },
+        {
+          "metric": "evidence_f1_min",
+          "actual": 0.8889,
+          "target": 0.5,
+          "passed": true
+        },
+        {
+          "metric": "section_coverage_min",
+          "actual": 1.0,
+          "target": 0.8,
+          "passed": true
+        }
+      ],
+      "case_passed": true,
+      "benchmark": {
+        "requirement_f1": 1.0,
+        "status_accuracy": 1.0,
+        "evidence_f1": 0.8889,
+        "section_coverage": 1.0
+      }
+    }
+  ]
+}

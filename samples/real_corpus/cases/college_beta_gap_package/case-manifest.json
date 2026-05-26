@@ -6,7 +6,15 @@
   "report_type": "readiness_report",
   "status": "benchmark_ready",
   "redaction_level": "redacted_real_like",
+  "difficulty": "medium",
   "tags": ["pilot", "gap", "mixed-status", "text"],
+  "analysis_focus": ["gap_detection", "applicability", "risk_sections"],
+  "quality_targets": {
+    "requirement_f1_min": 0.95,
+    "status_accuracy_min": 0.90,
+    "evidence_f1_min": 0.75,
+    "section_coverage_min": 0.95
+  },
   "documents": [
     {
       "path": "samples/real_corpus/cases/college_beta_gap_package/documents/normative_gap_excerpt.txt",

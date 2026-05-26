@@ -6,7 +6,15 @@
   "report_type": "readiness_report",
   "status": "benchmark_ready",
   "redaction_level": "synthetic",
+  "difficulty": "medium",
   "tags": ["pilot", "full-package", "text", "structured"],
+  "analysis_focus": ["evidence_linking", "section_generation", "structured_rows"],
+  "quality_targets": {
+    "requirement_f1_min": 0.95,
+    "status_accuracy_min": 0.70,
+    "evidence_f1_min": 0.60,
+    "section_coverage_min": 0.85
+  },
   "documents": [
     {
       "path": "samples/real_corpus/cases/college_alpha_full_package/documents/normative_order_excerpt.txt",

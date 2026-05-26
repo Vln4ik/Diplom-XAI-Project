@@ -3,7 +3,9 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BACKEND_ROOT = Path(__file__).resolve().parents[1]
 PROJECT_ROOT = BACKEND_ROOT.parent
@@ -15,7 +17,7 @@ from app.services.experiment import compare_time_ranges, seconds_to_minutes, sum
 MANUAL_LABELS = {
     "review_regulatory_basis": "Анализ нормативной базы",
     "identify_applicable_requirements": "Выделение и отбор применимых требований",
-    "search_and_verify_evidence": "Поиск и проверка evidence",
+    "search_and_verify_evidence": "Поиск и проверка доказательств",
     "compile_requirement_matrix": "Сборка матрицы требований",
     "draft_report_text": "Подготовка черновика отчёта",
     "internal_alignment_and_revision": "Внутреннее согласование и правки",
@@ -24,16 +26,18 @@ MANUAL_LABELS = {
 AUTOMATED_LABELS = {
     "upload_and_categorize_documents": "Загрузка и категоризация документов",
     "verify_processing_and_search_results": "Проверка обработки и результатов поиска",
-    "review_requirements_and_risks": "Review требований и рисков",
+    "review_requirements_and_risks": "Проверка требований и рисков",
     "final_editorial_review": "Финальная редакторская проверка",
     "export_and_submit_report": "Экспорт и отправка на согласование",
 }
 
 QUALITY_LABELS = {
     "requirement_omission_risk_reduction": "Снижение риска пропуска требования",
-    "evidence_completeness_improvement": "Улучшение полноты evidence-покрытия",
+    "evidence_completeness_improvement": "Улучшение полноты покрытия доказательствами",
     "review_reproducibility_improvement": "Повышение воспроизводимости проверки",
 }
+
+TIMEZONE = "Europe/Moscow"
 
 
 def _load_json(path: Path) -> dict:
@@ -52,6 +56,9 @@ def build_report() -> dict[str, object]:
     assumptions = _load_json(PROJECT_ROOT / "docs" / "experiment-assumptions.json")
     performance = _load_json(PROJECT_ROOT / "docs" / "performance-baseline.json")
     load = _load_json(PROJECT_ROOT / "docs" / "load-baseline.json")
+    committed_suite = _load_json(PROJECT_ROOT / "docs" / "quality-benchmark-suite-results.json")
+    real_corpus_suite = _load_json(PROJECT_ROOT / "docs" / "real-corpus-quality-suite-results.json")
+    real_corpus_targets = _load_json(PROJECT_ROOT / "docs" / "real-corpus-target-evaluation.json")
 
     machine_cycle_seconds = (
         float(performance["summary"]["process_total"]["mean"])
@@ -73,6 +80,7 @@ def build_report() -> dict[str, object]:
     )
 
     return {
+        "captured_at": datetime.now(ZoneInfo(TIMEZONE)).isoformat(),
         "scenario": assumptions["scenario"],
         "manual_process_minutes": assumptions["manual_process_minutes"],
         "manual_process_summary_minutes": manual_summary,
@@ -85,6 +93,36 @@ def build_report() -> dict[str, object]:
         "conservative_reporting_reduction_percent": assumptions["conservative_reporting_reduction_percent"],
         "quality_gain_assumptions_percent": assumptions["quality_gain_assumptions_percent"],
         "quality_proxy_observed": assumptions["quality_proxy_observed"],
+        "committed_quality_snapshot": {
+            "suite_size": int(committed_suite["suite_size"]),
+            "requirement_f1": float(committed_suite["aggregate"]["requirement_extraction"]["f1"]),
+            "evidence_f1": float(committed_suite["aggregate"]["evidence_linking"]["f1"]),
+            "evidence_precision": float(committed_suite["aggregate"]["evidence_linking"]["precision"]),
+            "source_requirement_coverage": float(
+                committed_suite["aggregate"]["report_sections"]["source_requirement_coverage_mean"]
+            ),
+            "section_quality_pass_share": float(
+                committed_suite["aggregate"]["report_sections"]["quality_pass_share_mean"]
+            ),
+        },
+        "real_corpus_quality_snapshot": {
+            "suite_size": int(real_corpus_suite["suite_size"]),
+            "requirement_f1": float(real_corpus_suite["aggregate"]["requirement_extraction"]["f1"]),
+            "evidence_f1": float(real_corpus_suite["aggregate"]["evidence_linking"]["f1"]),
+            "evidence_precision": float(real_corpus_suite["aggregate"]["evidence_linking"]["precision"]),
+            "source_requirement_coverage": float(
+                real_corpus_suite["aggregate"]["report_sections"]["source_requirement_coverage_mean"]
+            ),
+            "section_quality_pass_share": float(
+                real_corpus_suite["aggregate"]["report_sections"]["quality_pass_share_mean"]
+            ),
+        },
+        "real_corpus_targets_snapshot": {
+            "case_total": int(real_corpus_targets["case_total"]),
+            "cases_passed": int(real_corpus_targets["cases_passed"]),
+            "target_total": int(real_corpus_targets["target_total"]),
+            "targets_passed": int(real_corpus_targets["targets_passed"]),
+        },
         "performance_baseline_snapshot": {
             "process_total_seconds_mean": float(performance["summary"]["process_total"]["mean"]),
             "analyze_seconds_mean": float(performance["summary"]["analyze"]["mean"]),
@@ -105,13 +143,17 @@ def render_markdown(report: dict[str, object]) -> str:
     comparison = report["time_comparison"]
     quality_assumptions = report["quality_gain_assumptions_percent"]
     quality_proxy = report["quality_proxy_observed"]
+    committed_quality = report["committed_quality_snapshot"]
+    real_corpus_quality = report["real_corpus_quality_snapshot"]
+    real_corpus_targets = report["real_corpus_targets_snapshot"]
     perf = report["performance_baseline_snapshot"]
     conservative = report["conservative_reporting_reduction_percent"]
+    captured_at = datetime.fromisoformat(str(report["captured_at"])).astimezone(ZoneInfo(TIMEZONE))
 
     lines = [
-        "# Experimental Results",
+        "# Экспериментальные результаты",
         "",
-        "Дата фиксации: `2026-05-07`",
+        f"Дата фиксации: `{captured_at:%Y-%m-%d}`",
         "",
         "## 1. Назначение документа",
         "",
@@ -126,7 +168,7 @@ def render_markdown(report: dict[str, object]) -> str:
         "- входной пакет: `4` документа",
         "- после анализа: `3` требования",
         "- после генерации: `9` разделов отчёта",
-        "- export-артефакты: `DOCX`, `XLSX`, `ZIP`, `HTML explanations`",
+        "- экспортные артефакты: `DOCX`, `XLSX`, `ZIP`, `HTML explanations`",
         "",
         "## 3. Ручной процесс: принятые временные допущения",
         "",
@@ -172,14 +214,14 @@ def render_markdown(report: dict[str, object]) -> str:
             f"- минимально ожидаемая экономия времени: `{_format_minutes(comparison['min_minutes_saved'])}` мин",
             f"- максимально ожидаемая экономия времени: `{_format_minutes(comparison['max_minutes_saved'])}` мин",
             f"- экономия времени по midpoint-сценарию: `{_format_minutes(comparison['midpoint_minutes_saved'])}` мин",
-            f"- reduction в худшем случае: `{_format_percent(comparison['min_reduction_percent'])}`",
-            f"- reduction в лучшем случае: `{_format_percent(comparison['max_reduction_percent'])}`",
-            f"- reduction по midpoint-сценарию: `{_format_percent(comparison['midpoint_reduction_percent'])}`",
+            f"- сокращение времени в худшем случае: `{_format_percent(comparison['min_reduction_percent'])}`",
+            f"- сокращение времени в лучшем случае: `{_format_percent(comparison['max_reduction_percent'])}`",
+            f"- сокращение времени по midpoint-сценарию: `{_format_percent(comparison['midpoint_reduction_percent'])}`",
             "",
             "Для публичной и дипломной коммуникации используется более консервативный интервал:",
             f"`{_format_percent(conservative['min'])} - {_format_percent(conservative['max'])}`.",
             "",
-            "## 8. Proxy-метрики качества, уже подтверждённые системой",
+            "## 8. Косвенные метрики качества, уже подтверждённые системой",
             "",
             f"- `documents_processed_share`: `{_format_percent(quality_proxy['documents_processed_share'] * 100)}`",
             f"- `evidence_coverage`: `{_format_percent(quality_proxy['evidence_coverage'] * 100)}`",
@@ -188,7 +230,23 @@ def render_markdown(report: dict[str, object]) -> str:
             f"- `requirements_count`: `{quality_proxy['requirements_count']}`",
             f"- `sections_count`: `{quality_proxy['sections_count']}`",
             "",
-            "## 9. Предварительная экспертно-инженерная оценка прироста качества",
+            "## 9. Формальные benchmark-метрики качества",
+            "",
+            f"- committed suite: `{committed_quality['suite_size']}` сценариев",
+            f"- committed `requirement extraction F1`: `{committed_quality['requirement_f1']:.4f}`",
+            f"- committed `evidence linking precision`: `{committed_quality['evidence_precision']:.4f}`",
+            f"- committed `evidence linking F1`: `{committed_quality['evidence_f1']:.4f}`",
+            f"- committed `section quality pass share`: `{_format_percent(committed_quality['section_quality_pass_share'] * 100)}`",
+            f"- pilot real corpus: `{real_corpus_quality['suite_size']}` кейсов",
+            f"- pilot real corpus `cases_passed`: `{real_corpus_targets['cases_passed']}/{real_corpus_targets['case_total']}`",
+            f"- pilot real corpus `targets_passed`: `{real_corpus_targets['targets_passed']}/{real_corpus_targets['target_total']}`",
+            f"- pilot real corpus `requirement extraction F1`: `{real_corpus_quality['requirement_f1']:.4f}`",
+            f"- pilot real corpus `evidence linking precision`: `{real_corpus_quality['evidence_precision']:.4f}`",
+            f"- pilot real corpus `evidence linking F1`: `{real_corpus_quality['evidence_f1']:.4f}`",
+            f"- pilot real corpus `source requirement coverage`: `{_format_percent(real_corpus_quality['source_requirement_coverage'] * 100)}`",
+            f"- pilot real corpus `section quality pass share`: `{_format_percent(real_corpus_quality['section_quality_pass_share'] * 100)}`",
+            "",
+            "## 10. Предварительная экспертно-инженерная оценка прироста качества",
             "",
             "| Показатель | Предполагаемый диапазон улучшения |",
             "|---|---:|",
@@ -200,27 +258,28 @@ def render_markdown(report: dict[str, object]) -> str:
     lines.extend(
         [
             "",
-            "## 10. Параллельная нагрузка",
+            "## 11. Параллельная нагрузка",
             "",
             f"- `generate` при `2x concurrency`: `{perf['load_generate_seconds_mean']:.4f}s`",
             f"- `load success rate`: `{_format_percent(perf['load_success_rate'] * 100)}`",
             f"- `throughput`: `{perf['load_throughput_runs_per_minute']:.4f}` runs/min",
             "",
-            "## 11. Интерпретация результатов",
+            "## 12. Интерпретация результатов",
             "",
             "Текущие данные позволяют сделать следующие выводы:",
             "",
             "- система уже демонстрирует воспроизводимый машинный цикл подготовки отчёта;",
-            "- даже с учётом ручного review автоматизированный сценарий существенно короче ручного;",
-            "- на demo dataset достигается полное покрытие evidence/XAI/export по текущему сценарию;",
-            "- главный узкий участок при нагрузке — генерация разделов отчёта.",
+            "- даже с учётом ручной проверки автоматизированный сценарий существенно короче ручного;",
+            "- формальный benchmark-контур уже подтверждает не только время, но и качество извлечения требований, evidence linking и coverage разделов;",
+            "- на pilot real corpus уже закрыты `20/20` целевых критериев качества;",
+            "- главный узкий участок при нагрузке остаётся в генерации разделов отчёта и в evidence precision на более широком корпусе.",
             "",
-            "## 12. Ограничения эксперимента",
+            "## 13. Ограничения эксперимента",
             "",
             "- временные оценки ручного сценария являются экспертно-инженерными допущениями;",
-            "- quality improvement пока не выражен через `precision/recall/F1`;",
-            "- сравнение построено на demo dataset малого объёма;",
-            "- для строгой научной валидации нужен отдельный gold benchmark и экспертная разметка.",
+            "- benchmark-метрики качества уже есть, но они всё ещё опираются на ограниченный committed suite и pilot real corpus;",
+            "- сравнение времени и качества пока строится на разных экспериментальных слоях и не заменяет широкую экспертную межразметочную валидацию;",
+            "- для строгой научной валидации нужен более крупный real-world gold corpus и расширенная экспертная разметка.",
             "",
         ]
     )

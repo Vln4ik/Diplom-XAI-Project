@@ -1,122 +1,42 @@
-# Quality Metrics
+# Метрики качества
 
-Дата фиксации: `2026-05-07`
+Дата актуализации: `2026-05-26`
 
-## Метрики для demo/MVP
+## 1. Назначение документа
 
-- `requirements_created`: число требований после анализа.
-- `deduplicated_requirements`: отсутствие дублей по заголовкам в acceptance flow.
-- `evidence_coverage`: доля требований с хотя бы одним evidence.
-- `xai_coverage`: доля требований с explanation и заполненным `logic_json`.
-- `export_success`: успешность генерации `DOCX/XLSX/ZIP/HTML`.
-- `review_flow_success`: успешность переходов `submit -> approve/return-to-revision`.
+Документ собирает в одном месте качественные метрики проекта и объясняет, как их интерпретировать на текущем этапе.
 
-## Текущие числовые значения на demo dataset
+Он разделяет:
 
-Ниже указаны фактические значения для текущего MVP на нашем demo-сценарии `Рособрнадзор + образовательная организация`.
+- функциональное покрытие `MVP 1`
+- формальные benchmark-метрики
+- pilot `real_corpus`
+- OCR-метрики
+- ограничения текущей доказательной базы
 
-### 1. Покрытие входного пакета
+## 2. Что уже подтверждает качество `MVP 1`
 
-- `documents_total`: `4`
-- `documents_processed_or_review`: `4/4` (`100%`)
-- статус всех документов в baseline-сценарии: `processed`
+### 2.1. Функциональное покрытие на demo-сценарии
 
-### 2. Требования и дедупликация
+На demo-сценарии система уже подтверждает:
 
-- `requirements_total`: `3`
-- `unique_requirement_titles`: `3`
-- `deduplication_rate`: `1.0` (`100%` уникальных заголовков на demo dataset)
-
-### 3. Evidence и XAI coverage
-
-- `matrix_rows_total`: `3`
-- `requirements_with_evidence`: `3/3` (`100%`)
-- `evidence_coverage`: `1.0`
-- `requirements_with_xai_logic`: `3/3` (`100%`)
-- `xai_coverage`: `1.0`
-- `requirements_with_recommended_action`: `3/3` (`100%`)
-
-### 4. Итог отчёта
-
-- `report_status_after_analyze`: `requires_review`
-- `report_readiness_percent`: `100.0`
-- `sections_total`: `9`
-
-### 5. Экспорт
-
-- `exports_ready`: `4/4` (`100%`)
-- `export_success_rate`: `1.0`
-
-Форматы:
-
-- `DOCX`
-- `XLSX`
-- `ZIP`
-- `HTML explanations`
-
-## Числовые данные по времени
-
-По текущему sequential performance baseline:
-
-- `process_total`: `4.1443s`
-- `analyze`: `1.0202s`
-- `generate`: `7.1013s`
-
-Если смотреть полный машинный контур `process + analyze + generate`, он составляет около:
-
-- `12.27s` на demo dataset без учёта ручного review
-
-Отдельно:
-
-- `search`: `0.0532s`
-- `export_docx`: `0.0363s`
-- `export_matrix`: `0.0088s`
-- `export_package`: `0.0282s`
-- `export_explanations`: `0.0046s`
-
-## Что это означает для пользователя
-
-### Уже измеренный технический эффект
-
-На demo dataset система:
-
-- полностью обрабатывает `4` входных документа
-- выделяет `3` требования
-- строит `3` строки матрицы
-- формирует `9` разделов отчёта
-- создаёт `4` export-артефакта
-- делает машинный цикл подготовки примерно за `12.27s`
-
-### Оценка выигрыша по времени против ручного сценария
-
-Для малого пакета документов ручной сценарий подготовки обычно занимает:
-
-- от `2.5` до `6` часов
-
-С учётом этого консервативная инженерная оценка выглядит так:
-
-- сокращение времени первичной подготовки: `40-70%`
-- сокращение времени повторных review-циклов: `25-50%`
-
-Важно:
-
-- это не formal field study
-- это engineering estimate на основе текущего demo-сценария и baseline-замеров
-- для строгой научной фиксации нужна отдельная экспериментальная методика на реальных кейсах
-
-## Что можно и нельзя честно называть "точностью" сейчас
-
-### Что уже можно измерять численно
-
-Сейчас у нас уже есть proxy-метрики качества:
-
-- покрытие evidence
-- покрытие XAI
-- отсутствие дублей на demo dataset
+- обработку входного пакета
+- наличие требований
+- наличие evidence
+- наличие XAI
 - успешность export
-- готовность отчёта в сценарии
+- наличие sections и review-контура
 
-Кроме того, теперь в проекте есть и первый формальный `gold benchmark`:
+Ключевой смысл этих метрик:
+
+- продукт закрывает основной функциональный контур
+- результат не ограничивается только генерацией текста
+
+## 3. Формальный quality benchmark
+
+### 3.1. Базовый gold benchmark
+
+Для сценария `Рособрнадзор + образовательная организация` зафиксировано:
 
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
@@ -126,165 +46,183 @@
 - `evidence linking recall`: `1.0000`
 - `evidence linking F1`: `0.9231`
 - `report sections source coverage`: `1.0000`
+- `report sections quality_score_mean`: `100.00%`
 
-Подробная фиксация вынесена в [docs/quality-benchmark-results.md](quality-benchmark-results.md).
+Источник: [quality-benchmark-results.md](quality-benchmark-results.md)
 
-Дополнительно в проекте теперь есть `benchmark-suite` из семи сценариев. В него входят:
+### 3.2. Расширенный committed benchmark-suite
 
-- базовый full-package сценарий;
-- compact package;
-- mixed-scope applicability;
-- normative-only gap;
-- три OCR-augmented сценария на `clean_notice.png`, `site_scan.pdf` и `mixed_layout_scan.pdf`.
-
-Его агрегированные показатели:
+Для `7` committed сценариев:
 
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `1.0000`
-- `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8718`
+- `status_accuracy_mean`: `100.00%`
+- `applicability accuracy mean`: `100.00%`
+- `evidence linking precision`: `0.8293`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9315`
-- `report sections source coverage mean`: `1.0000`
+- `evidence linking F1`: `0.9067`
+- `report sections source coverage mean`: `100.00%`
+- `report sections requirement_content_coverage_mean`: `100.00%`
+- `report sections quality_score_mean`: `100.00%`
+- `report sections quality_pass_share_mean`: `100.00%`
 
-Подробная фиксация вынесена в [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
+Источник: [quality-benchmark-suite-results.md](quality-benchmark-suite-results.md)
 
-Это важный инженерный вывод: после расширения корпуса OCR-augmented сценариями quality-suite остаётся стабильным по `requirement extraction`, `applicability` и section coverage. Небольшое снижение aggregate precision относительно core-suite объясняется не регрессией extraction, а тем, что в расширенном корпусе стало больше конкурирующих evidence-кандидатов.
+### 3.3. Как это интерпретировать
 
-### Calibration sweep
+Из committed suite уже можно сделать честные выводы:
 
-Для того же расширенного suite теперь есть отдельный calibration sweep по профилям `evidence reranker + confidence thresholds`.
+- extraction layer стабилен
+- applicability на committed corpus закрывается уверенно
+- section coverage и marker-based section quality не являются слабым местом на committed контуре
+- основной оставшийся challenge — точность evidence linking на более сложных и реалистичных кейсах
 
-Результат текущего sweep:
+## 4. Calibration-слой
 
-- `benchmark scenarios`: `7`
-- `evaluated profiles`: `4`
+### 4.1. Committed suite calibration
+
+На committed `7`-сценарном suite автоматический sweep показал:
+
 - `recommended profile`: `baseline_current`
-- `objective_score`: `0.9470`
+- `objective_score`: `0.8409`
 
-Подробная фиксация вынесена в [docs/calibration-sweep-results.md](calibration-sweep-results.md).
+Это означает:
 
-Практически это означает, что на текущем committed расширенном корпусе baseline-профиль уже находится в устойчивой зоне, а дополнительные overrides не дают воспроизводимого выигрыша.
+- текущий production-baseline остаётся лучшим компромиссом между evidence precision, статусами и coverage на committed suite
 
-### Pilot real corpus baseline
+Источник: [calibration-sweep-results.md](calibration-sweep-results.md)
 
-Поверх committed corpus теперь добавлен отдельный `pilot real_corpus` слой из `3` кейсов:
+### 4.2. Почему это не финальный вывод для продукта
 
-- `college_alpha_full_package`
-- `college_beta_gap_package`
-- `college_gamma_ocr_package`
+Это ещё не означает, что calibration можно считать окончательно закрытой.
 
-Его текущие агрегированные показатели:
+Причина:
+
+- и committed suite, и pilot `real_corpus` сейчас сходятся на `baseline_current`
+- но evidence precision на committed contour всё ещё заметно ниже идеального уровня
+- следовательно, следующий шаг — не искать новый набор порогов ради локального выигрыша, а расширять корпус и улучшать сам evidence linking
+
+## 5. Pilot `real_corpus`
+
+## 5.1. Структура слоя
+
+Сейчас pilot `real_corpus` включает:
+
+- `5` кейсов, готовых к benchmark-проверке
+- `3` redacted real-like кейса
+- `2` synthetic кейса
+- `0` readiness issues
+
+Источники:
+
+- [real-corpus-status.md](real-corpus-status.md)
+- [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md)
+
+## 5.2. Aggregate quality на pilot `real_corpus`
+
+Текущие агрегированные показатели:
 
 - `requirement extraction precision`: `1.0000`
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `0.6944`
-- `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.5714`
-- `evidence linking recall`: `0.6154`
-- `evidence linking F1`: `0.5926`
-- `report sections source coverage mean`: `0.8472`
+- `status_accuracy_mean`: `100.00%`
+- `applicability accuracy mean`: `100.00%`
+- `evidence linking precision`: `0.7500`
+- `evidence linking recall`: `0.9565`
+- `evidence linking F1`: `0.8408`
+- `report sections source coverage mean`: `100.00%`
+- `min source requirement pass share mean`: `100.00%`
+- `report sections requirement_content_coverage_mean`: `100.00%`
+- `report sections quality_score_mean`: `100.00%`
+- `report sections quality_pass_share_mean`: `100.00%`
 
-Подробная фиксация вынесена в [docs/real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md).
+Источник: [real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md)
 
-Это нужно интерпретировать правильно:
+## 5.3. Проверка целевых критериев
 
-- committed corpus остаётся regression-baseline;
-- pilot `real_corpus` не должен давать такие же “чистые” цифры, потому что его задача — выявлять слабые места на более реалистичных и менее шаблонных кейсах;
-- отдельный real-corpus calibration sweep уже показывает, что на этом слое может быть полезен более `coverage-oriented` профиль.
+На текущем пилотном `real_corpus`:
 
-Подробная фиксация sweep вынесена в [docs/real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md).
+- `cases_passed`: `5/5`
+- `targets_passed`: `20/20`
 
-### OCR benchmark
+Источник: [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md)
 
-Для OCR-контура теперь есть отдельный benchmark на committed corpus из пяти сценариев:
+## 5.4. Real-corpus calibration
 
-- clean image;
-- noisy image;
-- table-like image;
-- image-only PDF;
-- mixed-layout PDF.
+На pilot `real_corpus` sweep показал:
 
-Агрегированные показатели:
+- `recommended profile`: `baseline_current`
+- дополнительные overrides не требуются как устойчивый default на текущем pilot-корпусе
+
+Источник: [real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md)
+
+## 5.5. Что это означает
+
+Это один из самых важных выводов текущей итерации:
+
+- committed suite и pilot `real_corpus` сейчас сходятся на `baseline_current`
+- но это согласие не означает, что evidence linking уже полностью оптимален
+
+Следовательно, основной следующий шаг `MVP 2` — расширять real corpus и улучшать сам механизм evidence linking, а не надеяться закрыть задачу только подбором порогов.
+
+Дополнительный важный вывод после стабилизации section-quality benchmark:
+
+- marker-based проверка sections уже встроена и стабильна и на committed suite, и на текущем pilot `real_corpus`
+- слабый `structured-registry` кейс больше не проваливает section coverage и section-quality на текущем pilot-корпусе
+- `status_accuracy` и `section coverage` уже удерживаются на `100.00%` и на committed suite, и на pilot `real_corpus`
+- основной residual gap сместился в evidence precision и дальнейшую проверку на более широком real-world корпусе
+
+## 6. OCR metrics
+
+Для OCR benchmark уже подтверждено:
 
 - `char_similarity_mean`: `0.9100`
 - `token_precision_mean`: `0.9818`
 - `token_recall_mean`: `0.9818`
 - `token_f1_mean`: `0.9818`
 - `keyword_coverage_mean`: `1.0000`
-- `requires_review_rate`: `0.0000`
 
-Подробная фиксация вынесена в [docs/ocr-benchmark-results.md](ocr-benchmark-results.md).
+Источник: [ocr-benchmark-results.md](ocr-benchmark-results.md)
 
-Интерпретация этих цифр важна:
+Практический смысл:
 
-- clean/noisy image, table-like image и image-only PDF сейчас закрываются очень уверенно;
-- `mixed-layout PDF` теперь тоже закрывается по token/keyword coverage, но остаётся самым слабым по `char_similarity`, то есть по fidelity порядка и структуры контента;
-- значит следующий реальный шаг по OCR — это уже `layout-aware OCR` и восстановление структуры документа, а не просто “включить OCR”.
+- базовый OCR-контур уже рабочий
+- но layout-aware vision layer ещё не реализован как завершённый контур
 
-### Что уже измерено под более тяжёлой нагрузкой
+## 7. Нагрузочные и runtime-артефакты
 
-Теперь в проекте есть и отдельный `3x` stress baseline с container-level resource profiling:
+Качество продукта сейчас нельзя отделять от его runtime-поведения.  
+Поэтому quality-контур дополняется следующими артефактами:
 
-- `concurrency`: `3`
-- `success_rate`: `1.0`
-- `throughput_runs_per_minute`: `6.2504`
-- `generate mean`: `20.3659s`
-- `backend memory mean`: `140.08 MiB`
-- `worker memory mean`: `982.48 MiB`
+- [performance-baseline.md](performance-baseline.md)
+- [load-baseline.md](load-baseline.md)
+- [stress-baseline.md](stress-baseline.md)
+- [stress-4x-baseline.md](stress-4x-baseline.md)
+- [runtime-comparison-performance.md](runtime-comparison-performance.md)
 
-Подробная фиксация вынесена в [docs/stress-baseline.md](stress-baseline.md).
+Это важно для `MVP 4`, но уже полезно как инженерный контур `MVP 1`.
 
-### Чего пока нет
+## 8. Чего пока нет
 
-У нас пока нет:
+Пока не хватает:
 
-- benchmark на расширенном и репрезентативном корпусе реальных кейсов пользователей
-- устойчивой formal accuracy-оценки для `applicability classification` на большом реальном корпусе
-- устойчивой formal accuracy-оценки для итоговых generated report sections на большом реальном корпусе
-- экспертной межразметочной проверки на большом наборе кейсов
+- большого размеченного real-world gold corpus
+- более глубокой semantic quality оценки generated sections поверх текущего marker-based benchmark
+- широкой экспертной межразметочной проверки
+- production-grade long-horizon quality tracking
 
-Поэтому корректная формулировка сейчас такая:
+## 9. Что является задачей `MVP 2`
 
-- у нас уже есть измеримый functional quality, расширенный formal benchmark по `requirement extraction`, `applicability`, `evidence linking` и section coverage, а также calibration sweep на committed расширенном корпусе
-- у нас ещё нет формально доказанной semantic accuracy на широкой репрезентативной выборке
+По метрикам следующий главный шаг уже очевиден:
 
-## Что планируется добавить дальше
+- расширить `real_corpus`
+- усилить OCR / vision contour
+- улучшить evidence reranking
+- удержать coverage без деградации evidence precision на более широком корпусе
+- довести calibration на более реалистичном корпусе
 
-Следующий слой quality-метрик:
+## 10. Короткий итог
 
-- расширенный annotated benchmark для requirement extraction и evidence linking
-- расширенный annotated benchmark для applicability и section quality
-- расширение pilot `real_corpus` от `3` кейсов к более широкой redacted выборке
-- OCR benchmark на большем и более сложном image-heavy корпусе
-- `precision/recall/F1` на большем наборе кейсов
-- сравнение качества между fallback и local model runtime
-- отдельная экспертная оценка корректности generated report sections
-
-## Как измеряется сейчас
-
-- Автоматически через `backend/tests/test_pipeline.py`.
-- Автоматически через `backend/tests/test_acceptance_demo_flow.py`.
-- Автоматически через `backend/tests/test_quality_benchmark.py`.
-- Косвенно через `dashboard`, `notifications` и `audit log`.
-- Отдельно через live benchmark: [docs/performance-baseline.md](performance-baseline.md).
-- Отдельно через concurrency/load profile: [docs/load-baseline.md](load-baseline.md).
-- Отдельно через `3x` stress profile с Docker resource metrics: [docs/stress-baseline.md](stress-baseline.md).
-- Отдельно через formal benchmark report: [docs/quality-benchmark-results.md](quality-benchmark-results.md).
-- Отдельно через benchmark-suite report: [docs/quality-benchmark-suite-results.md](quality-benchmark-suite-results.md).
-- Отдельно через pilot real-corpus status report: [docs/real-corpus-status.md](real-corpus-status.md).
-- Отдельно через pilot real-corpus suite report: [docs/real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md).
-- Отдельно через pilot real-corpus calibration report: [docs/real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md).
-- Отдельно через OCR benchmark report: [docs/ocr-benchmark-results.md](ocr-benchmark-results.md).
-
-## Ограничения текущей фиксации
-
-- Benchmark-suite уже расширен OCR-augmented committed сценариями, но всё ещё построен на ограниченном demo corpus, а не на большом реальном архиве кейсов.
-- Pilot `real_corpus` уже введён, но это пока только `3` кейса, а не широкий размеченный массив организаций.
-- OCR benchmark пока тоже построен на synthetic committed corpus, а не на реальном массиве noisy-сканов от пользователей.
-- Формальные метрики уже покрывают `requirement extraction`, `applicability`, `evidence linking`, section coverage и базовый OCR-corpus.
-- Есть начальный local baseline для `PostgreSQL + Ollama`, включая `2x` load profile и `3x` stress profile с Docker `CPU/RAM` замерами.
-- Текущий resource sampler пока не покрывает host-level `Ollama`, если он работает вне Docker Compose.
+`MVP 1` уже имеет измеримый quality-контур.  
+Следующий этап проекта — не “впервые добавить метрики”, а усилить существующий benchmark-фундамент до уровня `MVP 2`.

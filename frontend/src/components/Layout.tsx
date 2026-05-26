@@ -1,15 +1,18 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { logout } from "../lib/api";
+import type { UiTask } from "../lib/ui";
+import { ActivityPanel } from "./ActivityPanel";
 
 type LayoutProps = {
   organizationId: string | null;
   onSelectOrganization: (value: string) => void;
   organizations: { id: string; name: string }[];
   unreadNotifications: number;
+  activeTasks: UiTask[];
 };
 
-export function Layout({ organizationId, onSelectOrganization, organizations, unreadNotifications }: LayoutProps) {
+export function Layout({ organizationId, onSelectOrganization, organizations, unreadNotifications, activeTasks }: LayoutProps) {
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -57,6 +60,7 @@ export function Layout({ organizationId, onSelectOrganization, organizations, un
         </button>
       </aside>
       <main className="content">
+        <ActivityPanel tasks={activeTasks} />
         <Outlet />
       </main>
     </div>

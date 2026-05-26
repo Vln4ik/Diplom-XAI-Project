@@ -1,0 +1,15 @@
+{
+  "organization_name": "Колледж социально-прикладных компетенций",
+  "organization_type": "educational",
+  "website": "https://epsilon-college.example.edu",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Лицензирование"
+  ],
+  "programs": [
+    "Социальная работа",
+    "Документационное обеспечение управления"
+  ],
+  "has_official_website": true,
+  "has_accreditation": false
+}

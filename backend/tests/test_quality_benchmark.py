@@ -14,6 +14,7 @@ from app.services.quality_benchmark import (
     evaluate_report_sections,
     load_benchmark_paths_from_manifest,
     precision_recall_f1,
+    resolve_benchmark_runtime_overrides,
     run_quality_benchmark,
     run_quality_benchmark_suite,
 )
@@ -92,9 +93,46 @@ def test_evaluate_evidence_linking_counts_grounded_pairs():
     )
 
     assert report["matched_total"] == 1
+    assert report["matched_predicted_total"] == 1
     assert report["precision"] == 0.5
     assert report["recall"] == 0.5
     assert report["grounded_requirements_share"] == 1.0
+
+
+def test_evaluate_evidence_linking_allows_merged_ocr_evidence_to_cover_multiple_expected_snippets():
+    expected = BenchmarkExpectedRequirement(
+        benchmark_id="req-ocr-site",
+        title="На официальном сайте должны быть размещены локальные акты и образовательные программы.",
+        category="Официальный сайт",
+        expected_status="data_found",
+        expected_applicability="applicable",
+        expected_evidence=[
+            "На сайте размещены локальные нормативные акты.",
+            "Программы обучения опубликованы.",
+        ],
+    )
+    predicted = BenchmarkPredictedRequirement(
+        requirement_id="pred-ocr-site",
+        title="На официальном сайте должны быть размещены локальные акты и образовательные программы.",
+        category="Официальный сайт",
+        applicability_status="applicable",
+        status="data_found",
+        confidence_score=0.74,
+        evidence_descriptions=[
+            "На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026",
+        ],
+    )
+
+    report = evaluate_evidence_linking(
+        matches=[RequirementMatch(expected=expected, predicted=predicted, similarity=0.95)]
+    )
+
+    assert report["matched_total"] == 2
+    assert report["matched_predicted_total"] == 1
+    assert report["precision"] == 1.0
+    assert report["recall"] == 1.0
+    assert report["f1"] == 1.0
+    assert len(report["per_requirement"][0]["matches"]) == 2
 
 
 def test_evaluate_applicability_reports_accuracy():
@@ -129,12 +167,19 @@ def test_evaluate_report_sections_tracks_requirement_coverage():
             expected_requirement_ids=["req_programs", "req_license_staff"],
             min_source_requirements=2,
             require_non_empty_content=True,
+            content_markers=["Всего требований", "Применимых"],
+            min_content_markers=2,
+            quality_pass_threshold=0.75,
         )
     ]
     predicted_sections = [
         BenchmarkPredictedSection(
             title="Перечень применимых требований",
-            content="Требования перечислены.",
+            content=(
+                "Всего требований: 2. Применимых: 2. "
+                "Организация должна разместить сведения о реализуемых образовательных программах. "
+                "Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе."
+            ),
             source_requirement_ids=["pred-programs", "pred-license"],
         )
     ]
@@ -187,6 +232,39 @@ def test_evaluate_report_sections_tracks_requirement_coverage():
     assert report["non_empty_content_share"] == 1.0
     assert report["source_requirement_coverage"] == 1.0
     assert report["min_source_requirement_pass_share"] == 1.0
+    assert report["requirement_content_coverage_mean"] == 1.0
+    assert report["content_marker_coverage_mean"] == 1.0
+    assert report["min_content_marker_pass_share"] == 1.0
+    assert report["quality_score_mean"] == 1.0
+    assert report["quality_pass_share"] == 1.0
+
+
+def test_evaluate_report_sections_penalizes_missing_content_markers():
+    expected_sections = [
+        BenchmarkExpectedSection(
+            title="Заключение",
+            expected_requirement_ids=[],
+            min_source_requirements=1,
+            require_non_empty_content=True,
+            content_markers=["Итоговая готовность отчета", "Открытых рисков"],
+            min_content_markers=2,
+            quality_pass_threshold=0.75,
+        )
+    ]
+    predicted_sections = [
+        BenchmarkPredictedSection(
+            title="Заключение",
+            content="Краткое итоговое заключение без явных метрик.",
+            source_requirement_ids=["pred-programs"],
+        )
+    ]
+
+    report = evaluate_report_sections(expected_sections, predicted_sections, matches=[])
+
+    assert report["content_marker_coverage_mean"] == 0.0
+    assert report["min_content_marker_pass_share"] == 0.0
+    assert report["quality_score_mean"] == 0.3333
+    assert report["quality_pass_share"] == 0.0
 
 
 def test_run_quality_benchmark_returns_formal_metrics():
@@ -204,6 +282,8 @@ def test_run_quality_benchmark_returns_formal_metrics():
     assert report["evidence_linking"]["f1"] >= 0.5
     assert report["evidence_linking"]["grounded_requirements_share"] >= 0.66
     assert report["report_sections"]["presence_rate"] >= 0.5
+    assert report["report_sections"]["quality_score_mean"] >= 0.7
+    assert report["report_sections"]["quality_pass_share"] >= 0.5
 
 
 def test_run_quality_benchmark_suite_aggregates_multiple_scenarios():
@@ -215,6 +295,7 @@ def test_run_quality_benchmark_suite_aggregates_multiple_scenarios():
     assert report["aggregate"]["applicability"]["accuracy_mean"] >= 0.75
     assert report["aggregate"]["evidence_linking"]["recall"] >= 0.5
     assert report["aggregate"]["report_sections"]["presence_rate_mean"] >= 0.5
+    assert report["aggregate"]["report_sections"]["quality_score_mean"] >= 0.7
 
 
 def test_load_benchmark_paths_from_manifest_resolves_relative_entries():
@@ -225,3 +306,18 @@ def test_load_benchmark_paths_from_manifest_resolves_relative_entries():
     assert len(benchmark_paths) == 7
     assert benchmark_paths[0].name == "rosobrnadzor_quality_benchmark.json"
     assert benchmark_paths[-1].name == "rosobrnadzor_quality_ocr_augmented_mixed_layout.json"
+
+
+def test_resolve_benchmark_runtime_overrides_supports_runtime_block():
+    provider, languages = resolve_benchmark_runtime_overrides(
+        {
+            "name": "ocr-aware-benchmark",
+            "runtime": {
+                "ocr_provider": "tesseract",
+                "ocr_languages": "rus+eng",
+            },
+        }
+    )
+
+    assert provider == "tesseract"
+    assert languages == "rus+eng"

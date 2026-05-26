@@ -82,9 +82,18 @@ export function fetchOrganizations(): Promise<Organization[]> {
 export function createOrganization(payload: {
   name: string;
   short_name?: string;
+  inn?: string;
+  kpp?: string;
+  ogrn?: string;
+  legal_address?: string;
+  actual_address?: string;
+  organization_type?: string;
+  okved?: string;
   website?: string;
   email?: string;
   phone?: string;
+  director_name?: string;
+  responsible_person?: string;
 }): Promise<Organization> {
   return request<Organization>("/api/organizations", {
     method: "POST",
@@ -92,6 +101,37 @@ export function createOrganization(payload: {
       organization_type: "educational",
       ...payload,
     }),
+  });
+}
+
+export function updateOrganization(
+  organizationId: string,
+  payload: {
+    name?: string;
+    short_name?: string;
+    inn?: string;
+    kpp?: string;
+    ogrn?: string;
+    legal_address?: string;
+    actual_address?: string;
+    organization_type?: string;
+    okved?: string;
+    website?: string;
+    email?: string;
+    phone?: string;
+    director_name?: string;
+    responsible_person?: string;
+  },
+): Promise<Organization> {
+  return request<Organization>(`/api/organizations/${organizationId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteOrganization(organizationId: string): Promise<Organization> {
+  return request<Organization>(`/api/organizations/${organizationId}`, {
+    method: "DELETE",
   });
 }
 

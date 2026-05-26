@@ -1,0 +1,103 @@
+{
+  "name": "real_corpus_college_epsilon_graduate_registry",
+  "scenario": "Рособрнадзор + колледж + graduate registry package",
+  "report_type": "readiness_report",
+  "documents": [
+    {
+      "filename": "normative_graduate_excerpt.txt",
+      "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/normative_graduate_excerpt.txt",
+      "category": "normative"
+    },
+    {
+      "filename": "site_graduate_snapshot.txt",
+      "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/site_graduate_snapshot.txt",
+      "category": "evidence"
+    },
+    {
+      "filename": "organization_profile.json",
+      "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/organization_profile.json",
+      "category": "other"
+    },
+    {
+      "filename": "graduate_registry.csv",
+      "path": "samples/real_corpus/cases/college_epsilon_graduate_registry/documents/graduate_registry.csv",
+      "category": "data_table"
+    }
+  ],
+  "expected_requirements": [
+    {
+      "id": "req_graduates",
+      "title": "Организация обязана раскрывать сведения о выпускниках и их трудоустройстве.",
+      "category": "Сведения о выпускниках",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "выпускники_трудоустроены | 2026 | 78"
+      ]
+    },
+    {
+      "id": "req_programs",
+      "title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+      "category": "Образовательные программы",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "На официальном сайте опубликованы сведения о реализуемых образовательных программах."
+      ]
+    },
+    {
+      "id": "req_local_acts",
+      "title": "На официальном сайте требуется опубликовать локальные нормативные акты и правила приема.",
+      "category": "Официальный сайт",
+      "expected_applicability": "applicable",
+      "expected_status": "data_found",
+      "expected_evidence": [
+        "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты и правила приема.",
+        "local_acts_published | 2026 | 17"
+      ]
+    },
+    {
+      "id": "req_license",
+      "title": "Необходимо предоставить сведения о лицензии и государственной аккредитации.",
+      "category": "Лицензия и аккредитация",
+      "expected_applicability": "applicable",
+      "expected_status": "data_missing",
+      "expected_evidence": []
+    }
+  ],
+  "expected_sections": [
+    {
+      "title": "Перечень применимых требований",
+      "expected_requirement_ids": [
+        "req_graduates",
+        "req_programs",
+        "req_local_acts",
+        "req_license"
+      ],
+      "min_source_requirements": 4,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Выявленные несоответствия и недостающие данные",
+      "expected_requirement_ids": [
+        "req_license"
+      ],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Риски",
+      "expected_requirement_ids": [
+        "req_license"
+      ],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    },
+    {
+      "title": "Заключение",
+      "expected_requirement_ids": [],
+      "min_source_requirements": 1,
+      "require_non_empty_content": true
+    }
+  ]
+}

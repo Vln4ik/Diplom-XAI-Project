@@ -37,7 +37,40 @@ def test_select_requirement_fragments_deduplicates_by_signature():
     selected = analysis.select_requirement_fragments(fragments, limit=10)  # type: ignore[arg-type]
 
     assert len(selected) == 2
-    assert {fragment.id for fragment in selected} == {"fragment-1", "fragment-3"}
+    selected_ids = {fragment.id for fragment in selected}
+    assert "fragment-3" in selected_ids
+    assert len({"fragment-1", "fragment-2"} & selected_ids) == 1
+
+
+def test_select_requirement_fragments_supports_gendered_obligation_markers():
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text="Организация должна раскрывать сведения о педагогических работниках.",
+        ),
+        FragmentStub(
+            id="fragment-2",
+            document_id="doc-2",
+            fragment_text="Сведения о педагогических работниках размещены на официальном сайте.",
+        ),
+    ]
+
+    selected = analysis.select_requirement_fragments(fragments, limit=10)  # type: ignore[arg-type]
+
+    assert len(selected) == 1
+    assert selected[0].id == "fragment-1"
+
+
+def test_applicability_for_report_accepts_pedagogical_staff_requirement_for_educational_scope():
+    applicability, reason = analysis.applicability_for_report(
+        "Организация должна раскрывать сведения о педагогических работниках.",
+        {"organization_type": "educational"},
+        "readiness_report",
+    )
+
+    assert applicability == ApplicabilityStatus.applicable
+    assert "образовательному сценарию" in reason
 
 
 def test_rank_evidence_candidates_prefers_diverse_documents(monkeypatch):
@@ -176,6 +209,7 @@ def test_rank_evidence_candidates_filters_hint_only_structural_fragments(monkeyp
     assert "fragment-1" in ids
     assert "fragment-4" in ids
     assert "fragment-2" not in ids
+    assert "fragment-3" not in ids
 
 
 def test_rank_evidence_candidates_prefers_focus_evidence_over_generic_site_overlap(monkeypatch):
@@ -218,6 +252,48 @@ def test_rank_evidence_candidates_prefers_focus_evidence_over_generic_site_overl
     ids = [fragment.id for fragment, _score in ranked]
     assert ids == ["fragment-1", "fragment-2"]
     assert "fragment-3" not in ids
+
+
+def test_rank_evidence_candidates_prefers_local_acts_structured_row_over_generic_site_registry(monkeypatch):
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text='В разделе "Сведения об образовательной организации" размещены локальные нормативные акты.',
+        ),
+        FragmentStub(
+            id="fragment-2",
+            document_id="doc-2",
+            fragment_text="website_sections_published | 2026 | 16",
+        ),
+        FragmentStub(
+            id="fragment-3",
+            document_id="doc-2",
+            fragment_text="local_acts_published | 2026 | 21",
+        ),
+    ]
+
+    monkeypatch.setattr(
+        analysis,
+        "rank_fragments",
+        lambda db, **kwargs: [
+            RankedFragment(fragment=fragments[0], score=0.88, keyword_score=0.8, vector_score=0.82),
+            RankedFragment(fragment=fragments[1], score=0.84, keyword_score=0.73, vector_score=0.75),
+            RankedFragment(fragment=fragments[2], score=0.83, keyword_score=0.72, vector_score=0.74),
+        ],
+    )
+
+    ranked = analysis.rank_evidence_candidates(
+        db=None,  # type: ignore[arg-type]
+        requirement_text="На официальном сайте требуется опубликовать локальные нормативные акты.",
+        fragments=fragments,  # type: ignore[arg-type]
+        category="Официальный сайт",
+        limit=2,
+    )
+
+    ids = [fragment.id for fragment, _score in ranked]
+    assert ids == ["fragment-1", "fragment-3"]
+    assert "fragment-2" not in ids
 
 
 def test_rank_evidence_candidates_prefers_human_readable_accreditation_value_over_boolean_flag(monkeypatch):
@@ -268,3 +344,129 @@ def test_rank_evidence_candidates_prefers_human_readable_accreditation_value_ove
     assert "fragment-2" in ids
     assert "fragment-4" in ids
     assert "fragment-3" not in ids
+
+
+def test_rank_evidence_candidates_trims_redundant_program_supporting_tail(monkeypatch):
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text="Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+        ),
+        FragmentStub(
+            id="fragment-2",
+            document_id="doc-2",
+            fragment_text='"Информационные системы и программирование",',
+        ),
+        FragmentStub(
+            id="fragment-3",
+            document_id="doc-3",
+            fragment_text="licensed_programs | 2026 | 2",
+        ),
+    ]
+
+    monkeypatch.setattr(
+        analysis,
+        "rank_fragments",
+        lambda db, **kwargs: [
+            RankedFragment(fragment=fragments[0], score=0.9, keyword_score=0.82, vector_score=0.84),
+            RankedFragment(fragment=fragments[2], score=0.81, keyword_score=0.71, vector_score=0.73),
+            RankedFragment(fragment=fragments[1], score=0.79, keyword_score=0.68, vector_score=0.7),
+        ],
+    )
+
+    ranked = analysis.rank_evidence_candidates(
+        db=None,  # type: ignore[arg-type]
+        requirement_text="Организация должна разместить сведения о реализуемых образовательных программах.",
+        fragments=fragments,  # type: ignore[arg-type]
+        category="Образовательные программы",
+        limit=3,
+    )
+
+    ids = [fragment.id for fragment, _score in ranked]
+    assert ids == ["fragment-1"]
+
+
+def test_rank_evidence_candidates_prefers_specific_license_fragments_over_mixed_ocr_sentence(monkeypatch):
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text="На официальном сайте организации размещены сведения о лицензии на образовательную деятельность.",
+        ),
+        FragmentStub(
+            id="fragment-2",
+            document_id="doc-2",
+            fragment_text="Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
+        ),
+        FragmentStub(
+            id="fragment-3",
+            document_id="doc-3",
+            fragment_text='"Государственная аккредитация"',
+        ),
+        FragmentStub(
+            id="fragment-4",
+            document_id="doc-4",
+            fragment_text="Лицензия и аккредитация размещены на сайте. Teachers total: 48. Локальные акты опубликованы.",
+        ),
+    ]
+
+    monkeypatch.setattr(
+        analysis,
+        "rank_fragments",
+        lambda db, **kwargs: [
+            RankedFragment(fragment=fragments[3], score=0.91, keyword_score=0.84, vector_score=0.86),
+            RankedFragment(fragment=fragments[0], score=0.84, keyword_score=0.79, vector_score=0.81),
+            RankedFragment(fragment=fragments[1], score=0.83, keyword_score=0.77, vector_score=0.79),
+            RankedFragment(fragment=fragments[2], score=0.8, keyword_score=0.71, vector_score=0.72),
+        ],
+    )
+
+    ranked = analysis.rank_evidence_candidates(
+        db=None,  # type: ignore[arg-type]
+        requirement_text="Необходимо предоставить сведения о лицензии, аккредитации и кадровом составе.",
+        fragments=fragments,  # type: ignore[arg-type]
+        category="Лицензия и аккредитация",
+        limit=3,
+    )
+
+    ids = [fragment.id for fragment, _score in ranked]
+    assert set(ids) == {"fragment-1", "fragment-2", "fragment-3"}
+    assert "fragment-4" not in ids
+
+
+def test_rank_evidence_candidates_supports_program_requirement_inside_merged_ocr_clause(monkeypatch):
+    fragments = [
+        FragmentStub(
+            id="fragment-1",
+            document_id="doc-1",
+            fragment_text="На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026",
+        ),
+    ]
+
+    monkeypatch.setattr(
+        analysis,
+        "rank_fragments",
+        lambda db, **kwargs: [
+            RankedFragment(fragment=fragments[0], score=0.41, keyword_score=0.22, vector_score=0.23),
+        ],
+    )
+
+    ranked = analysis.rank_evidence_candidates(
+        db=None,  # type: ignore[arg-type]
+        requirement_text="Организация должна разместить сведения о реализуемых образовательных программах.",
+        fragments=fragments,  # type: ignore[arg-type]
+        category="Образовательные программы",
+        limit=1,
+    )
+
+    assert len(ranked) == 1
+    assert ranked[0][1] >= 0.42
+
+    confidence = analysis.derive_requirement_confidence(
+        ApplicabilityStatus.applicable,
+        "Организация должна разместить сведения о реализуемых образовательных программах.",
+        ranked,  # type: ignore[arg-type]
+    )
+
+    assert confidence >= analysis.data_found_confidence_threshold()

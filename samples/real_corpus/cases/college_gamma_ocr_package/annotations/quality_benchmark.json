@@ -2,6 +2,10 @@
   "name": "real_corpus_college_gamma_ocr_package",
   "scenario": "Рособрнадзор + колледж + OCR-backed package",
   "report_type": "readiness_report",
+  "runtime": {
+    "ocr_provider": "tesseract",
+    "ocr_languages": "rus+eng"
+  },
   "documents": [
     {
       "filename": "normative_ocr_excerpt.txt",

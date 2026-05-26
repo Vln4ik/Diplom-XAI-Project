@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { PageGuide } from "../components/PageGuide";
 import type { RequirementItem } from "../lib/types";
+import { formatRequirementStatus, formatRiskLevel } from "../lib/ui";
 
 type Props = {
   requirements: RequirementItem[];
@@ -87,6 +89,36 @@ export function RequirementsPage({
 
   return (
     <div className="stack">
+      <PageGuide
+        title="Требования"
+        summary="Здесь пользователь работает с извлеченными требованиями: проверяет их применимость, подтверждает или отклоняет результат анализа, вносит ручные правки и при необходимости пересчитывает XAI."
+        blocks={[
+          {
+            title: "Что сюда попадает",
+            points: [
+              "Нормализованные требования после анализа отчета.",
+              "Статусы применимости, confidence, risk level и пользовательские комментарии.",
+              "Выявленные системой required_data и found_data.",
+            ],
+          },
+          {
+            title: "Что делать пользователю",
+            points: [
+              "Проверять требования со статусами partial, missing и needs clarification.",
+              "Подтверждать, отклонять или вручную корректировать спорные позиции.",
+              "После ручной правки пересчитывать XAI, чтобы объяснение соответствовало новой версии требования.",
+            ],
+          },
+          {
+            title: "Как оптимизировать",
+            points: [
+              "Сначала фильтровать по проблемным статусам, а не просматривать весь реестр подряд.",
+              "Использовать массовое подтверждение только для однотипных и уже проверенных строк.",
+              "Править здесь смысл требования, а доказательства уточнять через матрицу и документы.",
+            ],
+          },
+        ]}
+      />
       <section className="panel">
         <div className="section-header">
           <h2>Реестр требований</h2>
@@ -135,14 +167,14 @@ export function RequirementsPage({
                 <div className="requirement-summary">
                   <strong>{requirement.title}</strong>
                   <p>
-                    {requirement.category} · {requirement.status} · {requirement.applicability_status}
+                    {requirement.category} · {formatRequirementStatus(requirement.status)} · {requirement.applicability_status}
                   </p>
                   <p>{requirement.text}</p>
                 </div>
               </div>
               <div className="report-actions">
                 <span>
-                  {Math.round(requirement.confidence_score * 100)}% · {requirement.risk_level}
+                  {Math.round(requirement.confidence_score * 100)}% · {formatRiskLevel(requirement.risk_level)}
                 </span>
                 <button type="button" onClick={() => onSelectRequirement(requirement.id)}>
                   {selectedRequirementId === requirement.id ? "Выбрано" : "Объяснение"}

@@ -2,6 +2,10 @@
   "name": "rosobrnadzor_ocr_augmented_site_scan_benchmark",
   "scenario": "Рособрнадзор + образовательная организация + OCR image-only PDF evidence",
   "report_type": "readiness_report",
+  "runtime": {
+    "ocr_provider": "tesseract",
+    "ocr_languages": "rus+eng"
+  },
   "documents": [
     {
       "filename": "rosobrnadzor_sample.txt",

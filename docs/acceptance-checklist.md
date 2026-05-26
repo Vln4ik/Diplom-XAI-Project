@@ -1,40 +1,79 @@
-# Acceptance Checklist
+# Чек-лист приёмки
 
-Дата актуализации: `2026-05-06`
+Дата актуализации: `2026-05-24`
 
-## Цель
+## 1. Цель документа
 
-Этот документ фиксирует, как проверяется `web-first MVP` по сценарию `Рособрнадзор + образовательная организация`.
+Документ фиксирует:
 
-## Команды проверки
+- что считается закрытым для `MVP 1`
+- какими артефактами это подтверждается
+- что не входит в приёмку `MVP 1`
+- что станет фокусом приёмки `MVP 2`
+
+## 2. Приёмка для `MVP 1`
+
+### 2.1. Базовые проверки
 
 ```bash
 ./.venv/bin/pytest -q backend/tests
 cd frontend && npm run build
 ```
 
-## Acceptance Matrix
+### 2.2. Матрица приёмки
 
-| Критерий | Как проверяется | Артефакт |
-| --- | --- | --- |
-| Пользователь входит в систему и работает в контексте организации | API auth flow, создание организации и выбор организации в UI | `backend/tests/test_auth.py`, `frontend/src/pages/LoginPage.tsx` |
-| Документы загружаются и обрабатываются | Upload + process + search по фрагментам | `backend/tests/test_pipeline.py`, `backend/tests/test_acceptance_demo_flow.py` |
-| Система формирует требования и матрицу доказательств | Analyze report + matrix | `backend/tests/test_pipeline.py`, `backend/tests/test_acceptance_demo_flow.py` |
-| Для требования доступна XAI-цепочка | `GET /requirements/{id}/explanation` и наличие evidence | `backend/tests/test_pipeline.py`, `backend/tests/test_acceptance_demo_flow.py` |
-| Отчет генерируется и версионируется | Generate report + versions + restore | `backend/tests/test_pipeline.py` |
-| Риски, уведомления и аудит работают | Assignment, resolve, submit, approve, read notifications | `backend/tests/test_pipeline.py` |
-| Экспорт `DOCX/XLSX/ZIP/HTML` доступен | Проверка файлов на диске после export API | `backend/tests/test_pipeline.py`, `backend/tests/test_acceptance_demo_flow.py` |
-| Сквозной web MVP можно показать без Swagger | Все основные пользовательские экраны есть во frontend | `frontend/src/pages/*`, `docs/demo-scenario.md` |
+| Критерий | Как подтверждается | Артефакт |
+|---|---|---|
+| Пользователь работает в контексте организации | auth + organization scope | `backend/tests/test_auth.py` |
+| Документы загружаются и обрабатываются | upload + processing + search | `backend/tests/test_pipeline.py` |
+| Система создаёт требования и evidence matrix | analyze report | `backend/tests/test_pipeline.py` |
+| Для требований есть XAI-цепочка | explanation endpoint + evidence payload | `backend/tests/test_pipeline.py` |
+| Отчёт генерируется и версионируется | generate + report versions | `backend/tests/test_pipeline.py` |
+| Риски, уведомления и аудит работают | risk / approval / notification flow | `backend/tests/test_pipeline.py` |
+| Экспорт работает | `DOCX/XLSX/ZIP/HTML` files | `backend/tests/test_pipeline.py` |
+| Web-сценарий можно показать без Swagger | страницы frontend и demo-сценарий | `docs/demo-scenario.md` |
 
-## Что считается закрытым
+### 2.3. Что считается закрытым
 
-- Основной `demo flow` проходит автоматически.
-- Build frontend проходит без ошибок.
-- Для каждого требования, попавшего в источник разделов отчета, существует explanation с evidence.
+`MVP 1` считается закрытым, если:
 
-## Что остается вне acceptance MVP
+- основной demo-сценарий проходит
+- backend tests зелёные
+- frontend build проходит
+- для исходных требований отчёта доступны explanation и evidence
 
-- Полноценный `iOS`-клиент.
-- OCR сложных PDF/сканов.
-- Интеграции с внешними государственными системами.
-- Нагрузочное и security-тестирование production-уровня.
+## 3. Что не входит в приёмку `MVP 1`
+
+- большой real-world benchmark corpus
+- продвинутый vision-конвейер
+- внешние интеграции
+- электронная подпись
+- iOS client
+- production-grade security / load contour
+
+## 4. Что станет фокусом приёмки `MVP 2`
+
+`MVP 2` должен закрывать приёмку не по новому UI-сценарию, а по качеству AI-контура.
+
+Ключевые цели приёмки `MVP 2`:
+
+- расширенный `real_corpus`
+- более сильное OCR / vision-поведение
+- более сильный evidence linking
+- benchmark качества разделов
+- calibration на более широком корпусе
+
+## 5. Артефакты приёмки `MVP 2`
+
+Ожидаемые артефакты:
+
+- расширенный manifest `real_corpus`
+- обновлённая проверка целевых критериев
+- обновлённый OCR-benchmark
+- артефакты benchmark-проверки качества разделов
+- обновлённые calibration-отчёты
+
+## 6. Короткий итог
+
+Приёмка `MVP 1` уже относится к завершённой поставке.  
+Приёмка `MVP 2` должна сместиться с вопроса “есть ли функция” на вопрос “каково качество аналитического контура”.

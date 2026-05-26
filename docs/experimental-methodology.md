@@ -1,188 +1,199 @@
-# Experimental Methodology
+# Экспериментальная методология
 
 ## 1. Назначение документа
 
-Документ описывает методику экспериментальной оценки проекта `XAI Report Builder` в рамках дипломной работы.
+Документ описывает, как экспериментальная часть проекта соотносится с текущим продуктовым статусом.
 
-Методика нужна для того, чтобы:
+На текущем этапе:
 
-- формально объяснить, что именно мы сравниваем;
-- отделить фактически измеренные данные от экспертных допущений;
-- сделать эксперимент воспроизводимым;
-- подготовить основу для раздела `Экспериментальная часть`.
+- `MVP 1` завершён
+- экспериментальная часть уже опирается не только на demo-сценарий, но и на benchmark-слой с `real_corpus`
 
-## 2. Объект оценки
+## 2. Что именно оценивается
 
-Оценивается `web-first MVP` платформы подготовки объяснимой отчётности по сценарию:
+Оценивается завершённый `MVP 1` платформы по сценарию:
 
 - регулятор: `Рособрнадзор`
 - тип организации: образовательная организация
-- корпус входных данных: committed demo corpus, включающий базовый текстовый пакет и OCR-augmented сценарии
 
-Дополнительно в проекте теперь есть pilot `real_corpus` слой из `3` redacted/synthetic кейсов. Он используется не как основной regression-baseline, а как промежуточный уровень реалистичности между committed demo corpus и будущим большим real-world benchmark архивом.
+Экспериментальная база сейчас состоит из трёх уровней:
 
-## 3. Сравниваемые сценарии
+1. demo-сценарий
+2. committed benchmark corpus
+3. пилотный `real_corpus`
 
-В эксперименте сравниваются два сценария:
+## 3. Какие сценарии сравниваются
 
 ### 3.1. Ручной сценарий
 
 Специалист:
 
-- самостоятельно читает нормативные документы;
-- вручную выделяет требования;
-- вручную определяет применимость;
-- вручную ищет evidence в разных документах;
-- вручную собирает матрицу;
-- вручную готовит черновик отчёта.
+- читает нормативную базу вручную
+- выделяет требования вручную
+- ищет доказательства вручную
+- собирает матрицу вручную
+- формирует черновик отчёта вручную
 
 ### 3.2. Автоматизированный сценарий
 
 Специалист:
 
-- загружает документы в систему;
-- запускает обработку;
-- создаёт отчёт и запускает анализ;
-- просматривает требования, XAI и риски;
-- выполняет ручной review спорных мест;
-- генерирует и экспортирует итоговый пакет.
+- загружает документы
+- запускает обработку и анализ
+- проверяет требования, доказательства, XAI и риски
+- выполняет ручную проверку спорных мест
+- генерирует и экспортирует итоговый пакет
 
-## 4. Типы данных в эксперименте
-
-В экспериментальной части используются два типа данных:
+## 4. Какие типы данных используются
 
 ### 4.1. Фактически измеренные данные
 
-Это данные, которые получены из системы автоматически:
+К фактически измеренным данным относятся:
 
-- время `process`
-- время `analyze`
-- время `generate`
-- время export
-- `2x` load profile
-- formal quality benchmark
-- extended quality benchmark suite
-- calibration sweep по профилям reranker/confidence
-- pilot real-corpus validation
-- pilot real-corpus quality suite
-- pilot real-corpus calibration sweep
-- доля обработанных документов
-- доля требований с evidence
-- доля требований с XAI
-- успешность export
-
-Источники:
-
-- [docs/performance-baseline.json](performance-baseline.json)
-- [docs/load-baseline.json](load-baseline.json)
-- [docs/quality-metrics.md](quality-metrics.md)
+- performance baseline
+- load baseline
+- stress-артефакты
+- gold benchmark
+- committed benchmark-suite
+- calibration sweep
+- OCR benchmark
+- pilot `real_corpus`
+- проверка целевых критериев для `real_corpus`
 
 ### 4.2. Экспертно-инженерные допущения
 
-Это данные, которые пока не измерены на большом массиве реальных организаций, но необходимы для сравнения с ручным сценарием:
+К допущениям относятся:
 
-- диапазон времени ручной подготовки отчёта;
-- диапазон времени ручного review в автоматизированном процессе;
-- предварительная оценка прироста качества.
+- диапазоны времени ручного процесса
+- интервальные оценки выигрыша по времени
+- интервальные оценки потенциального прироста качества
 
-Источник:
+## 5. Как устроена текущая доказательная база
 
-- [docs/experiment-assumptions.json](experiment-assumptions.json)
+## 5.1. Demo-слой
 
-## 5. Метрики эксперимента
+Demo-слой показывает:
 
-### 5.1. Метрики времени
+- рабочий пользовательский сценарий
+- функциональное покрытие
+- export / XAI / review-контур
 
-- общее время ручного сценария;
-- общее время автоматизированного сценария;
-- абсолютная экономия времени;
-- относительное сокращение времени в процентах.
+## 5.2. Committed benchmark-слой
 
-### 5.2. Proxy-метрики качества
+Committed benchmark-слой показывает:
 
-- `documents_processed_share`
-- `evidence_coverage`
-- `xai_coverage`
-- `export_success_rate`
-- наличие дедупликации требований
+- формальные quality-метрики на фиксированном корпусе
+- воспроизводимость benchmark-замеров
+- устойчивость committed scenario pack
 
-### 5.3. Формальные quality-метрики текущего committed corpus
+## 5.3. Pilot `real_corpus`
 
-- `requirement extraction precision/recall/F1`
-- `applicability accuracy`
-- `evidence linking precision/recall/F1`
-- `report sections source coverage`
-- `status_accuracy_mean` по benchmark-suite
+Пилотный `real_corpus` показывает:
 
-### 5.4. Предварительные качественные эффекты
+- поведение системы на более реалистичных кейсах
+- где synthetic-базовый контур уже недостаточен
+- как calibration ведёт себя на усложнённом корпусе
 
-- снижение риска пропуска требования;
-- улучшение полноты evidence-покрытия;
-- повышение воспроизводимости проверки.
+## 6. Основные группы метрик
 
-## 6. Почему часть метрик качества всё ещё остаётся proxy-метриками
+### 6.1. Метрики времени
 
-На текущем этапе у проекта уже есть формальные `precision / recall / F1` на committed benchmark corpus, но пока ещё нет:
+- время ручного процесса
+- время автоматизированного процесса
+- экономия времени
+- latency отдельных этапов pipeline
 
-- большого real-world gold dataset с экспертной разметкой;
-- отдельного benchmark для semantic correctness generated report sections на реальном архиве кейсов;
-- широкой экспертной межразметочной проверки по нескольким организациям.
+### 6.2. Метрики функционального покрытия
 
-Поэтому в эксперименте текущей итерации корректно использовать:
+- documents processed share
+- evidence coverage
+- XAI coverage
+- export success rate
 
-- formal benchmark-метрики на committed corpus;
-- functional и coverage metrics;
-- экспертно-инженерные интервальные оценки.
+### 6.3. Формальные quality-метрики
 
-## 7. Воспроизводимость
+- requirement extraction precision / recall / F1
+- applicability accuracy
+- evidence linking precision / recall / F1
+- status accuracy
+- section source coverage
 
-Экспериментальная часть воспроизводится через:
+### 6.4. Метрики `real_corpus`
+
+- case readiness
+- target pass rate
+- aggregate quality on realistic pilot corpus
+
+## 7. Что уже можно честно утверждать
+
+По текущей итерации уже корректно утверждать:
+
+- `MVP 1` имеет формальный контур quality-метрик
+- committed benchmark-метрики воспроизводимы
+- pilot `real_corpus` уже существует и закрывает `20/20` целевых критериев
+- базовый OCR-контур измерен отдельно
+
+## 8. Что пока нельзя считать полностью доказанным
+
+Пока ещё нельзя считать полностью закрытыми следующие исследовательские вопросы:
+
+- semantic quality generated sections на большом реальном корпусе
+- окончательная calibration strategy на real-world data
+- generalization на существенно более широкий архив кейсов
+
+Именно это и составляет основу `MVP 2`.
+
+## 9. Как воспроизводится эксперимент
+
+### 9.1. Базовый экспериментальный отчёт
 
 ```bash
 ./.venv/bin/python backend/scripts/generate_experimental_report.py
 ```
 
-Качество committed corpus воспроизводится через:
+### 9.2. Committed benchmark-слой
 
 ```bash
-./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py
-./.venv/bin/python backend/scripts/run_calibration_sweep.py
+./.venv/bin/python backend/scripts/generate_quality_benchmark_report.py
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --suite-manifest samples/benchmark_suites/extended.json
+./.venv/bin/python backend/scripts/run_calibration_sweep.py --suite-manifest samples/benchmark_suites/extended.json
 ```
 
-Pilot `real_corpus` воспроизводится через:
+### 9.3. Пилотный `real_corpus`
 
 ```bash
 ./.venv/bin/python backend/scripts/validate_real_corpus.py
 ./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json --output-json docs/real-corpus-quality-suite-results.json --output-md docs/real-corpus-quality-suite-results.md
+./.venv/bin/python backend/scripts/evaluate_real_corpus_targets.py
 ./.venv/bin/python backend/scripts/run_calibration_sweep.py --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json --output-json docs/real-corpus-calibration-sweep.json --output-md docs/real-corpus-calibration-sweep.md
 ```
 
-Скрипт читает:
+## 10. Ограничения текущей методики
 
-- `docs/performance-baseline.json`
-- `docs/load-baseline.json`
-- `docs/experiment-assumptions.json`
+- сравнение ручного и автоматизированного времени всё ещё частично опирается на экспертные интервалы
+- benchmark-часть уже сильнее demo, но ещё не равна большому реальному архиву кейсов
+- pilot `real_corpus` полезен как мост, но не является окончательной широкой выборкой
 
-и генерирует:
+## 11. Как это связано с roadmap
 
-- `docs/experimental-results.json`
-- `docs/experimental-results.md`
+### `MVP 1`
 
-## 8. Ограничения методики
+Дал:
 
-- сравнение построено на малом demo dataset;
-- formal benchmark-часть уже расширена до OCR-augmented committed corpus, но не до большого реального архива кейсов;
-- pilot `real_corpus` уже введён, но пока содержит только `3` кейса и не является широким статистически репрезентативным корпусом;
-- часть временных и качественных оценок носит экспертный характер;
-- результаты не следует интерпретировать как окончательно доказанные научные метрики точности;
-- для строгой научной валидации нужен следующий этап с размеченным корпусом и экспертной проверкой.
+- воспроизводимый functional contour
+- формальный benchmark-слой
+- пилотный `real_corpus`
 
-## 9. Практический вывод
+### `MVP 2`
 
-Несмотря на ограничения, текущая методика уже позволяет:
+Должен дать:
 
-- формально показать измеримый выигрыш по времени;
-- показать formal quality-метрики на committed benchmark corpus и calibration sweep на расширенном suite;
-- показать покрытие evidence/XAI/export;
-- связать инженерные baseline-данные с прикладным пользовательским эффектом;
-- подготовить воспроизводимую основу для защиты и дальнейшего исследования.
+- более широкий `real_corpus`
+- более сильную OCR / vision-оценку
+- benchmark качества разделов
+- более зрелую calibration-стратегию
+
+## 12. Короткий итог
+
+Экспериментальная методика уже достаточна для защиты завершённого `MVP 1`,  
+но следующий исследовательский рост проекта напрямую связан с задачами `MVP 2`.

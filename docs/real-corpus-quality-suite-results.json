@@ -1,5 +1,5 @@
 {
-  "suite_size": 3,
+  "suite_size": 5,
   "benchmarks": [
     {
       "benchmark_name": "real_corpus_college_alpha_full_package",
@@ -15,7 +15,7 @@
         "recall": 1.0,
         "f1": 1.0,
         "category_accuracy": 1.0,
-        "status_accuracy": 0.75,
+        "status_accuracy": 1.0,
         "average_match_similarity": 0.99,
         "unmatched_expected_ids": [],
         "unexpected_predicted_titles": [],
@@ -26,7 +26,7 @@
             "predicted_title": "Организация обязана раскрывать сведения о численности обучающихся",
             "similarity": 0.99,
             "category_match": true,
-            "status_match": false
+            "status_match": true
           },
           {
             "expected_id": "req_local_acts",
@@ -62,11 +62,12 @@
       },
       "evidence_linking": {
         "expected_total": 6,
-        "predicted_total": 10,
-        "matched_total": 5,
-        "precision": 0.5,
-        "recall": 0.8333,
-        "f1": 0.625,
+        "predicted_total": 8,
+        "matched_total": 6,
+        "matched_predicted_total": 6,
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571,
         "grounded_requirements_share": 1.0,
         "per_requirement": [
           {
@@ -74,6 +75,7 @@
             "expected_total": 1,
             "predicted_total": 1,
             "matched_total": 1,
+            "matched_predicted_total": 1,
             "recall": 1.0,
             "precision": 1.0,
             "matches": [
@@ -87,11 +89,17 @@
           {
             "expected_id": "req_local_acts",
             "expected_total": 2,
-            "predicted_total": 2,
-            "matched_total": 1,
-            "recall": 0.5,
-            "precision": 0.5,
+            "predicted_total": 3,
+            "matched_total": 2,
+            "matched_predicted_total": 2,
+            "recall": 1.0,
+            "precision": 0.6667,
             "matches": [
+              {
+                "expected_snippet": "local_acts_published | 2026 | 24",
+                "predicted_snippet": "local_acts_published | 2026 | 24",
+                "similarity": 1.0
+              },
               {
                 "expected_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты и правила приема.",
                 "predicted_snippet": "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты и правила приема.",
@@ -102,10 +110,11 @@
           {
             "expected_id": "req_license_staff",
             "expected_total": 2,
-            "predicted_total": 4,
+            "predicted_total": 3,
             "matched_total": 2,
+            "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.5,
+            "precision": 0.6667,
             "matches": [
               {
                 "expected_snippet": "Сведения о педагогических работниках размещены на официальном сайте.",
@@ -122,10 +131,11 @@
           {
             "expected_id": "req_programs",
             "expected_total": 1,
-            "predicted_total": 3,
+            "predicted_total": 1,
             "matched_total": 1,
+            "matched_predicted_total": 1,
             "recall": 1.0,
-            "precision": 0.3333,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "На официальном сайте опубликованы сведения о реализуемых образовательных программах и учебных планах.",
@@ -141,8 +151,13 @@
         "predicted_total": 9,
         "presence_rate": 1.0,
         "non_empty_content_share": 1.0,
-        "source_requirement_coverage": 0.875,
-        "min_source_requirement_pass_share": 0.6667,
+        "source_requirement_coverage": 1.0,
+        "min_source_requirement_pass_share": 1.0,
+        "requirement_content_coverage_mean": 1.0,
+        "content_marker_coverage_mean": 1.0,
+        "min_content_marker_pass_share": 1.0,
+        "quality_score_mean": 1.0,
+        "quality_pass_share": 1.0,
         "per_section": [
           {
             "title": "Перечень применимых требований",
@@ -162,7 +177,27 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 4,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "matched_content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_programs",
+              "req_license_staff",
+              "req_local_acts",
+              "req_students"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Сведения, подтверждающие выполнение требований",
@@ -177,11 +212,32 @@
             "matched_requirement_ids": [
               "req_programs",
               "req_license_staff",
-              "req_local_acts"
+              "req_local_acts",
+              "req_students"
             ],
-            "source_requirement_recall": 0.75,
+            "source_requirement_recall": 1.0,
             "min_source_requirements": 4,
-            "min_source_requirements_ok": false
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "matched_content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_programs",
+              "req_license_staff",
+              "req_local_acts",
+              "req_students"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Заключение",
@@ -191,7 +247,24 @@
             "matched_requirement_ids": [],
             "source_requirement_recall": 0.0,
             "min_source_requirements": 1,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "matched_content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 3,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 0.0,
+            "matched_requirement_content_ids": [],
+            "quality_score": 1.0,
+            "quality_pass": true
           }
         ]
       }
@@ -259,6 +332,7 @@
         "expected_total": 2,
         "predicted_total": 3,
         "matched_total": 2,
+        "matched_predicted_total": 2,
         "precision": 0.6667,
         "recall": 1.0,
         "f1": 0.8,
@@ -269,6 +343,7 @@
             "expected_total": 0,
             "predicted_total": 0,
             "matched_total": 0,
+            "matched_predicted_total": 0,
             "recall": 0.0,
             "precision": 0.0,
             "matches": []
@@ -278,6 +353,7 @@
             "expected_total": 0,
             "predicted_total": 0,
             "matched_total": 0,
+            "matched_predicted_total": 0,
             "recall": 0.0,
             "precision": 0.0,
             "matches": []
@@ -287,6 +363,7 @@
             "expected_total": 1,
             "predicted_total": 2,
             "matched_total": 1,
+            "matched_predicted_total": 1,
             "recall": 1.0,
             "precision": 0.5,
             "matches": [
@@ -302,6 +379,7 @@
             "expected_total": 1,
             "predicted_total": 1,
             "matched_total": 1,
+            "matched_predicted_total": 1,
             "recall": 1.0,
             "precision": 1.0,
             "matches": [
@@ -321,6 +399,11 @@
         "non_empty_content_share": 1.0,
         "source_requirement_coverage": 1.0,
         "min_source_requirement_pass_share": 1.0,
+        "requirement_content_coverage_mean": 1.0,
+        "content_marker_coverage_mean": 1.0,
+        "min_content_marker_pass_share": 1.0,
+        "quality_score_mean": 1.0,
+        "quality_pass_share": 1.0,
         "per_section": [
           {
             "title": "Перечень применимых требований",
@@ -338,7 +421,26 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 3,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "matched_content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_programs",
+              "req_local_acts",
+              "req_graduates"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Выявленные несоответствия и недостающие данные",
@@ -354,7 +456,19 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 2,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [],
+            "matched_content_markers": [],
+            "content_marker_coverage": 0.0,
+            "min_content_markers": 0,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_graduates",
+              "req_server_room"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Риски",
@@ -370,7 +484,19 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 2,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [],
+            "matched_content_markers": [],
+            "content_marker_coverage": 0.0,
+            "min_content_markers": 0,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_graduates",
+              "req_server_room"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Рекомендации",
@@ -386,7 +512,19 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 2,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [],
+            "matched_content_markers": [],
+            "content_marker_coverage": 0.0,
+            "min_content_markers": 0,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_graduates",
+              "req_server_room"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Заключение",
@@ -396,7 +534,24 @@
             "matched_requirement_ids": [],
             "source_requirement_recall": 0.0,
             "min_source_requirements": 1,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "matched_content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 3,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 0.0,
+            "matched_requirement_content_ids": [],
+            "quality_score": 1.0,
+            "quality_pass": true
           }
         ]
       }
@@ -415,7 +570,7 @@
         "recall": 1.0,
         "f1": 1.0,
         "category_accuracy": 1.0,
-        "status_accuracy": 0.3333,
+        "status_accuracy": 1.0,
         "average_match_similarity": 0.99,
         "unmatched_expected_ids": [],
         "unexpected_predicted_titles": [],
@@ -426,7 +581,7 @@
             "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты",
             "similarity": 0.99,
             "category_match": true,
-            "status_match": false
+            "status_match": true
           },
           {
             "expected_id": "req_programs",
@@ -434,7 +589,7 @@
             "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
             "similarity": 0.99,
             "category_match": true,
-            "status_match": false
+            "status_match": true
           },
           {
             "expected_id": "req_license_staff",
@@ -454,43 +609,64 @@
       },
       "evidence_linking": {
         "expected_total": 5,
-        "predicted_total": 1,
-        "matched_total": 1,
-        "precision": 1.0,
-        "recall": 0.2,
-        "f1": 0.3333,
-        "grounded_requirements_share": 0.3333,
+        "predicted_total": 4,
+        "matched_total": 4,
+        "matched_predicted_total": 3,
+        "precision": 0.75,
+        "recall": 0.8,
+        "f1": 0.7742,
+        "grounded_requirements_share": 1.0,
         "per_requirement": [
           {
             "expected_id": "req_local_acts",
             "expected_total": 2,
-            "predicted_total": 0,
-            "matched_total": 0,
-            "recall": 0.0,
-            "precision": 0.0,
-            "matches": []
+            "predicted_total": 1,
+            "matched_total": 2,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "Локальные акты опубликованы.",
+                "predicted_snippet": "На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026",
+                "similarity": 0.88
+              },
+              {
+                "expected_snippet": "На сайте размещены локальные нормативные акты.",
+                "predicted_snippet": "На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026",
+                "similarity": 0.88
+              }
+            ]
           },
           {
             "expected_id": "req_programs",
             "expected_total": 1,
-            "predicted_total": 0,
-            "matched_total": 0,
-            "recall": 0.0,
-            "precision": 0.0,
-            "matches": []
+            "predicted_total": 1,
+            "matched_total": 1,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "Программы обучения опубликованы.",
+                "predicted_snippet": "На сайте размещены локальные нормативные акты. Программы обучения опубликованы. 2026",
+                "similarity": 0.88
+              }
+            ]
           },
           {
             "expected_id": "req_license_staff",
             "expected_total": 2,
-            "predicted_total": 1,
+            "predicted_total": 2,
             "matched_total": 1,
+            "matched_predicted_total": 1,
             "recall": 0.5,
-            "precision": 1.0,
+            "precision": 0.5,
             "matches": [
               {
                 "expected_snippet": "Лицензия и аккредитация размещены на сайте.",
-                "predicted_snippet": "\"Государственная аккредитация\"",
-                "similarity": 0.44
+                "predicted_snippet": "Лицензия и аккредитация размещены на сайте. Teachers total: 48. Локальные акты опубликованы.",
+                "similarity": 0.88
               }
             ]
           }
@@ -501,8 +677,13 @@
         "predicted_total": 9,
         "presence_rate": 1.0,
         "non_empty_content_share": 1.0,
-        "source_requirement_coverage": 0.6667,
-        "min_source_requirement_pass_share": 0.6667,
+        "source_requirement_coverage": 1.0,
+        "min_source_requirement_pass_share": 1.0,
+        "requirement_content_coverage_mean": 1.0,
+        "content_marker_coverage_mean": 1.0,
+        "min_content_marker_pass_share": 1.0,
+        "quality_score_mean": 1.0,
+        "quality_pass_share": 1.0,
         "per_section": [
           {
             "title": "Перечень применимых требований",
@@ -520,7 +701,26 @@
             ],
             "source_requirement_recall": 1.0,
             "min_source_requirements": 3,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "matched_content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_license_staff",
+              "req_programs",
+              "req_local_acts"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Сведения, подтверждающие выполнение требований",
@@ -532,11 +732,32 @@
               "req_local_acts"
             ],
             "matched_requirement_ids": [
-              "req_license_staff"
+              "req_license_staff",
+              "req_programs",
+              "req_local_acts"
             ],
-            "source_requirement_recall": 0.3333,
+            "source_requirement_recall": 1.0,
             "min_source_requirements": 3,
-            "min_source_requirements_ok": false
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "matched_content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_license_staff",
+              "req_programs",
+              "req_local_acts"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
           },
           {
             "title": "Заключение",
@@ -546,7 +767,559 @@
             "matched_requirement_ids": [],
             "source_requirement_recall": 0.0,
             "min_source_requirements": 1,
-            "min_source_requirements_ok": true
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "matched_content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 3,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 0.0,
+            "matched_requirement_content_ids": [],
+            "quality_score": 1.0,
+            "quality_pass": true
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_name": "real_corpus_college_delta_structured_registry",
+      "scenario": "Рособрнадзор + колледж + structured registry package",
+      "report_type": "readiness_report",
+      "expected_requirements": 4,
+      "predicted_requirements": 4,
+      "requirement_extraction": {
+        "expected_total": 4,
+        "predicted_total": 4,
+        "matched_total": 4,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "category_accuracy": 1.0,
+        "status_accuracy": 1.0,
+        "average_match_similarity": 0.99,
+        "unmatched_expected_ids": [],
+        "unexpected_predicted_titles": [],
+        "matches": [
+          {
+            "expected_id": "req_staff",
+            "expected_title": "Организация должна раскрывать сведения о педагогических работниках.",
+            "predicted_title": "Организация должна раскрывать сведения о педагогических работниках",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_local_acts",
+            "expected_title": "На официальном сайте требуется опубликовать локальные нормативные акты.",
+            "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+            "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_students",
+            "expected_title": "Организация обязана раскрывать сведения о численности обучающихся.",
+            "predicted_title": "Организация обязана раскрывать сведения о численности обучающихся",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          }
+        ]
+      },
+      "applicability": {
+        "expected_total": 4,
+        "matched_total": 4,
+        "accuracy": 1.0,
+        "mismatches": []
+      },
+      "evidence_linking": {
+        "expected_total": 6,
+        "predicted_total": 8,
+        "matched_total": 6,
+        "matched_predicted_total": 6,
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571,
+        "grounded_requirements_share": 1.0,
+        "per_requirement": [
+          {
+            "expected_id": "req_staff",
+            "expected_total": 2,
+            "predicted_total": 3,
+            "matched_total": 2,
+            "matched_predicted_total": 2,
+            "recall": 1.0,
+            "precision": 0.6667,
+            "matches": [
+              {
+                "expected_snippet": "teachers_total | 2026 | 84",
+                "predicted_snippet": "teachers_total | 2026 | 84",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "Сведения о педагогических работниках размещены на официальном сайте.",
+                "predicted_snippet": "Сведения о педагогических работниках размещены на официальном сайте.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_local_acts",
+            "expected_total": 2,
+            "predicted_total": 3,
+            "matched_total": 2,
+            "matched_predicted_total": 2,
+            "recall": 1.0,
+            "precision": 0.6667,
+            "matches": [
+              {
+                "expected_snippet": "local_acts_published | 2026 | 21",
+                "predicted_snippet": "local_acts_published | 2026 | 21",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты.",
+                "predicted_snippet": "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_total": 1,
+            "predicted_total": 1,
+            "matched_total": 1,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "На официальном сайте опубликованы сведения о реализуемых образовательных программах.",
+                "predicted_snippet": "На официальном сайте опубликованы сведения о реализуемых образовательных программах.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_students",
+            "expected_total": 1,
+            "predicted_total": 1,
+            "matched_total": 1,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "students_total | 2026 | 940",
+                "predicted_snippet": "students_total | 2026 | 940",
+                "similarity": 1.0
+              }
+            ]
+          }
+        ]
+      },
+      "report_sections": {
+        "expected_total": 3,
+        "predicted_total": 9,
+        "presence_rate": 1.0,
+        "non_empty_content_share": 1.0,
+        "source_requirement_coverage": 1.0,
+        "min_source_requirement_pass_share": 1.0,
+        "requirement_content_coverage_mean": 1.0,
+        "content_marker_coverage_mean": 1.0,
+        "min_content_marker_pass_share": 1.0,
+        "quality_score_mean": 1.0,
+        "quality_pass_share": 1.0,
+        "per_section": [
+          {
+            "title": "Перечень применимых требований",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "matched_requirement_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "source_requirement_recall": 1.0,
+            "min_source_requirements": 4,
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "matched_content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
+          },
+          {
+            "title": "Сведения, подтверждающие выполнение требований",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "matched_requirement_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "source_requirement_recall": 1.0,
+            "min_source_requirements": 4,
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "matched_content_markers": [
+              "Подтвержденных или готовых требований",
+              "доказательств"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_students",
+              "req_programs",
+              "req_local_acts",
+              "req_staff"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
+          },
+          {
+            "title": "Заключение",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [],
+            "matched_requirement_ids": [],
+            "source_requirement_recall": 0.0,
+            "min_source_requirements": 1,
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "matched_content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 3,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 0.0,
+            "matched_requirement_content_ids": [],
+            "quality_score": 1.0,
+            "quality_pass": true
+          }
+        ]
+      }
+    },
+    {
+      "benchmark_name": "real_corpus_college_epsilon_graduate_registry",
+      "scenario": "Рособрнадзор + колледж + graduate registry package",
+      "report_type": "readiness_report",
+      "expected_requirements": 4,
+      "predicted_requirements": 4,
+      "requirement_extraction": {
+        "expected_total": 4,
+        "predicted_total": 4,
+        "matched_total": 4,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "category_accuracy": 1.0,
+        "status_accuracy": 1.0,
+        "average_match_similarity": 0.99,
+        "unmatched_expected_ids": [],
+        "unexpected_predicted_titles": [],
+        "matches": [
+          {
+            "expected_id": "req_license",
+            "expected_title": "Необходимо предоставить сведения о лицензии и государственной аккредитации.",
+            "predicted_title": "Необходимо предоставить сведения о лицензии и государственной аккредитации",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_local_acts",
+            "expected_title": "На официальном сайте требуется опубликовать локальные нормативные акты и правила приема.",
+            "predicted_title": "На официальном сайте требуется опубликовать локальные нормативные акты и правила приема",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_title": "Организация должна разместить сведения о реализуемых образовательных программах.",
+            "predicted_title": "Организация должна разместить сведения о реализуемых образовательных программах",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          },
+          {
+            "expected_id": "req_graduates",
+            "expected_title": "Организация обязана раскрывать сведения о выпускниках и их трудоустройстве.",
+            "predicted_title": "Организация обязана раскрывать сведения о выпускниках и их трудоустройстве",
+            "similarity": 0.99,
+            "category_match": true,
+            "status_match": true
+          }
+        ]
+      },
+      "applicability": {
+        "expected_total": 4,
+        "matched_total": 4,
+        "accuracy": 1.0,
+        "mismatches": []
+      },
+      "evidence_linking": {
+        "expected_total": 4,
+        "predicted_total": 5,
+        "matched_total": 4,
+        "matched_predicted_total": 4,
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1": 0.8889,
+        "grounded_requirements_share": 0.75,
+        "per_requirement": [
+          {
+            "expected_id": "req_license",
+            "expected_total": 0,
+            "predicted_total": 0,
+            "matched_total": 0,
+            "matched_predicted_total": 0,
+            "recall": 0.0,
+            "precision": 0.0,
+            "matches": []
+          },
+          {
+            "expected_id": "req_local_acts",
+            "expected_total": 2,
+            "predicted_total": 3,
+            "matched_total": 2,
+            "matched_predicted_total": 2,
+            "recall": 1.0,
+            "precision": 0.6667,
+            "matches": [
+              {
+                "expected_snippet": "local_acts_published | 2026 | 17",
+                "predicted_snippet": "local_acts_published | 2026 | 17",
+                "similarity": 1.0
+              },
+              {
+                "expected_snippet": "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты и правила приема.",
+                "predicted_snippet": "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты и правила приема.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_programs",
+            "expected_total": 1,
+            "predicted_total": 1,
+            "matched_total": 1,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "На официальном сайте опубликованы сведения о реализуемых образовательных программах.",
+                "predicted_snippet": "На официальном сайте опубликованы сведения о реализуемых образовательных программах.",
+                "similarity": 1.0
+              }
+            ]
+          },
+          {
+            "expected_id": "req_graduates",
+            "expected_total": 1,
+            "predicted_total": 1,
+            "matched_total": 1,
+            "matched_predicted_total": 1,
+            "recall": 1.0,
+            "precision": 1.0,
+            "matches": [
+              {
+                "expected_snippet": "выпускники_трудоустроены | 2026 | 78",
+                "predicted_snippet": "выпускники_трудоустроены | 2026 | 78",
+                "similarity": 1.0
+              }
+            ]
+          }
+        ]
+      },
+      "report_sections": {
+        "expected_total": 4,
+        "predicted_total": 9,
+        "presence_rate": 1.0,
+        "non_empty_content_share": 1.0,
+        "source_requirement_coverage": 1.0,
+        "min_source_requirement_pass_share": 1.0,
+        "requirement_content_coverage_mean": 1.0,
+        "content_marker_coverage_mean": 1.0,
+        "min_content_marker_pass_share": 1.0,
+        "quality_score_mean": 1.0,
+        "quality_pass_share": 1.0,
+        "per_section": [
+          {
+            "title": "Перечень применимых требований",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [
+              "req_graduates",
+              "req_programs",
+              "req_local_acts",
+              "req_license"
+            ],
+            "matched_requirement_ids": [
+              "req_graduates",
+              "req_programs",
+              "req_local_acts",
+              "req_license"
+            ],
+            "source_requirement_recall": 1.0,
+            "min_source_requirements": 4,
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "matched_content_markers": [
+              "Всего требований",
+              "Применимых"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 2,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_graduates",
+              "req_programs",
+              "req_local_acts",
+              "req_license"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
+          },
+          {
+            "title": "Выявленные несоответствия и недостающие данные",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [
+              "req_license"
+            ],
+            "matched_requirement_ids": [
+              "req_license"
+            ],
+            "source_requirement_recall": 1.0,
+            "min_source_requirements": 1,
+            "min_source_requirements_ok": true,
+            "content_markers": [],
+            "matched_content_markers": [],
+            "content_marker_coverage": 0.0,
+            "min_content_markers": 0,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_license"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
+          },
+          {
+            "title": "Риски",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [
+              "req_license"
+            ],
+            "matched_requirement_ids": [
+              "req_license"
+            ],
+            "source_requirement_recall": 1.0,
+            "min_source_requirements": 1,
+            "min_source_requirements_ok": true,
+            "content_markers": [],
+            "matched_content_markers": [],
+            "content_marker_coverage": 0.0,
+            "min_content_markers": 0,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 1.0,
+            "matched_requirement_content_ids": [
+              "req_license"
+            ],
+            "quality_score": 1.0,
+            "quality_pass": true
+          },
+          {
+            "title": "Заключение",
+            "present": true,
+            "non_empty": true,
+            "expected_requirement_ids": [],
+            "matched_requirement_ids": [],
+            "source_requirement_recall": 0.0,
+            "min_source_requirements": 1,
+            "min_source_requirements_ok": true,
+            "content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "matched_content_markers": [
+              "Готовых требований",
+              "Открытых рисков",
+              "Итоговая готовность отчета"
+            ],
+            "content_marker_coverage": 1.0,
+            "min_content_markers": 3,
+            "min_content_markers_ok": true,
+            "requirement_content_coverage": 0.0,
+            "matched_requirement_content_ids": [],
+            "quality_score": 1.0,
+            "quality_pass": true
           }
         ]
       }
@@ -558,22 +1331,27 @@
       "recall": 1.0,
       "f1": 1.0,
       "category_accuracy_mean": 1.0,
-      "status_accuracy_mean": 0.6944
+      "status_accuracy_mean": 1.0
     },
     "applicability": {
       "accuracy_mean": 1.0
     },
     "evidence_linking": {
-      "precision": 0.5714,
-      "recall": 0.6154,
-      "f1": 0.5926,
-      "grounded_requirements_share_mean": 0.6111
+      "precision": 0.75,
+      "recall": 0.9565,
+      "f1": 0.8408,
+      "grounded_requirements_share_mean": 0.85
     },
     "report_sections": {
       "presence_rate_mean": 1.0,
       "non_empty_content_share_mean": 1.0,
-      "source_requirement_coverage_mean": 0.8472,
-      "min_source_requirement_pass_share_mean": 0.7778
+      "source_requirement_coverage_mean": 1.0,
+      "min_source_requirement_pass_share_mean": 1.0,
+      "requirement_content_coverage_mean": 1.0,
+      "content_marker_coverage_mean": 1.0,
+      "min_content_marker_pass_share_mean": 1.0,
+      "quality_score_mean": 1.0,
+      "quality_pass_share_mean": 1.0
     }
   }
 }

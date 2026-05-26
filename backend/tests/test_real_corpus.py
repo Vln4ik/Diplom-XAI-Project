@@ -15,7 +15,7 @@ def test_load_real_corpus_case_paths_returns_all_pilot_cases():
 
     case_paths = load_real_corpus_case_paths(manifest_path)
 
-    assert len(case_paths) == 3
+    assert len(case_paths) == 5
     assert case_paths[0].name == "case-manifest.json"
 
 
@@ -34,6 +34,9 @@ def test_validate_real_corpus_case_manifest_marks_alpha_case_ready():
     assert report["case_id"] == "college_alpha_full_package"
     assert report["benchmark_ready"] is True
     assert report["document_total"] == 4
+    assert report["difficulty"] == "medium"
+    assert "evidence_linking" in report["analysis_focus"]
+    assert report["quality_targets"]["requirement_f1_min"] == 0.95
     assert report["issues"] == []
 
 
@@ -42,11 +45,13 @@ def test_summarize_real_corpus_manifest_returns_expected_counts():
 
     report = summarize_real_corpus_manifest(manifest_path)
 
-    assert report["case_total"] == 3
-    assert report["benchmark_ready_case_total"] == 3
+    assert report["case_total"] == 5
+    assert report["benchmark_ready_case_total"] == 5
     assert report["issue_total"] == 0
-    assert report["document_category_counts"]["normative"] == 3
-    assert report["document_format_counts"]["json"] >= 3
+    assert report["document_category_counts"]["normative"] == 5
+    assert report["document_format_counts"]["json"] >= 5
+    assert report["difficulty_counts"]["high"] == 2
+    assert report["focus_counts"]["section_generation"] >= 2
 
 
 def test_load_benchmark_paths_from_real_corpus_manifest_returns_case_annotations():
@@ -54,5 +59,5 @@ def test_load_benchmark_paths_from_real_corpus_manifest_returns_case_annotations
 
     benchmark_paths = load_benchmark_paths_from_real_corpus_manifest(manifest_path)
 
-    assert len(benchmark_paths) == 3
+    assert len(benchmark_paths) == 5
     assert benchmark_paths[0].name == "quality_benchmark.json"

@@ -1,0 +1,16 @@
+{
+  "organization_name": "Технологический колледж развития",
+  "organization_type": "educational",
+  "website": "https://delta-college.example.edu",
+  "regulatory_scope": [
+    "Рособрнадзор",
+    "Лицензирование"
+  ],
+  "programs": [
+    "Прикладная информатика",
+    "Сетевое администрирование",
+    "Педагогика дополнительного образования"
+  ],
+  "has_official_website": true,
+  "has_accreditation": false
+}

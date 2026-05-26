@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.core.config import get_settings
 from app.db.session import get_engine, get_session_factory
+from app.services.ocr_benchmark import temporary_ocr_runtime
 from app.services.real_corpus import infer_project_root
 from app.services.analysis import clear_analysis_calibration_cache, requirement_similarity, significant_token_roots
 from app.services.auth import create_user
@@ -44,6 +46,9 @@ class BenchmarkExpectedSection:
     expected_requirement_ids: list[str]
     min_source_requirements: int
     require_non_empty_content: bool
+    content_markers: list[str]
+    min_content_markers: int
+    quality_pass_threshold: float
 
 
 @dataclass(frozen=True)
@@ -60,8 +65,43 @@ class RequirementMatch:
     similarity: float
 
 
+DEFAULT_SECTION_CONTENT_MARKERS: dict[str, tuple[str, ...]] = {
+    "Перечень применимых требований": (
+        "Всего требований",
+        "Применимых",
+    ),
+    "Сведения, подтверждающие выполнение требований": (
+        "Подтвержденных или готовых требований",
+        "доказательств",
+    ),
+    "Заключение": (
+        "Готовых требований",
+        "Открытых рисков",
+        "Итоговая готовность отчета",
+    ),
+}
+
+
 def _load_json(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_benchmark_runtime_overrides(benchmark: dict[str, object]) -> tuple[str | None, str | None]:
+    runtime = benchmark.get("runtime")
+    provider: str | None = None
+    languages: str | None = None
+    if isinstance(runtime, dict):
+        raw_provider = runtime.get("ocr_provider")
+        raw_languages = runtime.get("ocr_languages")
+        provider = str(raw_provider).strip() if raw_provider else None
+        languages = str(raw_languages).strip() if raw_languages else None
+    if provider is None:
+        raw_provider = benchmark.get("ocr_provider")
+        provider = str(raw_provider).strip() if raw_provider else None
+    if languages is None:
+        raw_languages = benchmark.get("ocr_languages")
+        languages = str(raw_languages).strip() if raw_languages else None
+    return provider, languages
 
 
 def load_benchmark_paths_from_manifest(manifest_path: Path) -> list[Path]:
@@ -90,8 +130,23 @@ def _round(value: float) -> float:
 
 
 def precision_recall_f1(*, true_positive: int, predicted_total: int, expected_total: int) -> dict[str, float]:
-    precision = 0.0 if predicted_total == 0 else true_positive / predicted_total
-    recall = 0.0 if expected_total == 0 else true_positive / expected_total
+    return precision_recall_f1_from_counts(
+        matched_predicted_total=true_positive,
+        predicted_total=predicted_total,
+        matched_expected_total=true_positive,
+        expected_total=expected_total,
+    )
+
+
+def precision_recall_f1_from_counts(
+    *,
+    matched_predicted_total: int,
+    predicted_total: int,
+    matched_expected_total: int,
+    expected_total: int,
+) -> dict[str, float]:
+    precision = 0.0 if predicted_total == 0 else matched_predicted_total / predicted_total
+    recall = 0.0 if expected_total == 0 else matched_expected_total / expected_total
     f1 = 0.0 if precision == 0.0 or recall == 0.0 else 2 * precision * recall / (precision + recall)
     return {
         "precision": _round(precision),
@@ -102,6 +157,43 @@ def precision_recall_f1(*, true_positive: int, predicted_total: int, expected_to
 
 def _mean(values: list[float]) -> float:
     return _round(sum(values) / len(values)) if values else 0.0
+
+
+def _normalize_text(value: str) -> str:
+    return " ".join(value.lower().split())
+
+
+def _significant_roots(value: str) -> set[str]:
+    return {token for token in significant_token_roots(value) if not token.isdigit()}
+
+
+def marker_matches_content(marker: str, content: str) -> bool:
+    normalized_marker = _normalize_text(marker)
+    normalized_content = _normalize_text(content)
+    if not normalized_marker:
+        return True
+    if normalized_marker in normalized_content:
+        return True
+
+    marker_roots = _significant_roots(marker)
+    if not marker_roots:
+        return False
+    content_roots = _significant_roots(content)
+    overlap = len(marker_roots & content_roots)
+    if overlap == len(marker_roots):
+        return True
+    return overlap >= 2 and overlap / len(marker_roots) >= 0.67
+
+
+def requirement_title_covered_in_content(requirement_title: str, content: str) -> bool:
+    title_roots = _significant_roots(requirement_title)
+    if not title_roots:
+        return False
+    content_roots = _significant_roots(content)
+    overlap = len(title_roots & content_roots)
+    overlap_ratio = overlap / len(title_roots)
+    similarity = requirement_similarity(requirement_title, content)
+    return overlap_ratio >= 0.6 or (overlap >= 2 and overlap_ratio >= 0.45 and similarity >= 0.35)
 
 
 def evidence_similarity(expected_snippet: str, predicted_snippet: str) -> float:
@@ -120,6 +212,17 @@ def evidence_similarity(expected_snippet: str, predicted_snippet: str) -> float:
     if not shared_roots and base_similarity < 0.75:
         return 0.0
     return base_similarity
+
+
+def allows_multi_match(predicted_snippet: str, similarity: float) -> bool:
+    if similarity >= 0.82:
+        return True
+    normalized = _normalize_text(predicted_snippet)
+    if len(normalized) < 70:
+        return False
+    clause_count = sum(normalized.count(separator) for separator in [".", ";", ":"])
+    root_count = len(_significant_roots(predicted_snippet))
+    return similarity >= 0.74 and clause_count >= 1 and root_count >= 4
 
 
 def match_requirements(
@@ -207,7 +310,8 @@ def evaluate_evidence_linking(
     *,
     min_similarity: float = 0.34,
 ) -> dict[str, object]:
-    true_positive = 0
+    matched_expected_total = 0
+    matched_predicted_total = 0
     expected_total = 0
     predicted_total = 0
     grounded_requirements = 0
@@ -244,7 +348,24 @@ def evaluate_evidence_linking(
                 }
             )
 
-        true_positive += len(local_matches)
+        for similarity, expected_index, predicted_index in candidate_pairs:
+            if expected_index in matched_expected:
+                continue
+            if predicted_index not in matched_predicted:
+                continue
+            if not allows_multi_match(predicted_items[predicted_index], similarity):
+                continue
+            matched_expected.add(expected_index)
+            local_matches.append(
+                {
+                    "expected_snippet": expected_items[expected_index],
+                    "predicted_snippet": predicted_items[predicted_index],
+                    "similarity": _round(similarity),
+                }
+            )
+
+        matched_expected_total += len(matched_expected)
+        matched_predicted_total += len(matched_predicted)
         if local_matches:
             grounded_requirements += 1
 
@@ -253,22 +374,25 @@ def evaluate_evidence_linking(
                 "expected_id": match.expected.benchmark_id,
                 "expected_total": len(expected_items),
                 "predicted_total": len(predicted_items),
-                "matched_total": len(local_matches),
-                "recall": _round(0.0 if not expected_items else len(local_matches) / len(expected_items)),
-                "precision": _round(0.0 if not predicted_items else len(local_matches) / len(predicted_items)),
+                "matched_total": len(matched_expected),
+                "matched_predicted_total": len(matched_predicted),
+                "recall": _round(0.0 if not expected_items else len(matched_expected) / len(expected_items)),
+                "precision": _round(0.0 if not predicted_items else len(matched_predicted) / len(predicted_items)),
                 "matches": local_matches,
             }
         )
 
-    metrics = precision_recall_f1(
-        true_positive=true_positive,
+    metrics = precision_recall_f1_from_counts(
+        matched_predicted_total=matched_predicted_total,
         predicted_total=predicted_total,
+        matched_expected_total=matched_expected_total,
         expected_total=expected_total,
     )
     return {
         "expected_total": expected_total,
         "predicted_total": predicted_total,
-        "matched_total": true_positive,
+        "matched_total": matched_expected_total,
+        "matched_predicted_total": matched_predicted_total,
         **metrics,
         "grounded_requirements_share": _round(0.0 if not matches else grounded_requirements / len(matches)),
         "per_requirement": per_requirement,
@@ -311,6 +435,8 @@ def evaluate_report_sections(
     expected_sections: list[BenchmarkExpectedSection],
     predicted_sections: list[BenchmarkPredictedSection],
     matches: list[RequirementMatch],
+    *,
+    expected_requirements_by_id: dict[str, BenchmarkExpectedRequirement] | None = None,
 ) -> dict[str, object]:
     if not expected_sections:
         return {
@@ -320,22 +446,42 @@ def evaluate_report_sections(
             "non_empty_content_share": 0.0,
             "source_requirement_coverage": 0.0,
             "min_source_requirement_pass_share": 0.0,
+            "requirement_content_coverage_mean": 0.0,
+            "content_marker_coverage_mean": 0.0,
+            "min_content_marker_pass_share": 0.0,
+            "quality_score_mean": 0.0,
+            "quality_pass_share": 0.0,
             "per_section": [],
         }
 
     predicted_by_title = {section.title: section for section in predicted_sections}
     requirement_id_map = {match.predicted.requirement_id: match.expected.benchmark_id for match in matches}
+    expected_requirement_map = expected_requirements_by_id or {
+        match.expected.benchmark_id: match.expected for match in matches
+    }
 
     matched_sections = 0
     non_empty_sections = 0
     min_source_sections = 0
+    min_content_marker_sections = 0
+    quality_pass_sections = 0
     expected_links_total = 0
     matched_links_total = 0
+    requirement_content_coverages: list[float] = []
+    content_marker_coverages: list[float] = []
+    quality_scores: list[float] = []
     per_section: list[dict[str, object]] = []
 
     for expected_section in expected_sections:
+        default_markers = list(DEFAULT_SECTION_CONTENT_MARKERS.get(expected_section.title, ()))
+        content_markers = expected_section.content_markers or default_markers
+        min_content_markers = expected_section.min_content_markers
+        if min_content_markers == 0 and content_markers:
+            min_content_markers = len(content_markers)
+
         predicted = predicted_by_title.get(expected_section.title)
         if predicted is None:
+            quality_scores.append(0.0)
             per_section.append(
                 {
                     "title": expected_section.title,
@@ -346,6 +492,15 @@ def evaluate_report_sections(
                     "source_requirement_recall": 0.0,
                     "min_source_requirements": expected_section.min_source_requirements,
                     "min_source_requirements_ok": expected_section.min_source_requirements == 0,
+                    "content_markers": content_markers,
+                    "matched_content_markers": [],
+                    "content_marker_coverage": 0.0,
+                    "min_content_markers": min_content_markers,
+                    "min_content_markers_ok": min_content_markers == 0,
+                    "requirement_content_coverage": 0.0,
+                    "matched_requirement_content_ids": [],
+                    "quality_score": 0.0,
+                    "quality_pass": False,
                 }
             )
             expected_links_total += len(expected_section.expected_requirement_ids)
@@ -376,6 +531,59 @@ def evaluate_report_sections(
         if min_source_ok:
             min_source_sections += 1
 
+        matched_content_markers = [
+            marker for marker in content_markers if marker_matches_content(marker, normalized_content)
+        ]
+        content_marker_coverage = (
+            _round(len(matched_content_markers) / len(content_markers)) if content_markers else 0.0
+        )
+        if content_markers:
+            content_marker_coverages.append(content_marker_coverage)
+        min_content_markers_ok = len(matched_content_markers) >= min_content_markers
+        if min_content_markers_ok:
+            min_content_marker_sections += 1
+
+        expected_requirement_titles = [
+            expected_requirement_map[requirement_id].title
+            for requirement_id in expected_section.expected_requirement_ids
+            if requirement_id in expected_requirement_map
+        ]
+        matched_requirement_content_ids = [
+            requirement_id
+            for requirement_id in expected_section.expected_requirement_ids
+            if requirement_id in expected_requirement_map
+            and requirement_title_covered_in_content(
+                expected_requirement_map[requirement_id].title,
+                normalized_content,
+            )
+        ]
+        requirement_content_coverage = _round(
+            0.0
+            if not expected_requirement_titles
+            else len(matched_requirement_content_ids) / len(expected_requirement_titles)
+        )
+        if expected_requirement_titles:
+            requirement_content_coverages.append(requirement_content_coverage)
+
+        quality_components = [
+            1.0 if non_empty else 0.0,
+            1.0 if min_source_ok else 0.0,
+        ]
+        if expected_requirement_titles:
+            quality_components.append(
+                0.0
+                if not expected_section.expected_requirement_ids
+                else len(matched_requirement_ids) / len(expected_section.expected_requirement_ids)
+            )
+            quality_components.append(requirement_content_coverage)
+        if content_markers:
+            quality_components.append(content_marker_coverage)
+        quality_score = _mean(quality_components)
+        quality_scores.append(quality_score)
+        quality_pass = quality_score >= expected_section.quality_pass_threshold
+        if quality_pass:
+            quality_pass_sections += 1
+
         per_section.append(
             {
                 "title": expected_section.title,
@@ -390,6 +598,15 @@ def evaluate_report_sections(
                 ),
                 "min_source_requirements": expected_section.min_source_requirements,
                 "min_source_requirements_ok": min_source_ok,
+                "content_markers": content_markers,
+                "matched_content_markers": matched_content_markers,
+                "content_marker_coverage": content_marker_coverage,
+                "min_content_markers": min_content_markers,
+                "min_content_markers_ok": min_content_markers_ok,
+                "requirement_content_coverage": requirement_content_coverage,
+                "matched_requirement_content_ids": matched_requirement_content_ids,
+                "quality_score": quality_score,
+                "quality_pass": quality_pass,
             }
         )
 
@@ -402,6 +619,11 @@ def evaluate_report_sections(
             0.0 if expected_links_total == 0 else matched_links_total / expected_links_total
         ),
         "min_source_requirement_pass_share": _round(min_source_sections / len(expected_sections)),
+        "requirement_content_coverage_mean": _mean(requirement_content_coverages),
+        "content_marker_coverage_mean": _mean(content_marker_coverages),
+        "min_content_marker_pass_share": _round(min_content_marker_sections / len(expected_sections)),
+        "quality_score_mean": _mean(quality_scores),
+        "quality_pass_share": _round(quality_pass_sections / len(expected_sections)),
         "per_section": per_section,
     }
 
@@ -459,6 +681,7 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
     from app.workers.celery_app import celery_app
 
     benchmark = _load_json(benchmark_path)
+    ocr_provider, ocr_languages = resolve_benchmark_runtime_overrides(benchmark)
     project_root = infer_project_root(benchmark_path)
     backend_root = project_root / "backend"
     document_root = project_root / "samples" / "documents"
@@ -480,11 +703,20 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
             expected_requirement_ids=list(item.get("expected_requirement_ids") or []),
             min_source_requirements=int(item.get("min_source_requirements", 0)),
             require_non_empty_content=bool(item.get("require_non_empty_content", True)),
+            content_markers=list(item.get("content_markers") or []),
+            min_content_markers=int(item.get("min_content_markers", 0)),
+            quality_pass_threshold=float(item.get("quality_pass_threshold", 0.75)),
         )
         for item in benchmark.get("expected_sections", [])
     ]
 
-    with tempfile.TemporaryDirectory() as temp_dir:
+    runtime_context = (
+        temporary_ocr_runtime(provider=ocr_provider, languages=ocr_languages or "rus+eng")
+        if ocr_provider
+        else nullcontext()
+    )
+
+    with runtime_context, tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
         temp_database = temp_path / "benchmark.db"
         temp_storage = temp_path / "storage"
@@ -585,7 +817,12 @@ def run_quality_benchmark(benchmark_path: Path) -> dict[str, object]:
     matches = match_requirements(expected_requirements, predicted_requirements)
     evidence = evaluate_evidence_linking(matches)
     applicability = evaluate_applicability(matches)
-    sections = evaluate_report_sections(expected_sections, predicted_sections, matches)
+    sections = evaluate_report_sections(
+        expected_sections,
+        predicted_sections,
+        matches,
+        expected_requirements_by_id={item.benchmark_id: item for item in expected_requirements},
+    )
     return {
         "benchmark_name": benchmark["name"],
         "scenario": benchmark["scenario"],
@@ -604,7 +841,8 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
     extraction_tp = sum(int(report["requirement_extraction"]["matched_total"]) for report in reports)
     extraction_predicted = sum(int(report["requirement_extraction"]["predicted_total"]) for report in reports)
     extraction_expected = sum(int(report["requirement_extraction"]["expected_total"]) for report in reports)
-    evidence_tp = sum(int(report["evidence_linking"]["matched_total"]) for report in reports)
+    evidence_matched_expected = sum(int(report["evidence_linking"]["matched_total"]) for report in reports)
+    evidence_matched_predicted = sum(int(report["evidence_linking"].get("matched_predicted_total", 0)) for report in reports)
     evidence_predicted = sum(int(report["evidence_linking"]["predicted_total"]) for report in reports)
     evidence_expected = sum(int(report["evidence_linking"]["expected_total"]) for report in reports)
     applicability_accuracies = [float(report["applicability"]["accuracy"]) for report in reports if int(report["applicability"]["expected_total"]) > 0]
@@ -612,6 +850,11 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
     section_non_empty_rates = [float(report["report_sections"]["non_empty_content_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
     section_coverage_rates = [float(report["report_sections"]["source_requirement_coverage"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
     section_min_source_pass_rates = [float(report["report_sections"]["min_source_requirement_pass_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_requirement_content_rates = [float(report["report_sections"]["requirement_content_coverage_mean"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_marker_coverage_rates = [float(report["report_sections"]["content_marker_coverage_mean"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_min_marker_pass_rates = [float(report["report_sections"]["min_content_marker_pass_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_quality_scores = [float(report["report_sections"]["quality_score_mean"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
+    section_quality_pass_rates = [float(report["report_sections"]["quality_pass_share"]) for report in reports if int(report["report_sections"]["expected_total"]) > 0]
 
     return {
         "suite_size": len(reports),
@@ -634,9 +877,10 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
                 "accuracy_mean": _mean(applicability_accuracies),
             },
             "evidence_linking": {
-                **precision_recall_f1(
-                    true_positive=evidence_tp,
+                **precision_recall_f1_from_counts(
+                    matched_predicted_total=evidence_matched_predicted,
                     predicted_total=evidence_predicted,
+                    matched_expected_total=evidence_matched_expected,
                     expected_total=evidence_expected,
                 ),
                 "grounded_requirements_share_mean": _mean(
@@ -648,6 +892,11 @@ def run_quality_benchmark_suite(benchmark_paths: list[Path]) -> dict[str, object
                 "non_empty_content_share_mean": _mean(section_non_empty_rates),
                 "source_requirement_coverage_mean": _mean(section_coverage_rates),
                 "min_source_requirement_pass_share_mean": _mean(section_min_source_pass_rates),
+                "requirement_content_coverage_mean": _mean(section_requirement_content_rates),
+                "content_marker_coverage_mean": _mean(section_marker_coverage_rates),
+                "min_content_marker_pass_share_mean": _mean(section_min_marker_pass_rates),
+                "quality_score_mean": _mean(section_quality_scores),
+                "quality_pass_share_mean": _mean(section_quality_pass_rates),
             },
         },
     }

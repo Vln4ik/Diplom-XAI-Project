@@ -2,6 +2,10 @@
   "name": "rosobrnadzor_ocr_augmented_mixed_layout_benchmark",
   "scenario": "Рособрнадзор + образовательная организация + OCR mixed-layout PDF evidence",
   "report_type": "readiness_report",
+  "runtime": {
+    "ocr_provider": "tesseract",
+    "ocr_languages": "rus+eng"
+  },
   "documents": [
     {
       "filename": "rosobrnadzor_sample.txt",

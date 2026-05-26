@@ -4,6 +4,8 @@
   "cases": [
     "samples/real_corpus/cases/college_alpha_full_package/case-manifest.json",
     "samples/real_corpus/cases/college_beta_gap_package/case-manifest.json",
-    "samples/real_corpus/cases/college_gamma_ocr_package/case-manifest.json"
+    "samples/real_corpus/cases/college_gamma_ocr_package/case-manifest.json",
+    "samples/real_corpus/cases/college_delta_structured_registry/case-manifest.json",
+    "samples/real_corpus/cases/college_epsilon_graduate_registry/case-manifest.json"
   ]
 }

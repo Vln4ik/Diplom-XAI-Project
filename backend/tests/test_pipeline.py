@@ -339,3 +339,50 @@ def test_document_to_report_pipeline(client, tmp_path):
     export_explanations = test_client.post(f"/api/reports/{report_id}/export/explanations", headers=headers)
     assert export_explanations.status_code == 200
     assert Path(export_explanations.json()["storage_path"]).exists()
+
+
+def test_organization_update_and_delete(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="org-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "org-owner@example.com", "ChangeMe123!")
+
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={
+            "name": "Editable College",
+            "short_name": "EC",
+            "organization_type": "educational",
+            "website": "https://example.edu",
+            "email": "office@example.edu",
+            "phone": "+7 900 000-00-00",
+        },
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    update_response = test_client.patch(
+        f"/api/organizations/{organization_id}",
+        headers=headers,
+        json={
+            "name": "Editable College Updated",
+            "short_name": "ECU",
+            "phone": "+7 900 123-45-67",
+            "director_name": "Иван Иванов",
+        },
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["name"] == "Editable College Updated"
+    assert update_response.json()["short_name"] == "ECU"
+    assert update_response.json()["phone"] == "+7 900 123-45-67"
+    assert update_response.json()["director_name"] == "Иван Иванов"
+
+    delete_response = test_client.delete(f"/api/organizations/{organization_id}", headers=headers)
+    assert delete_response.status_code == 200
+    assert delete_response.json()["id"] == organization_id
+
+    list_response = test_client.get("/api/organizations", headers=headers)
+    assert list_response.status_code == 200
+    assert all(item["id"] != organization_id for item in list_response.json())

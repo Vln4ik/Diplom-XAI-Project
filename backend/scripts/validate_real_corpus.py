@@ -82,6 +82,22 @@ def render_markdown(report: dict[str, object], *, timezone_name: str) -> str:
     lines.extend(
         [
             "",
+            "### Уровни сложности",
+            "",
+        ]
+    )
+    lines.extend(_format_counter(dict(report["difficulty_counts"])))
+    lines.extend(
+        [
+            "",
+            "### Фокусы анализа",
+            "",
+        ]
+    )
+    lines.extend(_format_counter(dict(report["focus_counts"])))
+    lines.extend(
+        [
+            "",
             "### Категории документов",
             "",
         ]
@@ -111,12 +127,22 @@ def render_markdown(report: dict[str, object], *, timezone_name: str) -> str:
                 f"- status: `{case['status']}`",
                 f"- report_type: `{case['report_type']}`",
                 f"- redaction_level: `{case['redaction_level']}`",
+                f"- difficulty: `{case['difficulty']}`",
                 f"- documents: `{case['document_total']}`",
                 f"- benchmark_ready: `{case['benchmark_ready']}`",
                 f"- benchmark_path: `{case['benchmark_path']}`",
                 "",
             ]
         )
+        if case["analysis_focus"]:
+            lines.append("Фокусы анализа:")
+            lines.extend(f"- `{item}`" for item in case["analysis_focus"])
+            lines.append("")
+        if case["quality_targets"]:
+            lines.append("Целевые quality thresholds:")
+            for key, value in case["quality_targets"].items():
+                lines.append(f"- `{key}`: `{value:.4f}`")
+            lines.append("")
         if case["issues"]:
             lines.append("Проблемы:")
             lines.extend(f"- {issue}" for issue in case["issues"])

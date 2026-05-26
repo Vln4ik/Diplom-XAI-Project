@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ensure_org_access, get_current_user, get_db, get_membership
@@ -111,6 +111,23 @@ def update_organization(
     db.commit()
     db.refresh(organization)
     return organization
+
+
+@router.delete("/{organization_id}", response_model=OrganizationResponse)
+def delete_organization(
+    organization_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizationResponse:
+    ensure_org_access(db, organization_id=organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.system_admin])
+    organization = db.scalar(select(Organization).where(Organization.id == organization_id))
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    snapshot = OrganizationResponse.model_validate(organization)
+    db.execute(delete(Organization).where(Organization.id == organization_id))
+    db.commit()
+    return snapshot
 
 
 @router.get("/{organization_id}/dashboard", response_model=DashboardResponse)

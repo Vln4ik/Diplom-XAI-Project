@@ -1,79 +1,128 @@
 # XAI Report Builder
 
-Репозиторий выпускной квалификационной работы, посвящённой разработке `web-first MVP` платформы для формирования объяснимой отчётности по надзорным и проверочным сценариям.
+Репозиторий выпускной квалификационной работы и инженерного MVP платформы для подготовки объяснимой отчётности по проверочным и надзорным сценариям.
 
-Текущий фокус проекта:
+Текущий статус проекта:
 
-- регуляторный сценарий: `Рособрнадзор`
-- тип организации: образовательная организация
-- целевой результат: проект отчёта о готовности к проверке с доказательной базой, XAI-объяснениями, матрицей требований и реестром рисков
+- `MVP 1` завершён
+- активный следующий горизонт: `MVP 2`
+- основной сценарий текущей версии: `Рособрнадзор + образовательная организация`
 
-## Актуальность проекта
+## Что это за система
 
-Подготовка к проверке в образовательной организации обычно строится на ручной работе со множеством разрозненных источников:
+`XAI Report Builder` превращает набор разрозненных документов организации в управляемый контур подготовки отчёта:
 
-- нормативные документы
-- локальные акты
-- сведения с официального сайта
-- таблицы с показателями и метриками
-- внутренние подтверждающие материалы
+- загружает и обрабатывает документы
+- выделяет требования
+- подбирает доказательства
+- рассчитывает статус, confidence и риски
+- сохраняет XAI-цепочку по каждому выводу
+- генерирует проект отчёта и экспортные артефакты
 
-На практике это приводит к ряду типовых проблем:
-
-- требования выделяются вручную и могут быть пропущены
-- доказательная база собирается в разных файлах и таблицах
-- повторные версии отчёта требуют повторного ручного анализа
-- руководитель получает результат без прозрачной трассировки `вывод -> источник -> доказательство`
-
-Проект направлен на снижение трудоёмкости этого процесса и повышение его прозрачности за счёт сочетания document pipeline, retrieval, локальных AI-моделей и XAI-подхода.
-
-## Цель работы
-
-Целью проекта является разработка программной системы, позволяющей автоматизировать первичную подготовку отчёта о готовности организации к проверке, сохранив при этом проверяемость, объяснимость и управляемость результата.
-
-## Задачи работы
-
-В рамках проекта решаются следующие задачи:
-
-1. Централизованный приём документов организации в различных форматах.
-2. Извлечение текста, разбиение документов на фрагменты и индексирование данных.
-3. Выделение требований из нормативных и локальных документов.
-4. Определение применимости требований к конкретной организации.
-5. Поиск подтверждающих evidence в загруженных материалах.
-6. Формирование confidence, рекомендаций и реестра рисков.
-7. Сохранение XAI-цепочки для каждого существенного вывода.
-8. Генерация проекта отчёта и экспортных артефактов.
-9. Поддержка ручного review, согласования, аудита и версионности.
-
-## Научно-практическая идея проекта
-
-Ключевая идея работы состоит в том, что в задачах регуляторной отчётности ценность создаёт не просто генерация текста через LLM, а связка нескольких уровней:
+Система не сводится к генерации текста через LLM. Её ценность строится на связке:
 
 - обработка документов
-- hybrid retrieval
-- requirement mining
-- evidence grounding
-- persisted XAI
-- human-in-the-loop review
+- гибридный поиск
+- извлечение требований
+- привязка доказательств
+- `XAI`
+- проверка человеком
 
-Таким образом, система формирует не только итоговый текст отчёта, но и объяснимую аналитическую основу, на которой этот отчёт построен.
+## Что уже входит в `MVP 1`
 
-## Функциональные возможности текущего MVP
+Текущий завершённый функциональный контур включает:
 
-На текущем этапе проект поддерживает:
-
+- backend на `FastAPI + SQLAlchemy + Alembic`
+- web-клиент на `React + TypeScript + Vite`
+- хранение данных в `PostgreSQL`, брокер задач `Redis`, background jobs через `Celery`
 - загрузку документов `PDF`, `DOCX`, `XLSX`, `CSV`, `TXT`, `JSON`
-- извлечение текста и разбиение документов на фрагменты
-- поиск по фрагментам через hybrid retrieval
-- формирование реестра требований
-- построение матрицы `требование -> доказательство`
-- генерацию XAI-объяснений
-- формирование списка рисков и рекомендованных действий
-- генерацию проекта отчёта
-- экспорт `DOCX`, `XLSX`, `ZIP`, `HTML`
-- уведомления, аудит, review-flow и versioning
+- извлечение текста, chunking, embeddings, поиск по фрагментам
+- реестр требований, матрицу доказательств, реестр рисков
+- сохранённые XAI-объяснения
+- генерацию отчёта, версионность и экспорт `DOCX`, `XLSX`, `ZIP`, `HTML`
+- базовый OCR-контур на `Tesseract` для image-файлов и image-only `PDF`
+- базовый observability-контур на `Prometheus + Grafana + Alertmanager`
+- контур тестирования, benchmark-оценки и acceptance-проверки
 
-## Архитектура и технологический стек
+Подробный статус вынесен в [docs/roadmap-status.md](docs/roadmap-status.md).
+
+## Что уже подтверждено артефактами
+
+### Базовый gold benchmark
+
+Для основного benchmark-сценария `Рособрнадзор + образовательная организация` зафиксировано:
+
+- `requirement extraction F1`: `1.0000`
+- `applicability accuracy`: `1.0000`
+- `evidence linking F1`: `0.9231`
+- `report sections source coverage`: `1.0000`
+
+Источник: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
+
+### Расширенный committed benchmark-suite
+
+Для `7` committed сценариев, включая OCR-augmented cases:
+
+- `requirement extraction F1`: `1.0000`
+- `status_accuracy_mean`: `100.00%`
+- `applicability accuracy mean`: `100.00%`
+- `evidence linking precision`: `0.8293`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `0.9067`
+- `source requirement coverage mean`: `100.00%`
+- `section quality pass share mean`: `100.00%`
+
+Источник: [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md)
+
+### Пилотный `real_corpus`
+
+В репозитории уже есть пилотный слой `real_corpus`:
+
+- `5` кейсов, готовых к benchmark-проверке
+- `5 из 5` кейсов прошли проверку
+- `20 из 20` целевых критериев качества выполнены
+- `requirement extraction F1`: `1.0000`
+- `status_accuracy_mean`: `100.00%`
+- `applicability accuracy mean`: `100.00%`
+- `evidence linking precision`: `0.7500`
+- `evidence linking recall`: `0.9565`
+- `evidence linking F1`: `0.8408`
+- `source requirement coverage mean`: `100.00%`
+- `section quality pass share mean`: `100.00%`
+
+Источники:
+
+- [docs/real-corpus-status.md](docs/real-corpus-status.md)
+- [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md)
+- [docs/real-corpus-target-evaluation.md](docs/real-corpus-target-evaluation.md)
+
+### Calibration
+
+Сейчас есть два разных calibration-среза:
+
+- на committed `7`-сценарном suite лучшим профилем остался `baseline_current`
+- на pilot `real_corpus` устойчивым базовым профилем остался `baseline_current`
+
+Это важный вывод для roadmap: в `MVP 2` нужно не только калибровать пороги, но и улучшать сам evidence linking на большем real-world корпусе.
+
+Источники:
+
+- [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md)
+- [docs/real-corpus-calibration-sweep.md](docs/real-corpus-calibration-sweep.md)
+
+### Базовый OCR-контур
+
+Для OCR benchmark зафиксировано:
+
+- `char_similarity_mean`: `0.9100`
+- `token_f1_mean`: `0.9818`
+- `keyword_coverage_mean`: `1.0000`
+
+Это подтверждает, что базовый OCR-контур уже рабочий, но layout-aware vision-контур остаётся задачей `MVP 2+`.
+
+Источник: [docs/ocr-benchmark-results.md](docs/ocr-benchmark-results.md)
+
+## Текущий стек
 
 ### Backend
 
@@ -91,464 +140,156 @@
 - `TypeScript`
 - `Vite`
 
-### Инфраструктура
+### AI / XAI
+
+- embeddings: `Ollama + all-minilm`
+- local LLM: `Ollama + gemma3:270m`
+- rule-based applicability / confidence / risk logic
+- сохранённые XAI-объяснения
+
+### Infra
 
 - `Docker Compose`
 - локальное файловое хранилище
-- локальный AI runtime через `Ollama`
+- optional-контур наблюдаемости: `Prometheus`, `Grafana`, `Alertmanager`
 
-### Локальные AI-модели
+## Новый roadmap проекта
 
-- embeddings: `Ollama + all-minilm`
-- LLM: `Ollama + gemma3:270m`
+Каноническая модель развития теперь выглядит так:
 
-Важно: текущая реализация остаётся text-centric и transformer-based. При этом в MVP уже работает `Tesseract OCR` для image-файлов и image-only PDF, но `CNN` и полноценный document-vision/layout-analysis контур для сложных сканов в проект пока не входят.
+- `MVP 1` — функциональное ядро, завершён
+- `MVP 2` — `AI quality first`
+- `MVP 3` — процессный контур, согласование, интеграции, ЭП
+- `MVP 4` — production/platform maturity
+- `Post-MVP` — исследовательский горизонт: multimodal, fine-tuning, mobile branch
 
-## Пользовательский сценарий
+Канонический roadmap: [docs/product-roadmap.md](docs/product-roadmap.md)
 
-Основной пользовательский путь в системе выглядит следующим образом:
+### Что входит в `MVP 2`
 
-1. Пользователь входит в систему.
-2. Создаёт организацию или выбирает существующую.
-3. Переходит в раздел `Документы`.
-4. Загружает нормативные, доказательные и служебные документы.
-5. Для каждого документа запускает обработку.
-6. Проверяет результаты поиска по фрагментам.
-7. Переходит в раздел `Отчёты`.
-8. Создаёт новый отчёт и привязывает к нему нужные документы.
-9. Нажимает `Анализ`.
-10. Проверяет `Требования`, `Объяснения`, `Матрицу` и `Риски`.
-11. При необходимости вручную подтверждает, отклоняет или редактирует спорные требования.
-12. Нажимает `Генерация`.
-13. Проверяет сформированные разделы в `Редакторе отчёта`.
-14. Выгружает `DOCX`, `XLSX`, `ZIP`, `XAI HTML`.
-15. Отправляет отчёт на согласование.
+- расширенный `real_corpus`
+- усиленный OCR / vision-контур
+- улучшение reranker и evidence linking
+- benchmark качества разделов
+- более сильные локальные embeddings / LLM
+- воспроизводимая calibration-стратегия на большем корпусе
 
-Развёрнутое описание прикладного сценария приведено в [docs/user-flow.md](docs/user-flow.md).
+### Что входит в `MVP 3`
 
-## Практическая значимость и ожидаемый эффект
-
-### Уже измеренные результаты на demo dataset
-
-- `4/4` документа успешно обрабатываются
-- `3/3` требования имеют evidence
-- `3/3` требования имеют XAI logic chain
-- `4/4` export-артефакта создаются успешно
-- полный машинный цикл `process + analyze + generate` составляет около `12.27s`
-
-### Первые формальные quality-метрики
-
-На текущем `gold benchmark` для сценария `Рособрнадзор + образовательная организация` зафиксированы следующие результаты:
-
-- `requirement extraction precision`: `1.0000`
-- `requirement extraction recall`: `1.0000`
-- `requirement extraction F1`: `1.0000`
-- `applicability accuracy`: `1.0000`
-- `evidence linking precision`: `0.8571`
-- `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9231`
-- `report sections source coverage`: `1.0000`
-
-Эти значения показывают, что текущий MVP уже устойчиво извлекает сами требования, а после внедрения отдельного reranker точнее подбирает подтверждения для составных требований. При этом дальнейшая калибровка evidence linking на большом реальном корпусе всё ещё нужна. Детализация вынесена в [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md).
-
-### Расширенный benchmark-suite
-
-Дополнительно в проекте собран `benchmark-suite` из семи сценариев:
-
-- полный пакет документов;
-- компактный пакет `нормативная база + evidence`;
-- mixed-scope сценарий с требованием, требующим ручной проверки применимости;
-- gap-сценарий `только нормативная база`.
-- OCR-augmented сценарий с `clean_notice.png`;
-- OCR-augmented сценарий с `site_scan.pdf`;
-- OCR-augmented сценарий с `mixed_layout_scan.pdf`.
-
-Агрегированные результаты suite:
-
-- `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `1.0000`
-- `applicability accuracy mean`: `1.0000`
-- `evidence linking precision`: `0.8718`
-- `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9315`
-- `report sections source coverage mean`: `1.0000`
-
-Детализация вынесена в [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md).
-
-### Calibration sweep
-
-Для слоя `evidence reranker + confidence thresholds` в проекте есть отдельный автоматический calibration sweep по расширенному 7-сценарному suite.
-
-На текущем committed corpus sweep показал:
-
-- `benchmark scenarios`: `7`
-- `evaluated profiles`: `4`
-- `recommended profile`: `baseline_current`
-
-Практический вывод здесь важный: после добавления OCR-augmented сценариев различия между профилями на текущем committed corpus исчезли, поэтому дополнительных production overrides пока не требуется. Детализация вынесена в [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md).
-
-### Pilot real corpus layer
-
-Следующий слой после committed demo corpus теперь тоже заведён в репозитории: `samples/real_corpus/`.
-
-Что в него входит сейчас:
-
-- `3` pilot-кейса;
-- corpus-level manifest;
-- case-manifest для каждого кейса;
-- redacted/synthetic документы;
-- benchmark-аннотации;
-- readiness validation;
-- отдельный real-corpus suite report;
-- отдельный real-corpus calibration sweep.
-
-Это важно методически: committed corpus остаётся стабильным regression-baseline, а `real_corpus` используется как мост к будущему большому размеченному архиву более реалистичных кейсов.
-
-Текущий pilot real-corpus baseline:
-
-- `case_total`: `3`
-- `benchmark_ready_cases`: `3`
-- `requirement extraction F1`: `1.0000`
-- `status_accuracy_mean`: `0.6944`
-- `evidence linking F1`: `0.5926`
-- `source_requirement_coverage_mean`: `0.8472`
-
-Эти цифры сознательно ниже, чем на committed corpus. Это не регрессия committed suite, а индикатор того, что pilot `real_corpus` уже содержит более сложные и менее “подогнанные” кейсы, особенно по evidence linking и OCR-backed traces. Детализация вынесена в [docs/real-corpus-status.md](docs/real-corpus-status.md), [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md) и [docs/real-corpus-calibration-sweep.md](docs/real-corpus-calibration-sweep.md).
-
-### OCR benchmark
-
-Для нового OCR-контура добавлен отдельный benchmark на committed corpus из пяти сценариев:
-
-- clean image
-- noisy image
-- table-like image
-- image-only PDF
-- mixed-layout PDF
-
-Агрегированные результаты:
-
-- `char_similarity_mean`: `0.9100`
-- `token_precision_mean`: `0.9818`
-- `token_recall_mean`: `0.9818`
-- `token_f1_mean`: `0.9818`
-- `keyword_coverage_mean`: `1.0000`
-- `requires_review_rate`: `0.0000`
-
-Практически это означает, что базовый `Tesseract OCR` с multi-pass обработкой уже устойчиво извлекает ключевые признаки во всех пяти OCR-сценариях. Самым слабым сценарием теперь остаётся `mixed-layout PDF`, но уже не по coverage, а по `char similarity`: слова и ключевые сигналы извлекаются, однако порядок и layout fidelity ещё проседают. Следующий шаг в OCR-части связан уже не с общим “усилить OCR”, а с `layout-aware OCR / document structure reconstruction`.
-
-### Stress и ресурсный профиль
-
-Дополнительно для текущего MVP зафиксирован отдельный `3x` stress baseline с container-level profiling:
-
-- `concurrency`: `3`
-- `success_rate`: `1.0`
-- `throughput_runs_per_minute`: `6.2504`
-- `generate mean`: `20.3659s`
-- `backend memory mean`: `140.08 MiB`
-- `worker memory mean`: `982.48 MiB`
-
-Это позволяет говорить не только о latency, но и о реальном ресурсоёмком узле текущей системы: под параллельной нагрузкой главным bottleneck остаётся генерация разделов отчёта и связанный с ней AI runtime. Детализация вынесена в [docs/stress-baseline.md](docs/stress-baseline.md).
-
-### Оценка выигрыша по времени
-
-Для малого пакета документов ручной сценарий обычно занимает:
-
-- `2.5-6` часов
-
-При использовании текущего инструмента и с учётом ручного review реалистичная инженерная оценка выглядит так:
-
-- `20-45` минут на малый пакет документов
-- `45-120` минут на средний пакет
-
-Консервативная оценка эффекта:
-
-- ускорение первичной подготовки отчёта: `40-70%`
-- ускорение повторных review-циклов: `25-50%`
-
-### Оценка возможного прироста качества
-
-Предварительно можно предполагать:
-
-- снижение вероятности пропуска требования: `15-30%`
-- улучшение полноты evidence-покрытия: `20-40%`
-- повышение воспроизводимости и единообразия проверки: `25-50%`
-
-Важно: теперь в проекте уже есть первый формальный benchmark с `precision/recall/F1`, но он пока построен на малом demo corpus. Для строгой научной валидации всё ещё требуется расширенный размеченный benchmark и экспертное сравнение на репрезентативной выборке кейсов.
-
-## Ограничения текущего MVP
-
-В текущую версию сознательно не включены:
-
-- полноценный `iOS`-клиент
-- интеграции с внешними государственными системами
+- развитие процессного контура и согласования
+- enterprise process governance
 - электронная подпись
-- multi-regulator production scope
-- domain fine-tuning на большом размеченном корпусе
+- внешние интеграции
+- multi-regulator templates
 
-При этом в текущем MVP уже работает базовый `OCR`-контур:
+### Что входит в `MVP 4`
 
-- распознавание `PNG/JPG/TIFF/BMP`;
-- OCR-fallback для image-only `PDF`;
-- автоматическое включение `Tesseract` в Docker-окружении и launcher-скриптах.
-- отдельный OCR benchmark на committed corpus.
-- multi-pass OCR с несколькими `PSM` и image-variants.
+- security hardening
+- CI/CD и deployment profiles
+- stress `10x+`
+- retention / backup
+- production-grade observability и эксплуатация
 
-Следующим этапом остаются более тяжёлые OCR/vision-задачи:
+## Пользовательский результат в `MVP 1`
 
-- layout analysis сложных PDF;
-- OCR noisy-сканов с низким качеством;
-- vision-first обработка таблиц и многостраничных mixed-layout документов;
-- улучшение именно mixed-layout OCR и восстановления порядка контента, так как это сейчас самый слабый OCR-сценарий по layout fidelity.
+Специалист организации уже может:
+
+1. войти в систему и выбрать организацию
+2. загрузить и обработать документы
+3. создать отчёт и запустить анализ
+4. проверить требования, XAI, матрицу и риски
+5. вручную откорректировать спорные места
+6. сгенерировать проект отчёта
+7. выгрузить итоговый пакет
+8. отправить отчёт на согласование
+
+Подробные пользовательские документы:
+
+- [docs/user-flow.md](docs/user-flow.md)
+- [docs/demo-scenario.md](docs/demo-scenario.md)
+- [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
+
+## Документация проекта
+
+### Product / roadmap
+
+- [docs/product-roadmap.md](docs/product-roadmap.md)
+- [docs/roadmap-status.md](docs/roadmap-status.md)
+- [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
+
+### Architecture / engineering
+
+- [docs/architecture.md](docs/architecture.md)
+- [docs/architecture-decisions.md](docs/architecture-decisions.md)
+- [docs/system-handbook.md](docs/system-handbook.md)
+
+### AI / XAI / эксперименты
+
+- [docs/llm-xai-method.md](docs/llm-xai-method.md)
+- [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
+- [docs/quality-metrics.md](docs/quality-metrics.md)
+- [docs/experimental-methodology.md](docs/experimental-methodology.md)
+- [docs/experimental-results.md](docs/experimental-results.md)
+
+### Usage / demo / acceptance
+
+- [docs/user-flow.md](docs/user-flow.md)
+- [docs/demo-scenario.md](docs/demo-scenario.md)
+- [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
 
 ## Структура репозитория
 
-- `backend/` — backend-система, API, workers, бизнес-логика, тесты
-- `frontend/` — пользовательский web-интерфейс
-- `infra/` — docker-compose и инфраструктурные скрипты
-- `docs/` — документация проекта
-- `samples/` — sample dataset для demo и acceptance-сценариев
+```text
+backend/   API, доменная логика, workers, тесты
+frontend/  web-клиент
+infra/     docker-compose, скрипты, observability
+docs/      narrative-документация и generated benchmark-артефакты
+samples/   demo-корпус, benchmarks, real corpus, calibration-профили
+```
 
 ## Запуск проекта
 
-### Базовый локальный запуск
+### Базовый локальный запуск через Docker
 
 ```bash
 docker compose -f infra/docker-compose.yml up --build
 ```
-
-Эта команда запускает стабильный `fallback`-режим.
 
 ### Запуск с локальным AI через Ollama
 
 ```bash
-COMPOSE_PROFILES=local-ai \
-XAI_APP_EMBEDDING_PROVIDER=ollama \
-XAI_APP_LLM_PROVIDER=ollama \
-docker compose -f infra/docker-compose.yml up --build
-```
-
-Рекомендуемый bootstrap:
-
-```bash
+COMPOSE_PROFILES=local-ai docker compose -f infra/docker-compose.yml up --build
 bash infra/enable-ollama.sh
 ```
 
-Если модели нужно загрузить вручную:
+### Запуск с контуром наблюдаемости
 
 ```bash
-docker compose -f infra/docker-compose.yml exec ollama ollama pull all-minilm
-docker compose -f infra/docker-compose.yml exec ollama ollama pull gemma3:270m
+COMPOSE_PROFILES=observability,local-ai docker compose -f infra/docker-compose.yml up --build
 ```
-
-### Экспериментальный режим через transformers
-
-```bash
-INSTALL_LOCAL_AI=1 \
-XAI_APP_EMBEDDING_PROVIDER=sentence_transformers \
-XAI_APP_LLM_PROVIDER=local_transformers \
-docker compose -f infra/docker-compose.yml up --build
-```
-
-### Запуск с observability stack
-
-```bash
-COMPOSE_PROFILES=observability \
-docker compose -f infra/docker-compose.yml up --build
-```
-
-Для полного локального контура с `Ollama + Prometheus + Grafana`:
-
-```bash
-COMPOSE_PROFILES=local-ai,observability \
-XAI_APP_EMBEDDING_PROVIDER=ollama \
-XAI_APP_LLM_PROVIDER=ollama \
-docker compose -f infra/docker-compose.yml up --build
-```
-
-## Доступные сервисы
-
-- API: `http://localhost:8000`
-- API docs: `http://localhost:8000/docs`
-- Frontend: `http://localhost:5173`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
-- Alertmanager: `http://localhost:9093` (`COMPOSE_PROFILES=observability`)
-- Prometheus: `http://localhost:9090` (`COMPOSE_PROFILES=observability`)
-- Grafana: `http://localhost:3000` (`COMPOSE_PROFILES=observability`)
-
-Локальные bootstrap-учётные данные:
-
-- `admin@example.com`
-- `ChangeMe123!`
-
-## Служебные runtime endpoint-ы
-
-- `GET /api/system/ai-status` — активные `AI/OCR` provider-ы
-- `GET /api/system/health` — состояние базы, storage и runtime-конфигурации
-- `GET /api/system/metrics` — JSON snapshot request-метрик и Celery task lifecycle-метрик через общий Redis/fallback memory
-- `GET /api/system/metrics/prometheus` — Prometheus-compatible exposition для HTTP и фоновых задач
-
-Grafana bootstrap-учётные данные по умолчанию:
-
-- `admin`
-- `ChangeMe123!`
 
 ## Команды проверки
 
 ```bash
 ./.venv/bin/pytest -q backend/tests
 cd frontend && npm run build
-cd frontend && npm run e2e
 ```
 
-## Performance benchmark
-
-```bash
-./.venv/bin/python backend/scripts/benchmark_live_api.py \
-  --runs 2 \
-  --output docs/performance-baseline.json
-```
-
-## Concurrency/load benchmark
-
-```bash
-./.venv/bin/python backend/scripts/benchmark_live_api.py \
-  --runs 2 \
-  --concurrency 2 \
-  --output docs/load-baseline.json
-```
-
-## Stress benchmark с resource profiling
-
-```bash
-./.venv/bin/python backend/scripts/benchmark_live_api.py \
-  --runs 3 \
-  --concurrency 3 \
-  --resource-profile docker \
-  --resource-interval 1.0 \
-  --output docs/stress-baseline.json
-```
-
-## Stress 4x benchmark с hybrid profiling
-
-```bash
-./.venv/bin/python backend/scripts/run_benchmark_profile.py stress-4x
-```
-
-Этот профиль пишет результат в `docs/stress-4x-baseline.json` и одновременно собирает:
-
-- Docker resource profile по `backend/worker/postgres/redis`;
-- host-level profile по внешнему `Ollama` process match `ollama`.
-
-Последний зафиксированный артефакт:
-
-- [docs/stress-4x-baseline.md](docs/stress-4x-baseline.md)
-
-## Runtime comparison: fallback vs Ollama
-
-```bash
-./.venv/bin/python backend/scripts/compare_runtime_profiles.py performance
-```
-
-Команда поочерёдно:
-
-- переводит `backend/worker` в `fallback` runtime;
-- запускает тот же benchmark-профиль;
-- переводит стек в `Ollama` runtime;
-- повторяет benchmark;
-- сохраняет отдельные raw-артефакты и объединённый comparison report.
-
-Сохраняемые файлы по умолчанию:
-
-- `docs/runtime-comparison-performance-fallback.json`
-- `docs/runtime-comparison-performance-ollama.json`
-- `docs/runtime-comparison-performance.json`
-- `docs/runtime-comparison-performance.md`
-
-Последний зафиксированный comparison:
-
-- [docs/runtime-comparison-performance.md](docs/runtime-comparison-performance.md)
-
-## Formal quality benchmark
+Отдельные репортинг-команды:
 
 ```bash
 ./.venv/bin/python backend/scripts/generate_quality_benchmark_report.py
-```
-
-## Quality benchmark suite
-
-```bash
-./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py
-```
-
-Для core-набора без OCR-augmented сценариев:
-
-```bash
-./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --suite-manifest samples/benchmark_suites/core.json
-```
-
-## Calibration sweep
-
-```bash
-./.venv/bin/python backend/scripts/run_calibration_sweep.py
-```
-
-Для core-набора без OCR-augmented сценариев:
-
-```bash
-./.venv/bin/python backend/scripts/run_calibration_sweep.py --suite-manifest samples/benchmark_suites/core.json
-```
-
-## Real corpus validation
-
-```bash
+./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --suite-manifest samples/benchmark_suites/extended.json
 ./.venv/bin/python backend/scripts/validate_real_corpus.py
+./.venv/bin/python backend/scripts/evaluate_real_corpus_targets.py
 ```
-
-## Real corpus benchmark suite
-
-```bash
-./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py \
-  --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json \
-  --output-json docs/real-corpus-quality-suite-results.json \
-  --output-md docs/real-corpus-quality-suite-results.md
-```
-
-## Real corpus calibration sweep
-
-```bash
-./.venv/bin/python backend/scripts/run_calibration_sweep.py \
-  --real-corpus-manifest samples/real_corpus/manifests/pilot-redacted.json \
-  --output-json docs/real-corpus-calibration-sweep.json \
-  --output-md docs/real-corpus-calibration-sweep.md
-```
-
-## Документация проекта
-
-- системное руководство: [docs/system-handbook.md](docs/system-handbook.md)
-- пользовательский путь: [docs/user-flow.md](docs/user-flow.md)
-- observability stack: [docs/observability-stack.md](docs/observability-stack.md)
-- stress 4x runbook: [docs/stress-4x-runbook.md](docs/stress-4x-runbook.md)
-- runtime comparison report: [docs/runtime-comparison-performance.md](docs/runtime-comparison-performance.md)
-- описание LLM и XAI-метода: [docs/llm-xai-method.md](docs/llm-xai-method.md)
-- подробное объяснение моделей и XAI-блока: [docs/models-and-xai-overview.md](docs/models-and-xai-overview.md)
-- архитектурные решения: [docs/architecture-decisions.md](docs/architecture-decisions.md)
-- статус роадмапа: [docs/roadmap-status.md](docs/roadmap-status.md)
-- методика эксперимента: [docs/experimental-methodology.md](docs/experimental-methodology.md)
-- результаты эксперимента: [docs/experimental-results.md](docs/experimental-results.md)
-- ручной demo-сценарий: [docs/demo-scenario.md](docs/demo-scenario.md)
-- acceptance-checklist: [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
-- метрики качества: [docs/quality-metrics.md](docs/quality-metrics.md)
-- calibration sweep: [docs/calibration-sweep-results.md](docs/calibration-sweep-results.md)
-- quality benchmark report: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
-- quality benchmark suite: [docs/quality-benchmark-suite-results.md](docs/quality-benchmark-suite-results.md)
-- real corpus status: [docs/real-corpus-status.md](docs/real-corpus-status.md)
-- real corpus quality suite: [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md)
-- real corpus calibration sweep: [docs/real-corpus-calibration-sweep.md](docs/real-corpus-calibration-sweep.md)
-- performance baseline: [docs/performance-baseline.md](docs/performance-baseline.md)
-- load baseline: [docs/load-baseline.md](docs/load-baseline.md)
-- stress baseline: [docs/stress-baseline.md](docs/stress-baseline.md)
 
 ## Статус проекта
 
-Проект реализован как рабочий `web-first MVP` с локальным AI-контуром, XAI-слоем, evidence reranker, экспортом, acceptance-сценарием, browser e2e, расширенным 7-сценарным committed quality benchmark suite, calibration sweep, pilot `real_corpus` слоем, `4x` stress baseline и runtime-comparison контуром `fallback vs Ollama`. Следующий этап развития связан уже не с базовой сборкой ядра, а с расширением pilot `real_corpus` до большого размеченного набора кейсов, усилением benchmark-контуров и дальнейшей формализацией научных и эксплуатационных метрик качества.
+На текущем этапе проект уже можно честно описывать как:
+
+- завершённый `MVP 1`
+- с рабочим сквозным web-сценарием
+- с локальным AI/XAI-контуром
+- с формальным контуром валидации
+- с понятным roadmap на `MVP 2`, `MVP 3` и `MVP 4+`

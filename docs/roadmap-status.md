@@ -1,408 +1,178 @@
-# Roadmap Status
+# Статус roadmap
 
-## 1. Назначение этого документа
+## 1. Назначение документа
 
-Этот документ фиксирует:
+Этот документ фиксирует не желаемый, а фактический статус проекта по отношению к актуальному roadmap.
 
-- что уже реализовано по roadmap
-- что реализовано частично
-- что сознательно отложено
-- какие следующие шаги приоритетны
+Канонический roadmap версий находится в [product-roadmap.md](product-roadmap.md).  
+Здесь фиксируется:
 
-Он нужен для двух целей:
+- что завершено
+- что частично готово
+- что отложено
+- какой этап сейчас активен
 
-1. управлять разработкой проекта как инженерным планом
-2. показать на защите, что MVP строился не хаотично, а поэтапно
+## 2. Сводка по версиям
 
-## 2. Исходная roadmap-логика
-
-Базовый roadmap проекта был разбит на фазы:
-
-1. `Этап 0` — стартовая точка и scope
-2. `Этап 1` — архитектурный каркас и данные
-3. `Этап 2` — подсистема документов
-4. `Этап 3` — реестр требований и матрица доказательств
-5. `Этап 4` — XAI и риски
-6. `Этап 5` — генерация и экспорт
-7. `Этап 6` — web UI
-8. `Этап 7` — мобильный контур
-9. `Этап 8` — тестирование, приёмка, demo и метрики
-
-## 3. Текущий статус по этапам
-
-| Этап | Статус | Комментарий |
+| Версия | Статус | Смысл |
 |---|---|---|
-| `Этап 0` | `завершён` | scope MVP определён, web-first стратегия зафиксирована |
-| `Этап 1` | `завершён` | backend каркас, доменная модель, auth, multi-tenant логика |
-| `Этап 2` | `завершён на MVP-уровне` | загрузка и обработка документов работают |
-| `Этап 3` | `завершён на MVP-уровне` | требования, evidence, matrix и ручной review реализованы |
-| `Этап 4` | `завершён на MVP-уровне` | XAI, confidence, risks, explanations работают |
-| `Этап 5` | `завершён на MVP-уровне` | generation, exports, versioning реализованы |
-| `Этап 6` | `завершён на MVP-уровне` | web UI покрывает основной сценарий |
-| `Этап 7` | `отложен сознательно` | нативный mobile/iOS не в критическом пути MVP |
-| `Этап 8` | `частично завершён` | tests, acceptance, performance и load baseline уже есть, но остаются research-level расширения |
+| `MVP 1` | `завершён` | функциональное ядро реализовано |
+| `MVP 2` | `следующий активный этап` | следующий основной фокус — качество AI-контура |
+| `MVP 3` | `запланирован` | процессный контур, интеграции, ЭП и governance |
+| `MVP 4` | `запланирован` | production/platform maturity |
+| `Post-MVP` | `исследовательский горизонт` | multimodal, fine-tuning, mobile branch |
 
-## 4. Что именно уже реализовано
+## 3. Что реально закрыто в `MVP 1`
 
-## 4.1. Этап 0. Зафиксировать стартовую точку
+### 3.1. Продуктовый scope
 
-Сделано:
+В `MVP 1` уже реализованы:
 
-- принято решение о `web-first MVP`
-- определён основной регуляторный сценарий
-- определён фокус на образовательной организации
-- выделен новый monorepo-каркас вместо продолжения старого JSON-heavy прототипа как основной архитектуры
-
-Результат:
-
-- проект получил чёткий MVP scope
-
-## 4.2. Этап 1. Архитектурный каркас и данные
-
-Сделано:
-
-- новый backend на `FastAPI + SQLAlchemy + Alembic`
-- доменные сущности:
-  - `User`
-  - `Organization`
-  - `OrganizationMember`
-  - `Document`
-  - `DocumentFragment`
-  - `Requirement`
-  - `Evidence`
-  - `Explanation`
-  - `Risk`
-  - `Report`
-  - `ReportSection`
-  - `ReportVersion`
-  - `Notification`
-  - `AuditLog`
-  - `ExportFile`
-- аутентификация
-- роли
-- multi-tenant привязка данных к организации
-- storage abstraction
-
-Результат:
-
-- backend стал прикладной системой, а не только исследовательским прототипом
-
-## 4.3. Этап 2. Подсистема документов
-
-Сделано:
-
-- upload документов
-- категории документов
-- статусы обработки
-- извлечение текста из:
-  - `PDF`
-  - `DOCX`
-  - `XLSX`
-  - `CSV`
-  - `TXT`
-  - `JSON`
-- chunking на фрагменты
-- хранение embeddings
-- поиск по фрагментам
-- фоновые задачи обработки через `Celery`
-
-Результат:
-
-- документы можно загружать, обрабатывать и использовать как базу для retrieval
-
-## 4.4. Этап 3. Реестр требований и матрица доказательств
-
-Сделано:
-
-- requirement mining
-- дедупликация части повторов
-- категоризация требований
-- определение применимости
-- построение evidence matrix
-- ручные операции по требованиям:
-  - confirm
-  - reject
-  - edit
-  - bulk update
-  - refresh artifacts
-
-Результат:
-
-- пользователь работает уже не с “сырой LLM-выдачей”, а с управляемым реестром требований
-
-## 4.5. Этап 4. XAI и модуль рисков
-
-Сделано:
-
-- persisted explanation entity
-- logic chain
-- evidence payload
-- confidence
-- recommended action
-- risk registry
-- назначения и закрытие рисков
-- синхронизация explanation/risk после ручной правки требований
-
-Результат:
-
-- каждый важный вывод получил explainability layer
-
-## 4.6. Этап 5. Генерация отчёта и экспорт
-
-Сделано:
-
-- pipeline `create -> analyze -> generate -> export`
-- section generation
-- versioning отчёта
-- restore previous version
-- export:
-  - `DOCX`
-  - `XLSX`
-  - `ZIP`
-  - `XAI HTML`
-
-Результат:
-
-- система выдаёт не только аналитику, но и конечный пользовательский артефакт
-
-## 4.7. Этап 6. Web UI
-
-Сделано:
-
-- login
-- dashboard
-- organizations
-- documents
-- reports
-- matrix
-- requirements
+- web-first пользовательский сценарий
+- загрузка и обработка документов
+- реестр требований
+- матрица доказательств
 - risks
-- report editor
-- explanations
-- notifications
-- audit
+- XAI explanations
+- report generation
+- export
+- базовый контур review / approval
 
-Результат:
+### 3.2. Инженерный scope
 
-- основной сценарий проходит без Swagger
+Реализованы:
 
-## 4.8. Этап 8. Тестирование, приёмка и benchmark
+- `FastAPI + SQLAlchemy + Alembic`
+- `PostgreSQL + pgvector`
+- `Celery + Redis`
+- `React + TypeScript + Vite`
+- локальный AI runtime через `Ollama`
+- базовый OCR-контур через `Tesseract`
+- базовый observability-контур на `Prometheus + Grafana + Alertmanager`
 
-Сделано:
+### 3.3. Scope валидации
+
+В репозитории уже есть:
 
 - backend tests
-- acceptance demo flow
-- browser e2e
-- performance baseline
-- load baseline
-- formal quality benchmark для `requirement extraction`, `applicability`, `evidence linking` и section coverage
-- benchmark-suite из `7` committed сценариев, включая OCR-augmented cases
-- calibration sweep по `evidence reranker + confidence thresholds`
-- pilot `real_corpus` слой с manifest-ами, case-annotation и readiness validation
-- docs по demo и приёмке
-- формальная методика экспериментальной оценки
-- автоматически генерируемый experimental report
-- runtime observability endpoint-ы и CI workflow
+- acceptance demo-сценарий
+- quality benchmark
+- extended committed benchmark-suite
+- pilot `real_corpus`
+- calibration sweep
+- performance / load / stress artifacts
 
-Результат:
+## 4. Артефакты, подтверждающие статус `MVP 1`
 
-- система уже имеет не только функционал, но и проверяемый validation contour с материалами для экспериментальной части диплома, benchmark-suite и базовым production-hardening слоем
+### 4.1. Core benchmark layer
 
-## 5. Что реализовано частично
+- gold benchmark: [quality-benchmark-results.md](quality-benchmark-results.md)
+- committed suite: [quality-benchmark-suite-results.md](quality-benchmark-suite-results.md)
+- calibration: [calibration-sweep-results.md](calibration-sweep-results.md)
 
-### 5.1. AI quality
+### 4.2. Real corpus layer
 
-Сейчас реализован рабочий локальный AI-контур, но он ещё не доведён до полноценного domain-tuned production quality.
+- corpus status: [real-corpus-status.md](real-corpus-status.md)
+- suite results: [real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md)
+- target evaluation: [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md)
+- calibration: [real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md)
 
-Частично решено:
+### 4.3. Performance and operations
 
-- local embeddings
-- local LLM
-- hybrid retrieval
-- evidence reranker с focus/hint-aware rescoring
-- structured XAI
-- initial gold benchmark с `precision/recall/F1`
-- benchmark-suite с позитивными, mixed-scope, gap и OCR-augmented сценариями
-- calibration sweep на расширенном committed corpus
-- pilot `real_corpus` слой из `3` benchmark-ready кейсов с отдельным suite/calibration baseline
-- базовый OCR-контур на `Tesseract` для image-файлов и image-only PDF
-- OCR benchmark на committed image/PDF corpus
-- multi-pass OCR с несколькими `PSM` и image-variants
-- базовый production-hardening слой: `CI`, `health`, `metrics`
-- Celery lifecycle diagnostics через Redis-backed metrics: queued/started/succeeded/failed events, recent task history, task latency metrics
-- observability profile на `Prometheus + Grafana` с provisioned dashboard и alert rules
-- `Alertmanager` baseline для alert routing внутри observability profile
-- `3x` stress baseline с Docker resource profiling
-- `4x` stress baseline с hybrid profiling и host-level `Ollama` sampling
-- runtime comparison `fallback vs Ollama`
+- performance baseline: [performance-baseline.md](performance-baseline.md)
+- load baseline: [load-baseline.md](load-baseline.md)
+- stress baseline: [stress-baseline.md](stress-baseline.md)
+- stress `4x`: [stress-4x-baseline.md](stress-4x-baseline.md)
+- runtime comparison: [runtime-comparison-performance.md](runtime-comparison-performance.md)
+- observability stack: [observability-stack.md](observability-stack.md)
 
-Ещё не доведено:
+## 5. Что ещё не входит в завершённый `MVP 1`
 
-- domain fine-tuning
-- calibration на расширенном корпусе реальных кейсов пользователей
-- расширение pilot `real_corpus` по количеству кейсов и глубине разметки
-- reranking quality на репрезентативной выборке
-- benchmark на большом реальном корпусе для generated sections и applicability classification
-- layout-aware OCR/vision pipeline для сложных сканов и mixed-layout PDF
-- большой OCR benchmark на реальном corpus noisy-сканов
-- внешние интеграции и ЭП
-- полноценный stress/observability contour production-уровня
+Это не блокеры статуса `MVP 1` как завершённой версии, а задачи следующих этапов.
 
-### 5.2. Performance and load
+### 5.1. AI quality gaps
 
-Сейчас есть:
+- более широкий real-world benchmark corpus
+- более богатая оценка качества sections
+- более сильные embeddings / локальная LLM
+- более зрелый OCR / vision-контур
+- более сильная calibration-стратегия на широком корпусе
 
-- sequential performance baseline
-- `2x` concurrency load baseline
-- `3x` stress baseline
-- `4x` stress baseline
-- Docker `CPU/RAM/PIDs` profiling для `backend/worker/postgres/redis`
-- runtime metrics endpoint-ы для HTTP и фоновых Celery-задач, включая shared task state между API и worker через Redis
-- optional `Prometheus/Grafana` stack для накопления и визуализации runtime-метрик
-- host-level profiling support для внешнего `Ollama` через `benchmark_live_api.py`
-- named benchmark preset для `stress-4x`
-- committed benchmark artifacts: `performance`, `load`, `stress`, `stress-4x`
-- committed runtime comparison `fallback vs Ollama` на одном профиле
-- CI workflow для backend/frontend
+### 5.2. Workflow / enterprise gaps
 
-Ещё нет:
-
-- stress профилей выше `4x`
-- больших документных наборов
-- benchmark artifacts на расширенном реальном корпусе документов
-- long-retention metrics store и полноценная external notification routing поверх `Alertmanager`
-
-## 6. Что сознательно отложено
-
-### 6.1. Этап 7. Мобильный контур
-
-Нативный мобильный клиент не является критическим блоком MVP, поэтому он отложен.
-
-Причины:
-
-- приоритет у web-first сценария
-- важно сначала довести core domain logic
-- мобильный контур без зрелого backend и XAI-логики малоценен
-
-### 6.2. OCR и vision
-
-Базовый OCR-контур уже введён в MVP:
-
-- `Tesseract OCR` для `PNG/JPG/TIFF/BMP`
-- OCR-fallback для image-only `PDF`
-- диагностика OCR provider через `GET /api/system/ai-status`
-- отдельный OCR benchmark с clean/noisy/table/image-PDF/mixed-layout-PDF сценариями
-- multi-pass OCR с выбором лучшего кандидата по нескольким `PSM` и image-variants
-
-Отложенной остаётся именно расширенная vision-часть:
-
-- layout analysis и восстановление порядка контента в сложных PDF
-- OCR noisy-сканов
-- vision-first разбор таблиц, форм и mixed-layout документов
-
-## 7. Следующие шаги по приоритету
-
-### 7.1. Приоритет A. Документация, упаковка и публикация
-
-Статус:
-
-- documentation pack собран
-- архитектурные и AI/XAI документы оформлены
-- roadmap status формализован
-- проект опубликован на GitHub
-- `main` синхронизирован с `origin/main`
-
-Оставшееся ограничение:
-
-- локальный `gh` CLI не авторизован, поэтому через CLI пока нельзя создавать Pull Request, Issues и Milestones
-
-### 7.2. Приоритет B. Экспериментальная и защитная часть
-
-- оформить acceptance trace по ТЗ
-- собрать связку “проблема -> решение -> метрики -> ограничения”
-- зафиксировать статистические и инженерные результаты
-
-### 7.3. Приоритет C. Следующее качество AI
-
-- stronger local model
-- better embeddings
-- calibration and validation of reranker on larger corpus
-- расширение pilot `real_corpus` до более широкой redacted выборки
-- richer requirement extraction
-- более сильный reasoning layer по explanations
-
-### 7.4. Приоритет D. Расширение функциональности
-
-- advanced OCR/vision
-- OCR benchmark на большом реальном корпусе
-- multi-regulator templates
-- mobile contour
+- richer process governance
+- электронная подпись
 - внешние интеграции
+- multi-regulator templates
 
-## 8. Что именно уже можно показывать как результат
+### 5.3. Platform gaps
 
-С практической точки зрения уже можно демонстрировать:
+- CI/CD maturity
+- security hardening
+- retention / backup
+- stress-профили выше текущего базового уровня
+- more mature deployment profiles
 
-- локальный web-интерфейс
-- загрузку и обработку документов
-- поиск и retrieval
-- анализ и построение реестра требований
-- XAI explanations и risk registry
-- генерацию отчёта
-- экспорт и review-flow
-- baseline по производительности и нагрузке
+## 6. Активный следующий этап: `MVP 2`
 
-Это важно, потому что roadmap уже материализован не только в коде, но и в демонстрируемом пользовательском сценарии.
+Текущий активный этап roadmap — `MVP 2`.
 
-## 9. План развития после MVP
+### Главная цель
 
-### 9.1. Краткосрочный горизонт
+Поднять качество AI-контура на более реалистичных данных.
 
-- стабилизировать docs и packaging
-- оформить GitHub Issues и Milestones под оставшиеся этапы roadmap
-- провести ещё 1-2 экспериментальных сценария
-- при необходимости расширить benchmark
+### Что уже удалось зафиксировать на текущем подэтапе
 
-### 9.2. Среднесрочный горизонт
+- committed suite: `7` сценариев, `requirement extraction F1 = 1.0000`, `evidence linking precision = 0.8293`, `evidence linking F1 = 0.9067`
+- pilot `real_corpus`: `5/5` кейсов и `20/20` quality targets
+- pilot `real_corpus`: `requirement extraction F1 = 1.0000`, `status_accuracy_mean = 100.00%`, `source requirement coverage = 100.00%`, `section quality pass share = 100.00%`
+- pilot `real_corpus`: `evidence linking precision = 0.7500`, `recall = 0.9565`, `F1 = 0.8408`
 
-- усилить AI-качество
-- ввести OCR/vision contour
-- расширить число поддерживаемых типов отчётов
-- добавить более зрелую observability и CI/CD
+Это означает, что текущий weakest point `MVP 2` уже не в статусах и не в section coverage, а именно в дальнейшем усилении `evidence precision` на более широком real-world корпусе.
 
-### 9.3. Долгосрочный горизонт
+### Ближайшие приоритеты
 
-- multi-regulator platform
-- production-grade role workflows
-- template libraries
-- stronger analytics and dashboards
+1. расширение `real_corpus`
+2. улучшение OCR / vision-контура
+3. усиление reranker / evidence linking с лучшей precision на multi-evidence кейсах
+4. более сильные локальные AI-модели
+5. воспроизводимая calibration-стратегия на большем корпусе
+6. более глубокая semantic-оценка generated sections поверх текущего marker-based benchmark
 
-## 10. Технические долги и ограничения
+## 7. Что запланировано на `MVP 3`
 
-На текущий момент остаются такие объективные точки внимания:
+После стабилизации `MVP 2` следующий основной продуктовый слой:
 
-- `gh auth` не выполнен, поэтому GitHub API workflow через CLI ограничен
-- mobile contour не реализован
-- advanced OCR/vision contour не реализован
-- AI-качество пока ограничено lightweight local runtime
+- развитие процессного контура
+- enterprise process governance
+- внешние интеграции
+- electronic signature
+- multi-regulator templates
 
-## 11. Честный итог по roadmap
+## 8. Что запланировано на `MVP 4`
 
-Если оценивать проект прагматично, то сейчас у нас не “идея на бумаге”, а уже собранный:
+После `MVP 3` основной фокус смещается в platform maturity:
 
-- working backend
-- working web UI
-- working local AI contour
-- working XAI layer
-- working export pipeline
-- working acceptance/performance/load validation contour
+- security
+- deployment
+- observability maturity
+- stress `10x+`
+- backup / recovery / retention
 
-То есть roadmap в части MVP фактически реализован.
+## 9. Что сознательно вынесено за ближайший горизонт
 
-То, что осталось дальше, — это уже не сборка ядра с нуля, а:
+Вне ближайшего критического пути:
 
-- упаковка
-- расширение качества
-- масштабирование
-- публикация
-- развитие за пределы первого MVP-контура
+- thin iOS client
+- большой multimodal-контур document understanding
+- domain fine-tuning as separate research track
+- масштабирование на новые отрасли без завершения текущего образовательного сценария
+
+## 10. Текущий честный итог
+
+Проект уже можно корректно описывать как:
+
+- завершённый `MVP 1`
+- с работающим продуктовым ядром
+- с верифицируемым benchmark и acceptance-контуром
+- с ясным следующим этапом `MVP 2`

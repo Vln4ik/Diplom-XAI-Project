@@ -51,20 +51,20 @@
   },
   "evidence_linking": {
     "expected_total": 6,
-    "predicted_total": 8,
+    "predicted_total": 9,
     "matched_total": 6,
-    "precision": 0.75,
+    "precision": 0.6667,
     "recall": 1.0,
-    "f1": 0.8571,
+    "f1": 0.8,
     "grounded_requirements_share": 1.0,
     "per_requirement": [
       {
         "expected_id": "req_local_acts",
         "expected_total": 2,
-        "predicted_total": 2,
+        "predicted_total": 3,
         "matched_total": 2,
         "recall": 1.0,
-        "precision": 1.0,
+        "precision": 0.6667,
         "matches": [
           {
             "expected_snippet": "website_sections_published | 2026 | 12",
@@ -81,10 +81,10 @@
       {
         "expected_id": "req_license_staff",
         "expected_total": 3,
-        "predicted_total": 4,
+        "predicted_total": 3,
         "matched_total": 3,
         "recall": 1.0,
-        "precision": 0.75,
+        "precision": 1.0,
         "matches": [
           {
             "expected_snippet": "\"Государственная аккредитация\"",
@@ -106,10 +106,10 @@
       {
         "expected_id": "req_programs",
         "expected_total": 1,
-        "predicted_total": 2,
+        "predicted_total": 3,
         "matched_total": 1,
         "recall": 1.0,
-        "precision": 0.5,
+        "precision": 0.3333,
         "matches": [
           {
             "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",
@@ -127,6 +127,11 @@
     "non_empty_content_share": 1.0,
     "source_requirement_coverage": 1.0,
     "min_source_requirement_pass_share": 1.0,
+    "requirement_content_coverage_mean": 1.0,
+    "content_marker_coverage_mean": 1.0,
+    "min_content_marker_pass_share": 1.0,
+    "quality_score_mean": 1.0,
+    "quality_pass_share": 1.0,
     "per_section": [
       {
         "title": "Основания подготовки отчета",
@@ -136,7 +141,16 @@
         "matched_requirement_ids": [],
         "source_requirement_recall": 0.0,
         "min_source_requirements": 0,
-        "min_source_requirements_ok": true
+        "min_source_requirements_ok": true,
+        "content_markers": [],
+        "matched_content_markers": [],
+        "content_marker_coverage": 0.0,
+        "min_content_markers": 0,
+        "min_content_markers_ok": true,
+        "requirement_content_coverage": 0.0,
+        "matched_requirement_content_ids": [],
+        "quality_score": 1.0,
+        "quality_pass": true
       },
       {
         "title": "Перечень применимых требований",
@@ -154,7 +168,26 @@
         ],
         "source_requirement_recall": 1.0,
         "min_source_requirements": 3,
-        "min_source_requirements_ok": true
+        "min_source_requirements_ok": true,
+        "content_markers": [
+          "Всего требований",
+          "Применимых"
+        ],
+        "matched_content_markers": [
+          "Всего требований",
+          "Применимых"
+        ],
+        "content_marker_coverage": 1.0,
+        "min_content_markers": 2,
+        "min_content_markers_ok": true,
+        "requirement_content_coverage": 1.0,
+        "matched_requirement_content_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "quality_score": 1.0,
+        "quality_pass": true
       },
       {
         "title": "Сведения, подтверждающие выполнение требований",
@@ -172,7 +205,26 @@
         ],
         "source_requirement_recall": 1.0,
         "min_source_requirements": 3,
-        "min_source_requirements_ok": true
+        "min_source_requirements_ok": true,
+        "content_markers": [
+          "Подтвержденных или готовых требований",
+          "доказательств"
+        ],
+        "matched_content_markers": [
+          "Подтвержденных или готовых требований",
+          "доказательств"
+        ],
+        "content_marker_coverage": 1.0,
+        "min_content_markers": 2,
+        "min_content_markers_ok": true,
+        "requirement_content_coverage": 1.0,
+        "matched_requirement_content_ids": [
+          "req_programs",
+          "req_license_staff",
+          "req_local_acts"
+        ],
+        "quality_score": 1.0,
+        "quality_pass": true
       },
       {
         "title": "Заключение",
@@ -182,7 +234,24 @@
         "matched_requirement_ids": [],
         "source_requirement_recall": 0.0,
         "min_source_requirements": 1,
-        "min_source_requirements_ok": true
+        "min_source_requirements_ok": true,
+        "content_markers": [
+          "Готовых требований",
+          "Открытых рисков",
+          "Итоговая готовность отчета"
+        ],
+        "matched_content_markers": [
+          "Готовых требований",
+          "Открытых рисков",
+          "Итоговая готовность отчета"
+        ],
+        "content_marker_coverage": 1.0,
+        "min_content_markers": 3,
+        "min_content_markers_ok": true,
+        "requirement_content_coverage": 0.0,
+        "matched_requirement_content_ids": [],
+        "quality_score": 1.0,
+        "quality_pass": true
       }
     ]
   }

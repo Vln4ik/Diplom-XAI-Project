@@ -14,6 +14,17 @@ VALID_CASE_STATUSES = {
     "pilot",
     "benchmark_ready",
 }
+VALID_DIFFICULTY_LEVELS = {
+    "low",
+    "medium",
+    "high",
+}
+QUALITY_TARGET_FIELDS = (
+    "requirement_f1_min",
+    "status_accuracy_min",
+    "evidence_f1_min",
+    "section_coverage_min",
+)
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -61,9 +72,12 @@ def validate_real_corpus_case_manifest(case_manifest_path: Path) -> dict[str, ob
     organization_type = str(payload.get("organization_type") or "").strip()
     status = str(payload.get("status") or "").strip()
     redaction_level = str(payload.get("redaction_level") or "").strip()
+    difficulty = str(payload.get("difficulty") or "").strip()
     tags = [str(tag).strip() for tag in list(payload.get("tags") or []) if str(tag).strip()]
+    analysis_focus = [str(item).strip() for item in list(payload.get("analysis_focus") or []) if str(item).strip()]
     documents = list(payload.get("documents") or [])
     annotations = dict(payload.get("annotations") or {})
+    quality_targets_payload = dict(payload.get("quality_targets") or {})
 
     issues: list[str] = []
     if not case_id:
@@ -80,8 +94,26 @@ def validate_real_corpus_case_manifest(case_manifest_path: Path) -> dict[str, ob
         issues.append(f"invalid status: {status or '<empty>'}")
     if redaction_level not in VALID_REDACTION_LEVELS:
         issues.append(f"invalid redaction_level: {redaction_level or '<empty>'}")
+    if difficulty and difficulty not in VALID_DIFFICULTY_LEVELS:
+        issues.append(f"invalid difficulty: {difficulty}")
     if not documents:
         issues.append("missing documents")
+    if not analysis_focus:
+        issues.append("missing analysis_focus")
+
+    quality_targets: dict[str, float] = {}
+    for field in QUALITY_TARGET_FIELDS:
+        if field not in quality_targets_payload:
+            continue
+        try:
+            value = float(quality_targets_payload[field])
+        except (TypeError, ValueError):
+            issues.append(f"invalid quality target value for {field}")
+            continue
+        if value < 0.0 or value > 1.0:
+            issues.append(f"quality target out of range for {field}")
+            continue
+        quality_targets[field] = round(value, 4)
 
     document_reports: list[dict[str, object]] = []
     document_paths: set[Path] = set()
@@ -179,7 +211,10 @@ def validate_real_corpus_case_manifest(case_manifest_path: Path) -> dict[str, ob
         "report_type": report_type,
         "status": status,
         "redaction_level": redaction_level,
+        "difficulty": difficulty,
         "tags": tags,
+        "analysis_focus": analysis_focus,
+        "quality_targets": quality_targets,
         "document_total": len(document_reports),
         "documents": document_reports,
         "benchmark_path": benchmark_path_value,
@@ -201,12 +236,15 @@ def summarize_real_corpus_manifest(corpus_manifest_path: Path) -> dict[str, obje
     project_root = infer_project_root(corpus_manifest_path)
     case_status_counts = Counter(report["status"] for report in case_reports if report["status"])
     redaction_level_counts = Counter(report["redaction_level"] for report in case_reports if report["redaction_level"])
+    difficulty_counts = Counter(report["difficulty"] for report in case_reports if report["difficulty"])
     tag_counts: Counter[str] = Counter()
+    focus_counts: Counter[str] = Counter()
     category_counts: Counter[str] = Counter()
     source_type_counts: Counter[str] = Counter()
     format_counts: Counter[str] = Counter()
     for report in case_reports:
         tag_counts.update(report["tags"])
+        focus_counts.update(report["analysis_focus"])
         category_counts.update(report["category_counts"])
         source_type_counts.update(report["source_type_counts"])
         format_counts.update(report["format_counts"])
@@ -222,7 +260,9 @@ def summarize_real_corpus_manifest(corpus_manifest_path: Path) -> dict[str, obje
         "issue_total": issue_total,
         "case_status_counts": dict(sorted(case_status_counts.items())),
         "redaction_level_counts": dict(sorted(redaction_level_counts.items())),
+        "difficulty_counts": dict(sorted(difficulty_counts.items())),
         "tag_counts": dict(sorted(tag_counts.items())),
+        "focus_counts": dict(sorted(focus_counts.items())),
         "document_category_counts": dict(sorted(category_counts.items())),
         "document_source_type_counts": dict(sorted(source_type_counts.items())),
         "document_format_counts": dict(sorted(format_counts.items())),

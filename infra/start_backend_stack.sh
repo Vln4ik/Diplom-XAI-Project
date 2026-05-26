@@ -20,6 +20,7 @@ SERVICE_WAIT_ATTEMPTS="${SERVICE_WAIT_ATTEMPTS:-120}"
 WAIT_INTERVAL_SECONDS="${WAIT_INTERVAL_SECONDS:-2}"
 XAI_INCLUDE_FRONTEND="${XAI_INCLUDE_FRONTEND:-0}"
 XAI_INCLUDE_OBSERVABILITY="${XAI_INCLUDE_OBSERVABILITY:-0}"
+OLLAMA_PULL_RETRIES="${OLLAMA_PULL_RETRIES:-3}"
 
 mkdir -p "$LOG_DIR"
 
@@ -52,6 +53,45 @@ resolve_ollama_bin() {
     command -v ollama
     return 0
   fi
+  return 1
+}
+
+has_local_ollama_model() {
+  local ollama_bin="$1"
+  local model_name="$2"
+  local latest_name="${model_name}:latest"
+
+  "$ollama_bin" list 2>/dev/null | awk 'NR>1 {print $1}' | grep -E -x -q "${model_name}|${latest_name}"
+}
+
+pull_ollama_model() {
+  local ollama_bin="$1"
+  local model_name="$2"
+
+  if has_local_ollama_model "$ollama_bin" "$model_name"; then
+    echo "Модель уже доступна локально: $model_name"
+    return 0
+  fi
+
+  local attempt=1
+  while [[ "$attempt" -le "$OLLAMA_PULL_RETRIES" ]]; do
+    echo "Локальной модели нет. Пытаюсь скачать: $model_name (попытка $attempt/$OLLAMA_PULL_RETRIES)"
+    if "$ollama_bin" pull "$model_name"; then
+      return 0
+    fi
+    if has_local_ollama_model "$ollama_bin" "$model_name"; then
+      echo "После ошибки pull модель всё же появилась локально: $model_name"
+      return 0
+    fi
+    if [[ "$attempt" -lt "$OLLAMA_PULL_RETRIES" ]]; then
+      echo "Pull не удался, повторяю через $WAIT_INTERVAL_SECONDS сек."
+      sleep "$WAIT_INTERVAL_SECONDS"
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "Не удалось скачать модель Ollama: $model_name" >&2
+  echo "Если сеть нестабильна, попробуй позже или выполни 'ollama pull $model_name' вручную." >&2
   return 1
 }
 
@@ -96,10 +136,10 @@ pull_models() {
   }
 
   echo "Проверяю embedding model: $EMBED_MODEL"
-  "$ollama_bin" pull "$EMBED_MODEL"
+  pull_ollama_model "$ollama_bin" "$EMBED_MODEL"
 
   echo "Проверяю LLM model: $LLM_MODEL"
-  "$ollama_bin" pull "$LLM_MODEL"
+  pull_ollama_model "$ollama_bin" "$LLM_MODEL"
 }
 
 start_backend_services() {

@@ -1,6 +1,6 @@
 # Quality Benchmark Results
 
-Дата фиксации: `2026-05-22`
+Дата фиксации: `2026-05-25`
 
 ## 1. Назначение документа
 
@@ -33,9 +33,9 @@
 
 | Метрика | Значение |
 |---|---:|
-| `precision` | `0.7500` |
+| `precision` | `0.6667` |
 | `recall` | `1.0000` |
-| `f1` | `0.8571` |
+| `f1` | `0.8000` |
 | `grounded_requirements_share` | `100.00%` |
 | `matched_evidence_pairs` | `6` |
 
@@ -47,20 +47,25 @@
 | `non_empty_content_share` | `100.00%` |
 | `source_requirement_coverage` | `100.00%` |
 | `min_source_requirement_pass_share` | `100.00%` |
+| `requirement_content_coverage_mean` | `100.00%` |
+| `content_marker_coverage_mean` | `100.00%` |
+| `min_content_marker_pass_share` | `100.00%` |
+| `quality_score_mean` | `100.00%` |
+| `quality_pass_share` | `100.00%` |
 
 ## 6. Интерпретация
 
 - `requirement extraction` показывает, насколько полно система находит эталонные требования из нормативного корпуса.
 - `applicability` показывает, насколько корректно система отделяет явно применимые требования от спорных и требующих ручной проверки.
 - `evidence linking` показывает, насколько точно система связывает найденные требования с ожидаемыми подтверждениями.
-- `report sections` показывает, насколько корректно требования попадают в ожидаемые разделы отчета и не теряются при генерации.
+- `report sections` показывает не только наличие разделов и source links, но и то, насколько текст разделов действительно отражает ожидаемые requirement themes и контрольные markers.
 - различие между extraction и evidence-метриками позволяет разделять проблемы извлечения требований и проблемы ранжирования доказательств.
 
 ## 7. Детализация по требованиям
 
 ### req_local_acts
 
-- `precision`: `1.0000`
+- `precision`: `0.6667`
 - `recall`: `1.0000`
 - `matched_total`: `2` из `2` ожидаемых evidence
 
@@ -69,7 +74,7 @@
 
 ### req_license_staff
 
-- `precision`: `0.7500`
+- `precision`: `1.0000`
 - `recall`: `1.0000`
 - `matched_total`: `3` из `3` ожидаемых evidence
 
@@ -79,7 +84,7 @@
 
 ### req_programs
 
-- `precision`: `0.5000`
+- `precision`: `0.3333`
 - `recall`: `1.0000`
 - `matched_total`: `1` из `1` ожидаемых evidence
 
