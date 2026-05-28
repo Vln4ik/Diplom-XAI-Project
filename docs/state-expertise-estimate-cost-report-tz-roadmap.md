@@ -751,13 +751,13 @@ Confidence: 0.87.
 
 ## 21. Текущий статус реализации
 
-Статус на `2026-05-28`:
+Статус на `2026-05-29`:
 
 - `Шаг 1` выполнен: новый тип отчета добавлен в backend/frontend, обычные `analyze/generate` для него заблокированы.
 - `Шаг 2` выполнен: на вкладке `Отчеты` можно выбирать папку документов, видеть готовые/неготовые/ошибочные файлы и создавать спецотчет только по готовым документам.
-- `Шаг 3` выполнен как frontend skeleton: для спецотчета отображается интерактивная линия из `5` этапов, общая готовность, ETA, прогресс по этапам и счетчик unresolved findings.
-- `Шаг 4` частично выполнен: добавлены демонстрационные findings для проверки названия/содержания, комплектности по профилю `ПП РФ N 145` и качества/подписей.
-- `Шаг 5` выполнен на frontend-слое: по каждому finding доступны действия `Одобрить`, `Пропустить`, `Загрузить замену`; замена показывает mock progress повторного прогона до текущего этапа.
+- `Шаг 3` выполнен как backend-integrated workflow: для спецотчета отображается интерактивная линия этапов, общая готовность, ETA, прогресс по этапам и счетчик unresolved findings.
+- `Шаг 4` выполнен на backend/Celery: findings формируются stage pipeline, а не frontend mock-логикой.
+- `Шаг 5` выполнен на backend/frontend: по каждому finding доступны действия `Одобрить`, `Пропустить`, `Загрузить замену`; замена проходит document pipeline и stage-specific re-check.
 - `Шаг 6` частично выполнен: XAI-пояснение раскрывается по кнопке `XAI` или двойному клику по finding.
 - `Backend persistence` выполнен: добавлены таблицы workflow/stages/findings/user decisions, API `start/state/approve/skip/replacement`, сохранение решений и replacement-документа.
 - `Backend text-rules v2` выполнен: проверка названия/содержания теперь использует `file_name + extracted_text`, комплектность ищется по имени и тексту, quality stage находит пустой текстовый слой, терминологические/орфографические сигналы и отсутствие текстовых признаков подписи/печати.
@@ -774,5 +774,8 @@ Confidence: 0.87.
 - `Audit trail решений` выполнен: решения `approve/skip/replacement` пишутся в общий audit log с XAI-снимком, нормативной привязкой и replacement metadata.
 - `Synthetic estimate expertise benchmark` выполнен: добавлен корпус `samples/estimate_expertise_corpus/manifest.json`, evaluator `backend/scripts/evaluate_estimate_expertise_corpus.py`, generated docs `docs/estimate-expertise-corpus-evaluation.*`; текущий результат `4/4` cases и `10/10` targets.
 - `Estimate expertise corpus validator` выполнен: добавлен строгий validator `backend/scripts/validate_estimate_expertise_manifest.py`, шаблон `samples/estimate_expertise_corpus/real-corpus-template.json`, generated docs `docs/estimate-expertise-corpus-validation.*`; текущий synthetic manifest валиден, `4` cases, `12` documents, `10` targets, `0` errors.
+- `ПП 87 profile` выполнен: добавлен отдельный тип отчёта `state_expertise_estimate_cost_verification_pp87`; для него не запускается этап комплектности подачи по `ПП 145`, вместо него используется этап `section_content` по содержанию разделов проектной документации.
+- `Реальный локальный прогон` выполнен: кейс `Водоканалпроект / 1. ИРД / ПП 145`, `180` документов, `153 processed`, `27 requires_review`, `0 failed`, workflow `blocked`, `48` findings, `35` unresolved. Подробно: [current-project-status.md](current-project-status.md).
+- `Локальные нейромодели` включены как штатный режим: `Ollama + all-minilm` для embeddings и `Ollama + gemma3:270m` для LLM; fallback остается только аварийным режимом.
 
 Остается усилить оставшиеся части Фазы 2/3: наполнить подготовленный real-corpus слой фактическими обезличенными проектно-сметными кейсами, довести локальные OCR/vision/signature detectors до production-grade качества и провести внутреннюю нормативную проверку rules pack перед production/pilot.

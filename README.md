@@ -12,7 +12,8 @@
 
 - `MVP 1` завершён
 - активный следующий горизонт: `MVP 2`
-- основной сценарий текущей версии: `Рособрнадзор + образовательная организация`
+- базовый сценарий `MVP 1`: `Рособрнадзор + образовательная организация`
+- расширенный прикладной трек текущего кода: государственная экспертиза проектной документации, включая спецотчёты `ПП 145` и `ПП 87`
 
 ## Что это за система
 
@@ -42,15 +43,20 @@
 - web-клиент на `React + TypeScript + Vite`
 - хранение данных в `PostgreSQL`, брокер задач `Redis`, background jobs через `Celery`
 - загрузку документов `PDF`, `DOCX`, `XLSX`, `CSV`, `TXT`, `JSON`
+- расширенную обработку `DOC`, `XML`, `ZIP`, `SIG`, `P7S`, `GGE`, `JPG/PNG/TIFF/BMP` в рамках текущего document pipeline
 - извлечение текста, chunking, embeddings, поиск по фрагментам
 - реестр требований, матрицу доказательств, реестр рисков
 - сохранённые XAI-объяснения
 - генерацию отчёта, версионность и экспорт `DOCX`, `XLSX`, `ZIP`, `HTML`
 - базовый OCR-контур на `Tesseract` для image-файлов и image-only `PDF`
+- специализированный workflow государственной экспертизы по проверке достоверности сметной стоимости:
+  - `ПП 145`: проверка соответствия названия содержанию, комплектности, качества, подписей/печатей и XAI по findings;
+  - `ПП 87`: проверка соответствия названия содержанию, содержания разделов проектной документации, качества, подписей/печатей и XAI по findings;
 - базовый observability-контур на `Prometheus + Grafana + Alertmanager`
 - контур тестирования, benchmark-оценки и acceptance-проверки
 
 Подробный статус вынесен в [docs/roadmap-status.md](docs/roadmap-status.md).
+Фактический текущий runtime и последний реальный прогон зафиксированы в [docs/current-project-status.md](docs/current-project-status.md).
 
 Архитектурная граница runtime зафиксирована отдельно: [docs/local-runtime-boundaries.md](docs/local-runtime-boundaries.md).
 Коротко: документы, OCR, LLM, embeddings, XAI и экспорт остаются внутри локального серверного контура; внешние OCR/LLM API не используются.
@@ -153,14 +159,16 @@
 
 ### AI / XAI
 
-- embeddings: profile-aware `Ollama` runtime
-- local LLM: profile-aware `Ollama` runtime
+- текущий стабильный demo-runtime: profile-aware `Ollama` для локальных embeddings и LLM
+- fallback runtime: `hash-fallback` embeddings и `template-fallback` LLM только как аварийный режим, если Ollama недоступна
+- OCR: локальный `Tesseract`
+- visual quality/signature baseline: локальные эвристики backend
 - rule-based applicability / confidence / risk logic
 - сохранённые XAI-объяснения
 
 ### AI runtime profiles
 
-В `MVP 2` уже добавлен переключаемый слой локальных AI-профилей:
+В коде уже добавлен переключаемый слой локальных AI-профилей:
 
 - `baseline`:
   - embeddings: `all-minilm`
@@ -175,7 +183,9 @@
   - LLM: `qwen2.5:7b -> llama3.1:8b -> qwen2.5:3b -> llama3.2:3b -> gemma3:1b -> gemma3:270m`
   - цель: максимально сильный локальный профиль для тяжёлых benchmark и demo-сценариев
 
-Профиль задаётся через `XAI_APP_AI_RUNTIME_PROFILE`. По умолчанию система остаётся на `baseline`, а при запуске стека resolver сам подбирает лучшую локально доступную модель внутри выбранного профиля.
+Профиль задаётся через `XAI_APP_AI_RUNTIME_PROFILE`.
+
+Важно: профиль задаёт список предпочтительных моделей, а фактический provider должен быть `ollama`. В текущей конфигурации Docker по умолчанию используются `XAI_APP_EMBEDDING_PROVIDER=ollama` и `XAI_APP_LLM_PROVIDER=ollama`. Если Ollama недоступна, backend сохраняет работоспособность через fallback, но целевой режим проекта — работа с локальными нейромоделями.
 
 ### Infra
 
@@ -260,6 +270,7 @@
 
 - [docs/product-roadmap.md](docs/product-roadmap.md)
 - [docs/roadmap-status.md](docs/roadmap-status.md)
+- [docs/current-project-status.md](docs/current-project-status.md)
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)
 
 ### Architecture / engineering
@@ -281,6 +292,7 @@
 - [docs/user-flow.md](docs/user-flow.md)
 - [docs/demo-scenario.md](docs/demo-scenario.md)
 - [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
+- [docs/state-expertise-estimate-cost-report-tz-roadmap.md](docs/state-expertise-estimate-cost-report-tz-roadmap.md)
 
 ## Структура репозитория
 
@@ -324,14 +336,18 @@ docker compose -f infra/docker-compose.yml up --build
 ### Запуск с локальным AI через Ollama
 
 ```bash
-COMPOSE_PROFILES=local-ai docker compose -f infra/docker-compose.yml up --build
-bash infra/enable-ollama.sh
+COMPOSE_PROFILES=local-ai \
+XAI_APP_EMBEDDING_PROVIDER=ollama \
+XAI_APP_LLM_PROVIDER=ollama \
+docker compose -f infra/docker-compose.yml up --build
 ```
+
+Рекомендуемый путь — `bash infra/start_full_stack.sh`: он проверяет Docker, запускает host Ollama, проверяет модели `all-minilm` и `gemma3:270m`, затем поднимает backend/worker/frontend уже с `ollama` provider-ами.
 
 ### Запуск с контуром наблюдаемости
 
 ```bash
-COMPOSE_PROFILES=observability,local-ai docker compose -f infra/docker-compose.yml up --build
+COMPOSE_PROFILES=observability docker compose -f infra/docker-compose.yml up --build
 ```
 
 ### Переключение AI runtime profile
@@ -341,6 +357,8 @@ XAI_APP_AI_RUNTIME_PROFILE=baseline bash infra/start_full_stack.sh
 XAI_APP_AI_RUNTIME_PROFILE=quality bash infra/start_full_stack.sh
 XAI_APP_AI_RUNTIME_PROFILE=quality_plus bash infra/start_full_stack.sh
 ```
+
+Эти команды выбирают профиль моделей. В стандартном launcher provider-ы уже включены как `ollama`.
 
 ### Demo-pack организаций
 
@@ -368,6 +386,8 @@ cd frontend && npm run build
 ./.venv/bin/python backend/scripts/generate_quality_benchmark_suite_report.py --suite-manifest samples/benchmark_suites/extended.json
 ./.venv/bin/python backend/scripts/validate_real_corpus.py
 ./.venv/bin/python backend/scripts/evaluate_real_corpus_targets.py
+./.venv/bin/python backend/scripts/validate_estimate_expertise_manifest.py
+./.venv/bin/python backend/scripts/evaluate_estimate_expertise_corpus.py
 ```
 
 ## Статус проекта
@@ -376,6 +396,7 @@ cd frontend && npm run build
 
 - завершённый `MVP 1`
 - с рабочим сквозным web-сценарием
-- с локальным AI/XAI-контуром
+- с локальным AI/XAI-контуром на Ollama, Tesseract и baseline vision/rules
+- с реализованным прикладным workflow государственной экспертизы `ПП 145 / ПП 87`
 - с формальным контуром валидации
 - с понятным roadmap на `MVP 2`, `MVP 3` и `MVP 4+`

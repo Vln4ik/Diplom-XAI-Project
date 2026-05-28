@@ -12,6 +12,13 @@
 - тип организации: образовательная организация
 - результат: проект отчёта о готовности к проверке с доказательствами, рисками и XAI-объяснениями
 
+Текущий код также содержит расширенный прикладной трек:
+
+- государственная экспертиза проектной документации;
+- спецотчёт проверки достоверности сметной стоимости по `ПП 145`;
+- спецотчёт проверки разделов проектной документации по `ПП 87`;
+- workflow findings, user decisions, XAI и export по каждому спецотчёту.
+
 ## 2. Что система решает
 
 Система убирает основную боль ручной подготовки отчётности:
@@ -47,7 +54,7 @@
 ### 4.1. Документы
 
 - upload документов
-- обработка `PDF`, `DOCX`, `XLSX`, `CSV`, `TXT`, `JSON`
+- обработка `PDF`, `DOCX`, `DOC`, `XLSX`, `CSV`, `TXT`, `JSON`, `XML`, `ZIP`, `SIG`, `P7S`, `GGE`, `JPG/PNG/TIFF/BMP`
 - базовый OCR-контур для image-файлов и image-only `PDF`
 - chunking и индексирование фрагментов
 - поиск по фрагментам
@@ -68,6 +75,11 @@
 - confidence
 - risk generation
 - сохранённые XAI-объяснения
+- специализированные findings для государственной экспертизы:
+  - соответствие названия файла содержанию;
+  - комплектность по `ПП РФ N 145`;
+  - содержание разделов по `ПП РФ N 87`;
+  - качество документа, OCR/text-layer, подписи/печати, терминология.
 
 ### 4.3. Отчётный результат
 
@@ -76,6 +88,7 @@
 - versioning
 - export `DOCX`, `XLSX`, `ZIP`, `HTML`
 - базовый контур review / submit / approve
+- export спецworkflow `DOCX/XLSX/XAI HTML/ZIP`
 
 ### 4.4. Инженерная зрелость `MVP 1`
 
@@ -115,10 +128,16 @@
 
 - `PDF`
 - `DOCX`
+- `DOC`
 - `XLSX`
 - `CSV`
 - `TXT`
 - `JSON`
+- `XML`
+- `ZIP`
+- `SIG/P7S`
+- `GGE`
+- `JPG/PNG/TIFF/BMP`
 
 ## 7. Текущий пользовательский путь `MVP 1`
 
@@ -153,20 +172,24 @@
 
 ## 9. AI / XAI в текущей версии
 
-Текущая версия использует:
+Текущий штатный demo-runtime использует:
 
-- embeddings model
-- local generative LLM
+- `Ollama + all-minilm` для neural embeddings
+- `Ollama + gemma3:270m` для локальной generative LLM
+- локальный `Tesseract` OCR
+- локальные baseline-эвристики visual quality и signature/seal
 - rule-based business logic
 - сохранённые XAI-объяснения
 
-На текущем активном этапе `MVP 2` этот слой уже расширен до profile-aware локального runtime:
+На текущем активном этапе `MVP 2` код уже расширен до profile-aware локального runtime:
 
 - `baseline`
 - `quality`
 - `quality_plus`
 
 Профиль задаётся через `XAI_APP_AI_RUNTIME_PROFILE`, а system API показывает не только provider, но и фактически разрешённую модель для embeddings и LLM.
+
+Важно: `Ollama` является целевым режимом проекта. Launcher `infra/start_full_stack.sh` проверяет host Ollama, модели и запускает backend/worker с `XAI_APP_EMBEDDING_PROVIDER=ollama`, `XAI_APP_LLM_PROVIDER=ollama`. Fallback providers нужны только для аварийной деградации и не считаются полноценным режимом демонстрации.
 
 Важно:
 
@@ -185,6 +208,8 @@
 - pilot `real_corpus`
 - OCR benchmark
 - performance / load / stress artifacts
+- state expertise corpus validation
+- реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`: `180` документов, `48` findings, `35` unresolved, корректный статус `blocked`
 
 Это даёт не только demo, но и формальный validation contour.
 
@@ -231,3 +256,5 @@
 Корректная формулировка текущего состояния:
 
 > `EvidenceXAI` — это завершённый `MVP 1` web-first платформы для объяснимой подготовки отчётности, уже включающий документный pipeline, контур требований/доказательств/XAI, генерацию отчёта, экспортные артефакты и контур валидации, с активным следующим этапом развития в сторону `MVP 2` и усиления AI quality.
+
+Актуальная фактическая сводка по runtime и последнему реальному тесту находится в [current-project-status.md](current-project-status.md).

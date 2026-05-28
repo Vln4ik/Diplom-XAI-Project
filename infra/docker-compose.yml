@@ -32,12 +32,14 @@ services:
       XAI_APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.com
       XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
       XAI_APP_AI_RUNTIME_PROFILE: ${XAI_APP_AI_RUNTIME_PROFILE:-baseline}
-      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
-      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-ollama}
+      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-ollama}
       XAI_APP_OCR_PROVIDER: ${XAI_APP_OCR_PROVIDER:-tesseract}
-      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
+      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://host.docker.internal:11434/api}
       XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
       XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../backend:/app
       - backend_storage:/app/storage
@@ -63,12 +65,14 @@ services:
       XAI_APP_BOOTSTRAP_ADMIN_EMAIL: admin@example.com
       XAI_APP_BOOTSTRAP_ADMIN_PASSWORD: ChangeMe123!
       XAI_APP_AI_RUNTIME_PROFILE: ${XAI_APP_AI_RUNTIME_PROFILE:-baseline}
-      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-hash}
-      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-fallback}
+      XAI_APP_EMBEDDING_PROVIDER: ${XAI_APP_EMBEDDING_PROVIDER:-ollama}
+      XAI_APP_LLM_PROVIDER: ${XAI_APP_LLM_PROVIDER:-ollama}
       XAI_APP_OCR_PROVIDER: ${XAI_APP_OCR_PROVIDER:-tesseract}
-      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://ollama:11434/api}
+      XAI_APP_OLLAMA_BASE_URL: ${XAI_APP_OLLAMA_BASE_URL:-http://host.docker.internal:11434/api}
       XAI_APP_OLLAMA_EMBEDDING_MODEL: ${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}
       XAI_APP_OLLAMA_LLM_MODEL: ${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ../backend:/app
       - backend_storage:/app/storage

@@ -15,6 +15,13 @@
 
 Локальная модель — это модель или библиотека, которая установлена на сервере EvidenceXAI и вызывается backend/worker-процессами.
 
+Штатный локальный runtime проекта:
+
+- `Ollama + all-minilm` для neural embeddings;
+- `Ollama + gemma3:270m` для локальной generative LLM;
+- `Tesseract` внутри backend/worker container для OCR;
+- локальные Python baseline-провайдеры для visual quality, signature/seal и terminology rules.
+
 Примеры допустимого локального runtime:
 
 - `Tesseract` внутри backend container;
@@ -29,6 +36,8 @@
 - отправлять пользовательские документы во внешний OCR API;
 - отправлять пользовательские документы во внешний LLM API;
 - строить обязательную проверку через внешний SaaS.
+
+Fallback providers `hash-fallback` и `template-fallback` остаются только как аварийная деградация, если локальный AI runtime временно недоступен. Для полноценной демонстрации и защиты проекта должен использоваться режим `ollama`.
 
 ## 3. Текущий OCR / vision contour
 

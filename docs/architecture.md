@@ -16,7 +16,8 @@
 - `postgres` — транзакционные данные, full-text search и `pgvector`
 - `redis` — broker/result backend и shared runtime state
 - `filesystem storage` — исходные файлы и экспортные артефакты
-- `ollama` — локальный AI runtime для embeddings и LLM
+- `host Ollama` — штатный локальный AI runtime для embeddings и LLM
+- `ollama` compose service — optional runtime-вариант, если модели хранятся внутри Docker volume
 - `prometheus / grafana / alertmanager` — optional observability-профиль
 
 Локальный AI runtime уже работает в profile-aware режиме:
@@ -62,8 +63,8 @@
 ### 4.1. Что работает сейчас
 
 - text-centric pipeline
-- embeddings через локальную модель
-- локальная LLM для генерации
+- embeddings через локальную neural-модель `all-minilm` в Ollama
+- локальная LLM `gemma3:270m` в Ollama для генерации/суммаризации там, где включён provider abstraction
 - profile-aware выбор локальной embedding-модели и LLM
 - гибридный retrieval
 - rule-based applicability / confidence / risk

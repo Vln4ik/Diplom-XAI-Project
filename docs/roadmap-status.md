@@ -17,7 +17,7 @@
 | Версия | Статус | Смысл |
 |---|---|---|
 | `MVP 1` | `завершён` | функциональное ядро реализовано |
-| `MVP 2` | `следующий активный этап` | следующий основной фокус — качество AI-контура |
+| `MVP 2` | `активный этап` | качество AI-контура и прикладное расширение на государственную экспертизу |
 | `MVP 3` | `запланирован` | процессный контур, интеграции, ЭП и governance |
 | `MVP 4` | `запланирован` | production/platform maturity |
 | `Post-MVP` | `исследовательский горизонт` | multimodal, fine-tuning, mobile branch |
@@ -46,7 +46,8 @@
 - `PostgreSQL + pgvector`
 - `Celery + Redis`
 - `React + TypeScript + Vite`
-- локальный AI runtime через `Ollama`
+- штатный baseline AI runtime без внешних API: `Ollama + all-minilm` для embeddings, `Ollama + gemma3:270m` для LLM и локальный `Tesseract`
+- fallback providers `hash-fallback` и `template-fallback` сохранены только как аварийная деградация, если Ollama недоступна
 - базовый OCR-контур через `Tesseract`
 - базовый observability-контур на `Prometheus + Grafana + Alertmanager`
 
@@ -61,6 +62,7 @@
 - pilot `real_corpus`
 - calibration sweep
 - performance / load / stress artifacts
+- прикладной state expertise corpus и validation artifacts
 
 ## 4. Артефакты, подтверждающие статус `MVP 1`
 
@@ -128,10 +130,14 @@
 - pilot `real_corpus`: `requirement extraction F1 = 1.0000`, `status_accuracy_mean = 100.00%`, `source requirement coverage = 100.00%`, `section quality pass share = 100.00%`
 - pilot `real_corpus`: `evidence linking precision = 1.0000`, `recall = 1.0000`, `F1 = 1.0000`
 - реализован profile-aware локальный AI runtime: `baseline / quality / quality_plus`
-- `/api/system/ai-status` теперь показывает активный профиль и `resolved_model` для embeddings и LLM
-- launcher и Docker runtime умеют автоматически выбирать сильнейшую доступную локальную модель в рамках профиля
+- `/api/system/ai-status` показывает активный профиль, фактические provider-ы и режим `fallback/model`
+- Docker runtime и launcher настроены на `ollama` provider-ы по умолчанию
+- реализован state expertise workflow для `ПП 145` и `ПП 87`
+- на реальном локальном кейсе `Водоканалпроект / 1. ИРД / ПП 145` обработано `180` документов: `153 processed`, `27 requires_review`, `0 failed`
 
 Это означает, что aggregate quality-контур `MVP 2` уже значительно усилился: статусы, section coverage и suite-level evidence linking больше не выглядят главным ограничением. Текущий самый жёсткий residual case сместился в строгий OCR-backed target evaluation, где `college_gamma_ocr_package` всё ещё даёт `evidence_f1 = 0.7742`.
+
+Отдельно подтвержден реальный прикладной прогон: спецworkflow `ПП 145` по кейсу `Водоканалпроект` сформировал `48` findings и корректно завершился в `blocked`, потому что осталось `35` нерешённых замечаний. Подробно: [current-project-status.md](current-project-status.md).
 
 ### Ближайшие приоритеты
 
@@ -141,6 +147,8 @@
 4. сравнительный benchmark профилей `quality` и `quality_plus` против `baseline`
 5. воспроизводимая calibration-стратегия на большем корпусе
 6. более глубокая semantic-оценка generated sections поверх текущего marker-based benchmark
+7. снижение false-positive в `filename -> content` classifier на реальных пакетах проектной документации
+8. оптимизация API списка документов: не возвращать полный `extracted_text` в реестре больших пакетов
 
 ## 7. Что запланировано на `MVP 3`
 
