@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 
 import { logout } from "../lib/api";
@@ -10,9 +11,10 @@ type LayoutProps = {
   organizations: { id: string; name: string }[];
   unreadNotifications: number;
   activeTasks: UiTask[];
+  floatingWidget?: ReactNode;
 };
 
-export function Layout({ organizationId, onSelectOrganization, organizations, unreadNotifications, activeTasks }: LayoutProps) {
+export function Layout({ organizationId, onSelectOrganization, organizations, unreadNotifications, activeTasks, floatingWidget }: LayoutProps) {
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -62,6 +64,7 @@ export function Layout({ organizationId, onSelectOrganization, organizations, un
       <main className="content">
         <ActivityPanel tasks={activeTasks} />
         <Outlet />
+        {floatingWidget}
       </main>
     </div>
   );

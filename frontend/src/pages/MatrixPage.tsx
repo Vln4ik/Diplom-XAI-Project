@@ -2,7 +2,13 @@ import { PageGuide } from "../components/PageGuide";
 import type { ReportMatrixRow } from "../lib/types";
 import { formatRequirementStatus, formatRiskLevel, getRiskTone, getScoreTone } from "../lib/ui";
 
-export function MatrixPage({ rows }: { rows: ReportMatrixRow[] }) {
+type Props = {
+  rows: ReportMatrixRow[];
+  selectedRequirementId: string | null;
+  onSelectRequirement: (requirementId: string) => void;
+};
+
+export function MatrixPage({ rows, selectedRequirementId, onSelectRequirement }: Props) {
   return (
     <div className="stack">
       <PageGuide
@@ -53,7 +59,18 @@ export function MatrixPage({ rows }: { rows: ReportMatrixRow[] }) {
             {rows.map((row) => (
               <article
                 key={row.requirement_id}
-                className={`matrix-row tone-${getScoreTone(Math.round(row.confidence_score * 100))}`}
+                className={`matrix-row tone-${getScoreTone(Math.round(row.confidence_score * 100))} ${
+                  selectedRequirementId === row.requirement_id ? "selected-row" : ""
+                }`}
+                onClick={() => onSelectRequirement(row.requirement_id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectRequirement(row.requirement_id);
+                  }
+                }}
               >
                 <div>
                   <strong>{row.title}</strong>

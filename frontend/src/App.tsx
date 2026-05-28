@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 
+import { FloatingXaiWidget } from "./components/FloatingXaiWidget";
 import { Layout } from "./components/Layout";
 import {
   approveReport,
@@ -73,10 +74,12 @@ import { RisksPage } from "./pages/RisksPage";
 import { buildDashboardSignals, clampProgress, type UiTask } from "./lib/ui";
 
 function AppShell() {
+  const location = useLocation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedRequirementId, setSelectedRequirementId] = useState<string | null>(null);
+  const [isXaiWidgetOpen, setIsXaiWidgetOpen] = useState(false);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentSearchResults, setDocumentSearchResults] = useState<DocumentSearchMatch[]>([]);
@@ -93,6 +96,19 @@ function AppShell() {
   const [manualTasks, setManualTasks] = useState<UiTask[]>([]);
   const taskTimersRef = useRef<Record<string, number>>({});
   const selectedOrganization = organizations.find((organization) => organization.id === selectedOrganizationId) ?? null;
+  const selectedRequirement = useMemo(
+    () => requirements.find((requirement) => requirement.id === selectedRequirementId) ?? null,
+    [requirements, selectedRequirementId],
+  );
+  const xaiWidgetRoutes: Record<string, string> = {
+    "/reports": "Контекст отчета",
+    "/matrix": "Контекст матрицы",
+    "/requirements": "Контекст требования",
+    "/risks": "Контекст риска",
+  };
+  const xaiWidgetRouteEntry = Object.entries(xaiWidgetRoutes).find(([route]) => location.pathname === route || location.pathname.startsWith(`${route}/`));
+  const showXaiWidget = Boolean(xaiWidgetRouteEntry);
+  const xaiWidgetRouteLabel = xaiWidgetRouteEntry?.[1] ?? "Рабочий контекст";
 
   async function reloadOrganizations(preferredOrganizationId?: string | null) {
     const items = await fetchOrganizations();
@@ -230,6 +246,12 @@ function AppShell() {
     }
     fetchExplanation(selectedRequirementId).then(setExplanation).catch(() => setExplanation(null));
   }, [selectedRequirementId]);
+
+  useEffect(() => {
+    if (!showXaiWidget) {
+      setIsXaiWidgetOpen(false);
+    }
+  }, [showXaiWidget]);
 
   useEffect(() => {
     if (!selectedOrganizationId) {
@@ -567,6 +589,11 @@ function AppShell() {
     setSelectedRequirementId(requirementId);
   }
 
+  function handleInspectRequirement(requirementId: string) {
+    setSelectedRequirementId(requirementId);
+    setIsXaiWidgetOpen(true);
+  }
+
   async function handleMarkNotificationRead(notificationId: string) {
     await markNotificationRead(notificationId);
     await refreshOrganizationState();
@@ -675,6 +702,17 @@ function AppShell() {
             organizations={organizations}
             unreadNotifications={dashboard?.unread_notifications ?? notifications.filter((item) => item.status === "unread").length}
             activeTasks={activeTasks}
+            floatingWidget={
+              showXaiWidget ? (
+                <FloatingXaiWidget
+                  explanation={explanation}
+                  requirement={selectedRequirement}
+                  isOpen={isXaiWidgetOpen}
+                  onToggle={() => setIsXaiWidgetOpen((current) => !current)}
+                  routeLabel={xaiWidgetRouteLabel}
+                />
+              ) : null
+            }
           />
         }
       >
@@ -734,14 +772,19 @@ function AppShell() {
             />
           }
         />
-        <Route path="matrix" element={<MatrixPage rows={matrixRows} />} />
+        <Route
+          path="matrix"
+          element={
+            <MatrixPage rows={matrixRows} selectedRequirementId={selectedRequirementId} onSelectRequirement={handleInspectRequirement} />
+          }
+        />
         <Route
           path="requirements"
           element={
             <RequirementsPage
               requirements={requirements}
               selectedRequirementId={selectedRequirementId}
-              onSelectRequirement={setSelectedRequirementId}
+              onSelectRequirement={handleInspectRequirement}
               onConfirm={handleConfirmRequirement}
               onReject={handleRejectRequirement}
               onUpdateRequirement={handleUpdateRequirement}
@@ -755,6 +798,8 @@ function AppShell() {
             <RisksPage
               risks={risks}
               members={members}
+              selectedRequirementId={selectedRequirementId}
+              onSelectRequirement={handleInspectRequirement}
               onUpdateRisk={handleUpdateRisk}
               onResolveRisk={handleResolveRisk}
             />

@@ -5,6 +5,8 @@ import { formatRiskLevel } from "../lib/ui";
 type Props = {
   risks: RiskItem[];
   members: MemberItem[];
+  selectedRequirementId: string | null;
+  onSelectRequirement: (requirementId: string) => void;
   onUpdateRisk: (
     riskId: string,
     payload: { assigned_to_id?: string | null; status?: string; recommended_action?: string; description?: string },
@@ -12,7 +14,7 @@ type Props = {
   onResolveRisk: (riskId: string) => Promise<void>;
 };
 
-export function RisksPage({ risks, members, onUpdateRisk, onResolveRisk }: Props) {
+export function RisksPage({ risks, members, selectedRequirementId, onSelectRequirement, onUpdateRisk, onResolveRisk }: Props) {
   return (
     <div className="stack">
       <PageGuide
@@ -58,18 +60,39 @@ export function RisksPage({ risks, members, onUpdateRisk, onResolveRisk }: Props
         ) : (
           <div className="list">
             {risks.map((risk) => (
-              <article key={risk.id} className="list-item">
+              <article
+                key={risk.id}
+                className={`list-item ${risk.requirement_id && selectedRequirementId === risk.requirement_id ? "selected-row" : ""}`}
+                onClick={() => {
+                  if (risk.requirement_id) {
+                    onSelectRequirement(risk.requirement_id);
+                  }
+                }}
+                role={risk.requirement_id ? "button" : undefined}
+                tabIndex={risk.requirement_id ? 0 : undefined}
+                onKeyDown={(event) => {
+                  if (!risk.requirement_id) {
+                    return;
+                  }
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelectRequirement(risk.requirement_id);
+                  }
+                }}
+              >
                 <div>
                   <strong>{risk.title}</strong>
                   <p>
                     {risk.status} · {risk.description}
                   </p>
                   {risk.recommended_action ? <p>{risk.recommended_action}</p> : null}
+                  {risk.requirement_id ? <p className="helper-text">Клик по карточке открывает XAI по связанному требованию.</p> : null}
                 </div>
                 <div className="report-actions">
                   <span>{formatRiskLevel(risk.risk_level)}</span>
                   <select
                     value={risk.assigned_to_id ?? ""}
+                    onClick={(event) => event.stopPropagation()}
                     onChange={(event) =>
                       void onUpdateRisk(risk.id, {
                         assigned_to_id: event.target.value || null,
@@ -83,7 +106,14 @@ export function RisksPage({ risks, members, onUpdateRisk, onResolveRisk }: Props
                       </option>
                     ))}
                   </select>
-                  <button type="button" disabled={risk.status === "resolved"} onClick={() => void onResolveRisk(risk.id)}>
+                  <button
+                    type="button"
+                    disabled={risk.status === "resolved"}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void onResolveRisk(risk.id);
+                    }}
+                  >
                     Закрыть риск
                   </button>
                 </div>
