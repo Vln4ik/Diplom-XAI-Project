@@ -7,7 +7,8 @@ from functools import lru_cache
 
 from app.core.config import get_settings
 from app.embeddings.base import EmbeddingProvider, adapt_vector, normalize_vector
-from app.integrations.ollama import OllamaError, has_model, list_models, request_json
+from app.integrations.ollama import OllamaError, list_models, request_json
+from app.services.ai_profiles import get_ai_runtime_profile, resolve_ai_model_choice
 
 TOKEN_RE = re.compile(r"[A-Za-zА-Яа-я0-9_]+")
 
@@ -34,6 +35,8 @@ class HashEmbeddingProvider(EmbeddingProvider):
         return {
             "provider": self.provider_name,
             "vector_size": self.vector_size,
+            "runtime_profile": get_ai_runtime_profile().profile_id,
+            "resolved_model": None,
             "mode": "fallback",
         }
 
@@ -119,10 +122,12 @@ class SentenceTransformersEmbeddingProvider(EmbeddingProvider):
             "provider": self.provider_name,
             "configured_provider": self.provider,
             "configured_model": self._model_source(),
+            "runtime_profile": get_ai_runtime_profile().profile_id,
             "vector_size": self.target_vector_size,
             "raw_vector_size": self._raw_vector_size,
             "load_attempted": self._load_attempted,
             "loaded": self._encoder is not None,
+            "resolved_model": self._model_source(),
             "mode": mode,
             "fallback_provider": self._fallback.provider_name,
             "load_error": self._load_error,
@@ -133,20 +138,46 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
     def __init__(self) -> None:
         settings = get_settings()
         self.base_url = settings.ollama_base_url
-        self.model_name = settings.ollama_embedding_model
+        self.configured_model_name = settings.ollama_embedding_model
+        self.profile = get_ai_runtime_profile()
         self.timeout = settings.ollama_request_timeout_seconds
         self.keep_alive = settings.ollama_keep_alive
         self.target_vector_size = settings.embedding_size
         self._fallback = HashEmbeddingProvider(settings.embedding_size)
         self._last_error: str | None = None
+        self._last_choice = None
 
     @property
     def provider_name(self) -> str:
         return "ollama"
 
+    @property
+    def model_name(self) -> str:
+        return self.configured_model_name
+
+    def _resolve_model_choice(self, *, refresh: bool = False):
+        if self._last_choice is not None and not refresh:
+            return self._last_choice
+
+        available_models: list[str] | None = None
+        try:
+            available_models = list_models(self.base_url, self.timeout)
+        except OllamaError as exc:
+            self._last_error = str(exc)
+
+        self._last_choice = resolve_ai_model_choice(
+            configured_model=self.configured_model_name,
+            profile_candidates=self.profile.embedding_candidates,
+            available_models=available_models,
+            prefer_profile_candidates=self.profile.profile_id != "baseline",
+            profile_id=self.profile.profile_id,
+        )
+        return self._last_choice
+
     def embed_many(self, texts: Sequence[str]) -> list[list[float]]:
+        choice = self._resolve_model_choice()
         payload = {
-            "model": self.model_name,
+            "model": choice.resolved_model,
             "input": list(texts),
             "truncate": True,
             "dimensions": self.target_vector_size,
@@ -182,25 +213,25 @@ class OllamaEmbeddingProvider(EmbeddingProvider):
         return self.embed_many([text])[0]
 
     def status(self) -> dict[str, object]:
-        available_models: list[str] | None = None
-        reachable = False
-        check_error: str | None = None
-        try:
-            available_models = list_models(self.base_url, self.timeout)
-            reachable = True
-        except OllamaError as exc:
-            check_error = str(exc)
-        model_available = has_model(available_models, self.model_name)
+        choice = self._resolve_model_choice(refresh=True)
+        available_models = list(choice.available_models) if choice.available_models is not None else None
+        reachable = available_models is not None
+        check_error = None if reachable else self._last_error
 
         return {
             "provider": self.provider_name,
-            "configured_model": self.model_name,
+            "configured_model": self.configured_model_name,
+            "candidate_models": list(choice.candidate_models),
+            "resolved_model": choice.resolved_model,
+            "preferred_model": choice.preferred_model,
+            "runtime_profile": choice.profile_id,
+            "resolved_from_profile_candidate": choice.from_profile_candidate,
             "base_url": self.base_url,
             "vector_size": self.target_vector_size,
             "reachable": reachable,
-            "model_available": model_available,
+            "model_available": choice.model_available,
             "available_models": available_models,
-            "mode": "model" if reachable and model_available else "fallback",
+            "mode": "model" if reachable and choice.model_available else "fallback",
             "fallback_provider": self._fallback.provider_name,
             "load_error": self._last_error or check_error,
         }

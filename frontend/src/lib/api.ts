@@ -9,6 +9,7 @@ import type {
   ExportFile,
   NotificationItem,
   Organization,
+  OrganizationAutofillSuggestion,
   ReportItem,
   ReportMatrixRow,
   ReportSection,
@@ -132,6 +133,12 @@ export function updateOrganization(
 export function deleteOrganization(organizationId: string): Promise<Organization> {
   return request<Organization>(`/api/organizations/${organizationId}`, {
     method: "DELETE",
+  });
+}
+
+export function autofillOrganizationFromDocuments(organizationId: string): Promise<OrganizationAutofillSuggestion> {
+  return request<OrganizationAutofillSuggestion>(`/api/organizations/${organizationId}/autofill`, {
+    method: "POST",
   });
 }
 

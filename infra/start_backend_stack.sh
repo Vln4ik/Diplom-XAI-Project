@@ -5,7 +5,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 LOG_DIR="$ROOT_DIR/infra/logs"
 OLLAMA_LOG_FILE="$LOG_DIR/ollama-serve.log"
+PROJECT_PYTHON="${PROJECT_PYTHON:-$ROOT_DIR/.venv/bin/python}"
 HOST_OLLAMA_TAGS_URL="${HOST_OLLAMA_TAGS_URL:-http://localhost:11434/api/tags}"
+HOST_OLLAMA_BASE_URL="${HOST_OLLAMA_BASE_URL:-http://localhost:11434/api}"
 CONTAINER_OLLAMA_BASE_URL="${XAI_APP_OLLAMA_BASE_URL:-http://host.docker.internal:11434/api}"
 BACKEND_AI_STATUS_URL="${BACKEND_AI_STATUS_URL:-http://localhost:8000/api/system/ai-status}"
 BACKEND_HEALTH_URL="${BACKEND_HEALTH_URL:-http://localhost:8000/api/system/health}"
@@ -13,8 +15,12 @@ FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173/login}"
 PROMETHEUS_READY_URL="${PROMETHEUS_READY_URL:-http://localhost:9090/-/ready}"
 GRAFANA_HEALTH_URL="${GRAFANA_HEALTH_URL:-http://localhost:3000/api/health}"
 ALERTMANAGER_READY_URL="${ALERTMANAGER_READY_URL:-http://localhost:9093/-/ready}"
+AI_PROFILE="${XAI_APP_AI_RUNTIME_PROFILE:-baseline}"
+EMBED_MODEL_OVERRIDE="${XAI_APP_OLLAMA_EMBEDDING_MODEL-}"
+LLM_MODEL_OVERRIDE="${XAI_APP_OLLAMA_LLM_MODEL-}"
 EMBED_MODEL="${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}"
 LLM_MODEL="${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}"
+AI_PROFILE_RESOLVER="$ROOT_DIR/backend/scripts/describe_ai_profiles.py"
 DOCKER_WAIT_ATTEMPTS="${DOCKER_WAIT_ATTEMPTS:-180}"
 SERVICE_WAIT_ATTEMPTS="${SERVICE_WAIT_ATTEMPTS:-120}"
 WAIT_INTERVAL_SECONDS="${WAIT_INTERVAL_SECONDS:-2}"
@@ -23,6 +29,10 @@ XAI_INCLUDE_OBSERVABILITY="${XAI_INCLUDE_OBSERVABILITY:-0}"
 OLLAMA_PULL_RETRIES="${OLLAMA_PULL_RETRIES:-3}"
 
 mkdir -p "$LOG_DIR"
+
+if [[ ! -x "$PROJECT_PYTHON" ]]; then
+  PROJECT_PYTHON="${PROJECT_PYTHON_FALLBACK:-python3}"
+fi
 
 print_step() {
   printf '\n==> %s\n' "$1"
@@ -127,6 +137,38 @@ ensure_ollama() {
   echo "Ollama API готов."
 }
 
+resolve_profile_models() {
+  print_step "Разрешение AI profile"
+  echo "Активный AI profile: $AI_PROFILE"
+
+  if [[ ! -f "$AI_PROFILE_RESOLVER" ]]; then
+    echo "Resolver не найден, использую явные/default модели."
+    return 0
+  fi
+
+  local payload
+  if ! payload="$(
+    XAI_APP_AI_RUNTIME_PROFILE="$AI_PROFILE" \
+    XAI_APP_OLLAMA_BASE_URL="$HOST_OLLAMA_BASE_URL" \
+    XAI_APP_OLLAMA_EMBEDDING_MODEL="${EMBED_MODEL_OVERRIDE:-all-minilm}" \
+    XAI_APP_OLLAMA_LLM_MODEL="${LLM_MODEL_OVERRIDE:-gemma3:270m}" \
+    "$PROJECT_PYTHON" "$AI_PROFILE_RESOLVER" --json
+  )"; then
+    echo "Не удалось автоматически разрешить profile, использую текущие модели."
+    return 0
+  fi
+
+  if [[ -z "$EMBED_MODEL_OVERRIDE" ]]; then
+    EMBED_MODEL="$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["embedding"]["resolved_model"])')"
+  fi
+  if [[ -z "$LLM_MODEL_OVERRIDE" ]]; then
+    LLM_MODEL="$(printf '%s' "$payload" | python3 -c 'import json,sys; print(json.load(sys.stdin)["llm"]["resolved_model"])')"
+  fi
+
+  echo "Embedding model: $EMBED_MODEL"
+  echo "LLM model: $LLM_MODEL"
+}
+
 pull_models() {
   print_step "Проверка локальных моделей Ollama"
   local ollama_bin
@@ -159,6 +201,7 @@ start_backend_services() {
 
   print_step "Запуск $stack_label"
   COMPOSE_PROFILES="$compose_profiles" \
+  XAI_APP_AI_RUNTIME_PROFILE="$AI_PROFILE" \
   XAI_APP_EMBEDDING_PROVIDER=ollama \
   XAI_APP_LLM_PROVIDER=ollama \
   XAI_APP_OLLAMA_BASE_URL="$CONTAINER_OLLAMA_BASE_URL" \
@@ -229,6 +272,7 @@ print_summary() {
 main() {
   ensure_docker
   ensure_ollama
+  resolve_profile_models
   pull_models
   start_backend_services
   print_summary

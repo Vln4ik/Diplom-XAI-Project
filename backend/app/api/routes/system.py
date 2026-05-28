@@ -12,6 +12,7 @@ from app.embeddings.local import describe_embedding_provider
 from app.integrations.catalog import describe_external_integrations
 from app.integrations.ocr import describe_ocr_provider
 from app.llm.local import describe_llm_provider
+from app.services.ai_profiles import describe_ai_runtime_profile
 from app.services.runtime_metrics import runtime_metrics
 
 router = APIRouter(prefix="/system", tags=["system"])
@@ -20,6 +21,7 @@ router = APIRouter(prefix="/system", tags=["system"])
 @router.get("/ai-status")
 def get_ai_status() -> dict[str, dict[str, object]]:
     return {
+        "profile": describe_ai_runtime_profile(),
         "embeddings": describe_embedding_provider(),
         "llm": describe_llm_provider(),
         "ocr": describe_ocr_provider(),
@@ -48,6 +50,7 @@ def get_system_health() -> dict[str, object]:
         },
         "runtime": {
             "celery_task_always_eager": get_settings().celery_task_always_eager,
+            "ai_runtime_profile": get_settings().ai_runtime_profile,
             "embedding_provider": get_settings().embedding_provider,
             "llm_provider": get_settings().llm_provider,
             "ocr_provider": get_settings().ocr_provider,

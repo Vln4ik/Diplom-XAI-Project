@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     embedding_model_name: str | None = None
     embedding_model_path: str | None = None
     llm_provider: str = "fallback"
+    ai_runtime_profile: str = "baseline"
     local_llm_model_path: str | None = None
     local_llm_model_name: str | None = None
     local_llm_task: str = "text2text-generation"

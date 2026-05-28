@@ -1,6 +1,6 @@
 # Quality Benchmark Results
 
-Дата фиксации: `2026-05-25`
+Дата фиксации: `2026-05-28`
 
 ## 1. Назначение документа
 
@@ -33,9 +33,9 @@
 
 | Метрика | Значение |
 |---|---:|
-| `precision` | `0.6667` |
+| `precision` | `1.0000` |
 | `recall` | `1.0000` |
-| `f1` | `0.8000` |
+| `f1` | `1.0000` |
 | `grounded_requirements_share` | `100.00%` |
 | `matched_evidence_pairs` | `6` |
 
@@ -65,11 +65,11 @@
 
 ### req_local_acts
 
-- `precision`: `0.6667`
+- `precision`: `1.0000`
 - `recall`: `1.0000`
 - `matched_total`: `2` из `2` ожидаемых evidence
 
-- expected: `website_sections_published | 2026 | 12` -> predicted: `website_sections_published | 2026 | 12` (similarity `1.0000`)
+- expected: `local_acts_published | 2026 | 18` -> predicted: `local_acts_published | 2026 | 18` (similarity `1.0000`)
 - expected: `В разделе "Сведения об образовательной организации" опубликованы локальные нормативные акты.` -> predicted: `В разделе "Сведения об образовательной организации" опубликованы локальные нормативные акты.` (similarity `1.0000`)
 
 ### req_license_staff
@@ -84,7 +84,7 @@
 
 ### req_programs
 
-- `precision`: `0.3333`
+- `precision`: `1.0000`
 - `recall`: `1.0000`
 - `matched_total`: `1` из `1` ожидаемых evidence
 

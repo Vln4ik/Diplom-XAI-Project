@@ -1,0 +1,85 @@
+{
+  "organization": {
+    "name": "Уральский федеральный университет имени первого Президента России Б.Н. Ельцина",
+    "short_name": "УрФУ",
+    "organization_type": "educational",
+    "website": "https://urfu.ru/",
+    "city": "Екатеринбург",
+    "legal_address": "620002, г. Екатеринбург, ул. Мира, д. 19",
+    "actual_address": "620002, г. Екатеринбург, ул. Мира, д. 19, корп. Демо",
+    "inn": "6601005005",
+    "kpp": "660101005",
+    "ogrn": "1026600005005",
+    "okved": "85.22",
+    "email": "urfu-demo@example.org",
+    "phone": "+7 343 500-50-05",
+    "director_name": "Зайцев Дмитрий Олегович",
+    "responsible_person": "Соколова Наталья Андреевна",
+    "profile_json": {
+      "public_source_url": "https://privet.urfu.ru/about",
+      "public_source_note": "Официальный сайт УрФУ.",
+      "demo_seed_pack": true,
+      "synthetic_profile": true,
+      "students_total": 36000,
+      "teachers_total": 4700
+    }
+  },
+  "files": [
+    {
+      "file_name": "01_organization_profile.txt",
+      "category": "evidence",
+      "tags": [
+        "profile",
+        "organization"
+      ]
+    },
+    {
+      "file_name": "02_license_reference.txt",
+      "category": "normative",
+      "tags": [
+        "license",
+        "accreditation"
+      ]
+    },
+    {
+      "file_name": "03_official_site_sections.txt",
+      "category": "evidence",
+      "tags": [
+        "website",
+        "publication"
+      ]
+    },
+    {
+      "file_name": "04_education_programs.csv",
+      "category": "data_table",
+      "tags": [
+        "programs",
+        "education"
+      ]
+    },
+    {
+      "file_name": "05_staff_registry.csv",
+      "category": "data_table",
+      "tags": [
+        "staff",
+        "teachers"
+      ]
+    },
+    {
+      "file_name": "06_local_acts_register.json",
+      "category": "data_table",
+      "tags": [
+        "local_acts",
+        "documents"
+      ]
+    },
+    {
+      "file_name": "07_contingent_summary.csv",
+      "category": "data_table",
+      "tags": [
+        "students",
+        "contingent"
+      ]
+    }
+  ]
+}

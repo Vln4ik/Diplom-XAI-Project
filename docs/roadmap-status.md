@@ -123,19 +123,22 @@
 
 ### Что уже удалось зафиксировать на текущем подэтапе
 
-- committed suite: `7` сценариев, `requirement extraction F1 = 1.0000`, `evidence linking precision = 0.8293`, `evidence linking F1 = 0.9067`
+- committed suite: `7` сценариев, `requirement extraction F1 = 1.0000`, `evidence linking precision = 0.9444`, `evidence linking F1 = 0.9714`
 - pilot `real_corpus`: `5/5` кейсов и `20/20` quality targets
 - pilot `real_corpus`: `requirement extraction F1 = 1.0000`, `status_accuracy_mean = 100.00%`, `source requirement coverage = 100.00%`, `section quality pass share = 100.00%`
-- pilot `real_corpus`: `evidence linking precision = 0.7500`, `recall = 0.9565`, `F1 = 0.8408`
+- pilot `real_corpus`: `evidence linking precision = 1.0000`, `recall = 1.0000`, `F1 = 1.0000`
+- реализован profile-aware локальный AI runtime: `baseline / quality / quality_plus`
+- `/api/system/ai-status` теперь показывает активный профиль и `resolved_model` для embeddings и LLM
+- launcher и Docker runtime умеют автоматически выбирать сильнейшую доступную локальную модель в рамках профиля
 
-Это означает, что текущий weakest point `MVP 2` уже не в статусах и не в section coverage, а именно в дальнейшем усилении `evidence precision` на более широком real-world корпусе.
+Это означает, что aggregate quality-контур `MVP 2` уже значительно усилился: статусы, section coverage и suite-level evidence linking больше не выглядят главным ограничением. Текущий самый жёсткий residual case сместился в строгий OCR-backed target evaluation, где `college_gamma_ocr_package` всё ещё даёт `evidence_f1 = 0.7742`.
 
 ### Ближайшие приоритеты
 
 1. расширение `real_corpus`
 2. улучшение OCR / vision-контура
 3. усиление reranker / evidence linking с лучшей precision на multi-evidence кейсах
-4. более сильные локальные AI-модели
+4. сравнительный benchmark профилей `quality` и `quality_plus` против `baseline`
 5. воспроизводимая calibration-стратегия на большем корпусе
 6. более глубокая semantic-оценка generated sections поверх текущего marker-based benchmark
 

@@ -3,8 +3,9 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.core.config import get_settings
-from app.integrations.ollama import OllamaError, has_model, list_models, request_json
+from app.integrations.ollama import OllamaError, list_models, request_json
 from app.llm.base import LLMProvider
+from app.services.ai_profiles import get_ai_runtime_profile, resolve_ai_model_choice
 
 
 class DeterministicFallbackLLMProvider(LLMProvider):
@@ -22,9 +23,14 @@ class DeterministicFallbackLLMProvider(LLMProvider):
             normalized_context = "Недостаточно данных для автоматической генерации раздела."
         return f"{title}\n\n{normalized_context[:1200]}".strip()
 
+    def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str | None:
+        return None
+
     def status(self) -> dict[str, object]:
         return {
             "provider": self.provider_name,
+            "runtime_profile": get_ai_runtime_profile().profile_id,
+            "resolved_model": None,
             "mode": "fallback",
         }
 
@@ -134,14 +140,20 @@ class LocalTransformersProvider(LLMProvider):
         generated = self._run_generation(prompt, max_new_tokens=self.section_max_new_tokens)
         return generated if generated else self._fallback.generate_section(title, context)
 
+    def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str | None:
+        full_prompt = f"{system.strip()}\n\n{prompt}".strip() if system else prompt
+        return self._run_generation(full_prompt, max_new_tokens=max_tokens)
+
     def status(self) -> dict[str, object]:
         mode = "model" if self._generator is not None else "fallback"
         return {
             "provider": self.provider_name,
             "configured_model": self._model_source(),
+            "runtime_profile": get_ai_runtime_profile().profile_id,
             "task": self.task,
             "load_attempted": self._load_attempted,
             "loaded": self._generator is not None,
+            "resolved_model": self._model_source(),
             "mode": mode,
             "fallback_provider": self._fallback.provider_name,
             "load_error": self._load_error,
@@ -152,21 +164,47 @@ class OllamaLLMProvider(LLMProvider):
     def __init__(self) -> None:
         settings = get_settings()
         self.base_url = settings.ollama_base_url
-        self.model_name = settings.ollama_llm_model
+        self.configured_model_name = settings.ollama_llm_model
+        self.profile = get_ai_runtime_profile()
         self.timeout = settings.ollama_request_timeout_seconds
         self.keep_alive = settings.ollama_keep_alive
         self.summary_max_new_tokens = settings.local_llm_summary_max_new_tokens
         self.section_max_new_tokens = settings.local_llm_section_max_new_tokens
         self._fallback = DeterministicFallbackLLMProvider()
         self._last_error: str | None = None
+        self._last_choice = None
 
     @property
     def provider_name(self) -> str:
         return "ollama"
 
+    @property
+    def model_name(self) -> str:
+        return self.configured_model_name
+
+    def _resolve_model_choice(self, *, refresh: bool = False):
+        if self._last_choice is not None and not refresh:
+            return self._last_choice
+
+        available_models: list[str] | None = None
+        try:
+            available_models = list_models(self.base_url, self.timeout)
+        except OllamaError as exc:
+            self._last_error = str(exc)
+
+        self._last_choice = resolve_ai_model_choice(
+            configured_model=self.configured_model_name,
+            profile_candidates=self.profile.llm_candidates,
+            available_models=available_models,
+            prefer_profile_candidates=self.profile.profile_id != "baseline",
+            profile_id=self.profile.profile_id,
+        )
+        return self._last_choice
+
     def _generate(self, *, prompt: str, system: str, max_tokens: int) -> str | None:
+        choice = self._resolve_model_choice()
         payload = {
-            "model": self.model_name,
+            "model": choice.resolved_model,
             "prompt": prompt,
             "system": system,
             "stream": False,
@@ -214,25 +252,28 @@ class OllamaLLMProvider(LLMProvider):
         )
         return generated if generated else self._fallback.generate_section(title, context)
 
+    def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str | None:
+        return self._generate(prompt=prompt[:4000], system=system, max_tokens=max_tokens)
+
     def status(self) -> dict[str, object]:
-        available_models: list[str] | None = None
-        reachable = False
-        check_error: str | None = None
-        try:
-            available_models = list_models(self.base_url, self.timeout)
-            reachable = True
-        except OllamaError as exc:
-            check_error = str(exc)
-        model_available = has_model(available_models, self.model_name)
+        choice = self._resolve_model_choice(refresh=True)
+        available_models = list(choice.available_models) if choice.available_models is not None else None
+        reachable = available_models is not None
+        check_error = None if reachable else self._last_error
 
         return {
             "provider": self.provider_name,
-            "configured_model": self.model_name,
+            "configured_model": self.configured_model_name,
+            "candidate_models": list(choice.candidate_models),
+            "resolved_model": choice.resolved_model,
+            "preferred_model": choice.preferred_model,
+            "runtime_profile": choice.profile_id,
+            "resolved_from_profile_candidate": choice.from_profile_candidate,
             "base_url": self.base_url,
             "reachable": reachable,
-            "model_available": model_available,
+            "model_available": choice.model_available,
             "available_models": available_models,
-            "mode": "model" if reachable and model_available else "fallback",
+            "mode": "model" if reachable and choice.model_available else "fallback",
             "fallback_provider": self._fallback.provider_name,
             "load_error": self._last_error or check_error,
         }

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { PageGuide } from "../components/PageGuide";
-import type { Organization } from "../lib/types";
+import type { Organization, OrganizationAutofillSuggestion } from "../lib/types";
 import { formatOrganizationType } from "../lib/ui";
 
 type OrganizationFormPayload = {
@@ -28,6 +28,7 @@ type Props = {
   onCreateOrganization: (payload: OrganizationFormPayload) => Promise<void>;
   onUpdateOrganization: (organizationId: string, payload: OrganizationFormPayload) => Promise<void>;
   onDeleteOrganization: (organizationId: string) => Promise<void>;
+  onAutofillOrganization: (organizationId: string) => Promise<OrganizationAutofillSuggestion>;
 };
 
 type FormState = {
@@ -105,6 +106,33 @@ function toPayload(form: FormState): OrganizationFormPayload {
   };
 }
 
+function mergeSuggestionsIntoForm(current: FormState, suggestions: OrganizationAutofillSuggestion): FormState {
+  const next = { ...current };
+  const fields = [
+    "name",
+    "short_name",
+    "inn",
+    "kpp",
+    "ogrn",
+    "legal_address",
+    "actual_address",
+    "okved",
+    "website",
+    "email",
+    "phone",
+    "director_name",
+    "responsible_person",
+  ] as const;
+  for (const field of fields) {
+    const currentValue = (next[field] ?? "").trim();
+    const suggestedValue = suggestions[field]?.trim() ?? "";
+    if (!currentValue && suggestedValue) {
+      next[field] = suggestedValue;
+    }
+  }
+  return next;
+}
+
 export function OrganizationsPage({
   organizations,
   selectedOrganizationId,
@@ -112,9 +140,14 @@ export function OrganizationsPage({
   onCreateOrganization,
   onUpdateOrganization,
   onDeleteOrganization,
+  onAutofillOrganization,
 }: Props) {
   const [createForm, setCreateForm] = useState<FormState>(EMPTY_FORM);
   const [editForm, setEditForm] = useState<FormState>(EMPTY_FORM);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [autofillMessage, setAutofillMessage] = useState<string | null>(null);
+  const [autofillError, setAutofillError] = useState<string | null>(null);
+  const [isAutofilling, setIsAutofilling] = useState(false);
   const selectedOrganization = useMemo(
     () => organizations.find((organization) => organization.id === selectedOrganizationId) ?? null,
     [organizations, selectedOrganizationId],
@@ -127,6 +160,21 @@ export function OrganizationsPage({
     }
     setEditForm(toFormState(selectedOrganization));
   }, [onSelectOrganization, organizations, selectedOrganization, selectedOrganizationId]);
+
+  useEffect(() => {
+    if (!isEditModalOpen) {
+      return;
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsEditModalOpen(false);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEditModalOpen]);
 
   async function handleCreateSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -143,6 +191,7 @@ export function OrganizationsPage({
       return;
     }
     await onUpdateOrganization(selectedOrganization.id, toPayload(editForm));
+    setIsEditModalOpen(false);
   }
 
   async function handleDelete() {
@@ -156,6 +205,7 @@ export function OrganizationsPage({
       return;
     }
     await onDeleteOrganization(selectedOrganization.id);
+    setIsEditModalOpen(false);
   }
 
   function updateCreateForm(field: keyof FormState, value: string) {
@@ -164,6 +214,37 @@ export function OrganizationsPage({
 
   function updateEditForm(field: keyof FormState, value: string) {
     setEditForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleOpenOrganization(organizationId: string) {
+    onSelectOrganization(organizationId);
+    setAutofillMessage(null);
+    setAutofillError(null);
+    setIsEditModalOpen(true);
+  }
+
+  async function handleAutofill() {
+    if (!selectedOrganization) {
+      return;
+    }
+    setIsAutofilling(true);
+    setAutofillMessage(null);
+    setAutofillError(null);
+    try {
+      const suggestions = await onAutofillOrganization(selectedOrganization.id);
+      if (suggestions.matched_fields.length === 0) {
+        setAutofillError("Система не нашла подходящих реквизитов. Сначала обработайте документы с реквизитами организации.");
+        return;
+      }
+      setEditForm((current) => mergeSuggestionsIntoForm(current, suggestions));
+      setAutofillMessage(
+        `Подтянуто полей: ${suggestions.matched_fields.length}. Источники: ${suggestions.source_documents.slice(0, 3).join(", ")}${suggestions.source_documents.length > 3 ? " и другие" : ""}.`,
+      );
+    } catch (error) {
+      setAutofillError(error instanceof Error ? error.message : "Не удалось подтянуть данные из документов.");
+    } finally {
+      setIsAutofilling(false);
+    }
   }
 
   return (
@@ -250,7 +331,7 @@ export function OrganizationsPage({
               key={organization.id}
               type="button"
               className={`organization-card ${selectedOrganizationId === organization.id ? "selected-row" : ""}`}
-              onClick={() => onSelectOrganization(organization.id)}
+              onClick={() => handleOpenOrganization(organization.id)}
             >
               <div>
                 <strong>{organization.name}</strong>
@@ -266,56 +347,70 @@ export function OrganizationsPage({
         </div>
       </section>
 
-      {selectedOrganization ? (
-        <section className="panel">
-          <div className="section-header">
-            <h2>Редактирование организации</h2>
-            <span>{selectedOrganization.name}</span>
-          </div>
-          <p className="helper-text">
-            Нажатие на карточку организации слева открывает эту форму с уже заполненными данными. Здесь можно обновить
-            реквизиты или удалить тестовый контур целиком.
-          </p>
-          <form className="form-grid organization-form-grid" onSubmit={handleUpdateSubmit}>
-            <input value={editForm.name} onChange={(event) => updateEditForm("name", event.target.value)} placeholder="Полное название организации" />
-            <input value={editForm.short_name} onChange={(event) => updateEditForm("short_name", event.target.value)} placeholder="Краткое название" />
-            <select value={editForm.organization_type} onChange={(event) => updateEditForm("organization_type", event.target.value)}>
-              <option value="educational">Образовательная организация</option>
-              <option value="other">Иная организация</option>
-            </select>
-            <input value={editForm.website} onChange={(event) => updateEditForm("website", event.target.value)} placeholder="Сайт" />
-            <input value={editForm.email} onChange={(event) => updateEditForm("email", event.target.value)} placeholder="Email" />
-            <input value={editForm.phone} onChange={(event) => updateEditForm("phone", event.target.value)} placeholder="Телефон" />
-            <input value={editForm.inn} onChange={(event) => updateEditForm("inn", event.target.value)} placeholder="ИНН" />
-            <input value={editForm.kpp} onChange={(event) => updateEditForm("kpp", event.target.value)} placeholder="КПП" />
-            <input value={editForm.ogrn} onChange={(event) => updateEditForm("ogrn", event.target.value)} placeholder="ОГРН" />
-            <input value={editForm.okved} onChange={(event) => updateEditForm("okved", event.target.value)} placeholder="ОКВЭД" />
-            <input value={editForm.director_name} onChange={(event) => updateEditForm("director_name", event.target.value)} placeholder="Руководитель" />
-            <input
-              value={editForm.responsible_person}
-              onChange={(event) => updateEditForm("responsible_person", event.target.value)}
-              placeholder="Ответственный за подготовку"
-            />
-            <input
-              className="field-span-2"
-              value={editForm.legal_address}
-              onChange={(event) => updateEditForm("legal_address", event.target.value)}
-              placeholder="Юридический адрес"
-            />
-            <input
-              className="field-span-2"
-              value={editForm.actual_address}
-              onChange={(event) => updateEditForm("actual_address", event.target.value)}
-              placeholder="Фактический адрес"
-            />
-            <div className="inline-actions field-span-2">
-              <button type="submit">Сохранить изменения</button>
-              <button type="button" className="danger-button" onClick={handleDelete}>
-                Удалить организацию
+      {selectedOrganization && isEditModalOpen ? (
+        <div className="modal-backdrop" onClick={() => setIsEditModalOpen(false)}>
+          <section className="modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="section-header">
+              <div>
+                <p className="eyebrow">Карточка организации</p>
+                <h2>Редактирование организации</h2>
+              </div>
+              <button type="button" className="modal-close" onClick={() => setIsEditModalOpen(false)} aria-label="Закрыть окно">
+                ×
               </button>
             </div>
-          </form>
-        </section>
+            <p className="helper-text">
+              Здесь можно обновить реквизиты, контакты и ответственных лиц. Из этого же окна можно удалить тестовый
+              контур целиком.
+            </p>
+            <div className="inline-actions modal-tools">
+              <button type="button" className="action-button action-secondary" disabled={isAutofilling} onClick={() => void handleAutofill()}>
+                {isAutofilling ? "Ищем во вложениях..." : "Попробовать из вложений"}
+              </button>
+            </div>
+            {autofillMessage ? <div className="success-box">{autofillMessage}</div> : null}
+            {autofillError ? <div className="error-box">{autofillError}</div> : null}
+            <form className="form-grid organization-form-grid" onSubmit={handleUpdateSubmit}>
+              <input value={editForm.name} onChange={(event) => updateEditForm("name", event.target.value)} placeholder="Полное название организации" />
+              <input value={editForm.short_name} onChange={(event) => updateEditForm("short_name", event.target.value)} placeholder="Краткое название" />
+              <select value={editForm.organization_type} onChange={(event) => updateEditForm("organization_type", event.target.value)}>
+                <option value="educational">Образовательная организация</option>
+                <option value="other">Иная организация</option>
+              </select>
+              <input value={editForm.website} onChange={(event) => updateEditForm("website", event.target.value)} placeholder="Сайт" />
+              <input value={editForm.email} onChange={(event) => updateEditForm("email", event.target.value)} placeholder="Email" />
+              <input value={editForm.phone} onChange={(event) => updateEditForm("phone", event.target.value)} placeholder="Телефон" />
+              <input value={editForm.inn} onChange={(event) => updateEditForm("inn", event.target.value)} placeholder="ИНН" />
+              <input value={editForm.kpp} onChange={(event) => updateEditForm("kpp", event.target.value)} placeholder="КПП" />
+              <input value={editForm.ogrn} onChange={(event) => updateEditForm("ogrn", event.target.value)} placeholder="ОГРН" />
+              <input value={editForm.okved} onChange={(event) => updateEditForm("okved", event.target.value)} placeholder="ОКВЭД" />
+              <input value={editForm.director_name} onChange={(event) => updateEditForm("director_name", event.target.value)} placeholder="Руководитель" />
+              <input
+                value={editForm.responsible_person}
+                onChange={(event) => updateEditForm("responsible_person", event.target.value)}
+                placeholder="Ответственный за подготовку"
+              />
+              <input
+                className="field-span-2"
+                value={editForm.legal_address}
+                onChange={(event) => updateEditForm("legal_address", event.target.value)}
+                placeholder="Юридический адрес"
+              />
+              <input
+                className="field-span-2"
+                value={editForm.actual_address}
+                onChange={(event) => updateEditForm("actual_address", event.target.value)}
+                placeholder="Фактический адрес"
+              />
+              <div className="inline-actions field-span-2">
+                <button type="submit">Сохранить изменения</button>
+                <button type="button" className="danger-button" onClick={handleDelete}>
+                  Удалить организацию
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
       ) : null}
     </div>
   );

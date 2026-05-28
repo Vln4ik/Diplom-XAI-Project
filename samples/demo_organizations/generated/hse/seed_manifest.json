@@ -1,0 +1,85 @@
+{
+  "organization": {
+    "name": "Национальный исследовательский университет «Высшая школа экономики»",
+    "short_name": "НИУ ВШЭ",
+    "organization_type": "educational",
+    "website": "https://www.hse.ru/",
+    "city": "Москва",
+    "legal_address": "101000, г. Москва, ул. Мясницкая, д. 20",
+    "actual_address": "101000, г. Москва, ул. Мясницкая, д. 20, стр. Демо",
+    "inn": "7701003003",
+    "kpp": "770101003",
+    "ogrn": "1027700003003",
+    "okved": "85.22",
+    "email": "hse-demo@example.org",
+    "phone": "+7 495 300-30-03",
+    "director_name": "Морозов Алексей Юрьевич",
+    "responsible_person": "Лебедева Дарья Сергеевна",
+    "profile_json": {
+      "public_source_url": "https://www.hse.ru/info/",
+      "public_source_note": "Официальный сайт НИУ ВШЭ.",
+      "demo_seed_pack": true,
+      "synthetic_profile": true,
+      "students_total": 34000,
+      "teachers_total": 5100
+    }
+  },
+  "files": [
+    {
+      "file_name": "01_organization_profile.txt",
+      "category": "evidence",
+      "tags": [
+        "profile",
+        "organization"
+      ]
+    },
+    {
+      "file_name": "02_license_reference.txt",
+      "category": "normative",
+      "tags": [
+        "license",
+        "accreditation"
+      ]
+    },
+    {
+      "file_name": "03_official_site_sections.txt",
+      "category": "evidence",
+      "tags": [
+        "website",
+        "publication"
+      ]
+    },
+    {
+      "file_name": "04_education_programs.csv",
+      "category": "data_table",
+      "tags": [
+        "programs",
+        "education"
+      ]
+    },
+    {
+      "file_name": "05_staff_registry.csv",
+      "category": "data_table",
+      "tags": [
+        "staff",
+        "teachers"
+      ]
+    },
+    {
+      "file_name": "06_local_acts_register.json",
+      "category": "data_table",
+      "tags": [
+        "local_acts",
+        "documents"
+      ]
+    },
+    {
+      "file_name": "07_contingent_summary.csv",
+      "category": "data_table",
+      "tags": [
+        "students",
+        "contingent"
+      ]
+    }
+  ]
+}

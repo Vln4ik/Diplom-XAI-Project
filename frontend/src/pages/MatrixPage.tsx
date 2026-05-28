@@ -1,6 +1,6 @@
 import { PageGuide } from "../components/PageGuide";
 import type { ReportMatrixRow } from "../lib/types";
-import { formatRequirementStatus, formatRiskLevel, getScoreTone } from "../lib/ui";
+import { formatRequirementStatus, formatRiskLevel, getRiskTone, getScoreTone } from "../lib/ui";
 
 export function MatrixPage({ rows }: { rows: ReportMatrixRow[] }) {
   return (
@@ -84,7 +84,7 @@ export function MatrixPage({ rows }: { rows: ReportMatrixRow[] }) {
                   <strong>{formatRequirementStatus(row.status)}</strong>
                   <div className="status-meter compact-meter">
                     <div className="meter-meta">
-                      <span>Уровень подтверждения</span>
+                      <span>Сила подтверждения (confidence)</span>
                       <strong>{Math.round(row.confidence_score * 100)}%</strong>
                     </div>
                     <div className="progress-track">
@@ -94,9 +94,12 @@ export function MatrixPage({ rows }: { rows: ReportMatrixRow[] }) {
                       />
                     </div>
                   </div>
-                  <p>
-                    {Math.round(row.confidence_score * 100)}% · {formatRiskLevel(row.risk_level)}
+                  <p className="helper-text">
+                    Чем выше этот процент, тем увереннее система в том, что требование подтверждено найденными evidence.
                   </p>
+                  <span className={`status-pill tone-${getRiskTone(row.risk_level)}`}>
+                    Риск: {formatRiskLevel(row.risk_level)}
+                  </span>
                   <p>{row.included_in_report ? "В отчёте" : "Не включено"}</p>
                   {row.system_comment ? <p>Система: {row.system_comment}</p> : null}
                   {row.user_comment ? <p>Пользователь: {row.user_comment}</p> : null}

@@ -51,7 +51,7 @@
       "expected_status": "data_found",
       "expected_evidence": [
         "В разделе \"Сведения об образовательной организации\" опубликованы локальные нормативные акты.",
-        "website_sections_published | 2026 | 12"
+        "local_acts_published | 2026 | 18"
       ]
     }
   ],

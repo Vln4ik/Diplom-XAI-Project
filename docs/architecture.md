@@ -19,6 +19,12 @@
 - `ollama` — локальный AI runtime для embeddings и LLM
 - `prometheus / grafana / alertmanager` — optional observability-профиль
 
+Локальный AI runtime уже работает в profile-aware режиме:
+
+- `baseline`
+- `quality`
+- `quality_plus`
+
 ### 2.2. Основные доменные контуры
 
 - аутентификация и роли
@@ -58,6 +64,7 @@
 - text-centric pipeline
 - embeddings через локальную модель
 - локальная LLM для генерации
+- profile-aware выбор локальной embedding-модели и LLM
 - гибридный retrieval
 - rule-based applicability / confidence / risk
 - сохранённый XAI-артефакт

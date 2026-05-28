@@ -79,16 +79,16 @@
 
 - committed suite: `7` сценариев
 - committed `requirement extraction F1`: `1.0000`
-- committed `evidence linking precision`: `0.8293`
-- committed `evidence linking F1`: `0.9067`
+- committed `evidence linking precision`: `0.9444`
+- committed `evidence linking F1`: `0.9714`
 - committed `section quality pass share`: `100.00%`
 - pilot real corpus: `5` кейсов
 - pilot real corpus `cases_passed`: `5/5`
 - pilot real corpus `targets_passed`: `20/20`
 - pilot real corpus `requirement extraction F1`: `1.0000`
-- pilot real corpus `evidence linking precision`: `0.7500`
-- pilot real corpus `evidence linking recall`: `0.9565`
-- pilot real corpus `evidence linking F1`: `0.8408`
+- pilot real corpus `evidence linking precision`: `1.0000`
+- pilot real corpus `evidence linking recall`: `1.0000`
+- pilot real corpus `evidence linking F1`: `1.0000`
 - pilot real corpus `source requirement coverage`: `100.00%`
 - pilot real corpus `section quality pass share`: `100.00%`
 
@@ -114,7 +114,7 @@
 - даже с учётом ручной проверки автоматизированный сценарий существенно короче ручного;
 - формальный benchmark-контур уже подтверждает не только время, но и качество извлечения требований, evidence linking и coverage разделов;
 - на pilot real corpus уже закрыты `20/20` целевых критериев качества;
-- главный узкий участок при нагрузке остаётся в генерации разделов отчёта, а по качеству — в evidence precision на более широком корпусе.
+- главный узкий участок при нагрузке остаётся в генерации разделов отчёта, а по качеству — в расширении real-world корпуса и в более жёстких OCR-backed case-level проверках.
 
 ## 13. Ограничения эксперимента
 

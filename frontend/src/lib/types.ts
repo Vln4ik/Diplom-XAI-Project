@@ -19,6 +19,25 @@ export type Organization = {
   updated_at: string;
 };
 
+export type OrganizationAutofillSuggestion = {
+  name?: string | null;
+  short_name?: string | null;
+  inn?: string | null;
+  kpp?: string | null;
+  ogrn?: string | null;
+  legal_address?: string | null;
+  actual_address?: string | null;
+  okved?: string | null;
+  website?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  director_name?: string | null;
+  responsible_person?: string | null;
+  matched_fields: string[];
+  source_documents: string[];
+  processed_documents_count: number;
+};
+
 export type MemberItem = {
   id: string;
   organization_id: string;

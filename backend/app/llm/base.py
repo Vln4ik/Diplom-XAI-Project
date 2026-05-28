@@ -17,5 +17,9 @@ class LLMProvider(ABC):
     def generate_section(self, title: str, context: str) -> str:
         raise NotImplementedError
 
+    @abstractmethod
+    def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str | None:
+        raise NotImplementedError
+
     def status(self) -> dict[str, object]:
         return {"provider": self.provider_name}

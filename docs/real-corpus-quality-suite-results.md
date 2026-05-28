@@ -1,6 +1,6 @@
 # Quality Benchmark Suite Results
 
-Дата фиксации: `2026-05-26`
+Дата фиксации: `2026-05-28`
 
 - сценариев в suite: `5`
 
@@ -20,9 +20,9 @@
 
 ### Evidence linking
 
-- `precision`: `0.7500`
-- `recall`: `0.9565`
-- `f1`: `0.8408`
+- `precision`: `1.0000`
+- `recall`: `1.0000`
+- `f1`: `1.0000`
 - `grounded_requirements_share_mean`: `85.00%`
 
 ### Report sections
@@ -44,8 +44,8 @@
 - scenario: `Рособрнадзор + колледж + redacted full package`
 - extraction F1: `1.0000`
 - applicability accuracy: `100.00%`
-- evidence F1: `0.8571`
-- evidence precision: `0.7500`
+- evidence F1: `1.0000`
+- evidence precision: `1.0000`
 - evidence recall: `1.0000`
 - section coverage: `100.00%`
 - section quality score: `100.00%`
@@ -56,8 +56,8 @@
 - scenario: `Рособрнадзор + колледж + redacted gap package`
 - extraction F1: `1.0000`
 - applicability accuracy: `100.00%`
-- evidence F1: `0.8000`
-- evidence precision: `0.6667`
+- evidence F1: `1.0000`
+- evidence precision: `1.0000`
 - evidence recall: `1.0000`
 - section coverage: `100.00%`
 - section quality score: `100.00%`
@@ -68,9 +68,9 @@
 - scenario: `Рособрнадзор + колледж + OCR-backed package`
 - extraction F1: `1.0000`
 - applicability accuracy: `100.00%`
-- evidence F1: `0.7742`
-- evidence precision: `0.7500`
-- evidence recall: `0.8000`
+- evidence F1: `1.0000`
+- evidence precision: `1.0000`
+- evidence recall: `1.0000`
 - section coverage: `100.00%`
 - section quality score: `100.00%`
 - section quality pass share: `100.00%`
@@ -80,8 +80,8 @@
 - scenario: `Рособрнадзор + колледж + structured registry package`
 - extraction F1: `1.0000`
 - applicability accuracy: `100.00%`
-- evidence F1: `0.8571`
-- evidence precision: `0.7500`
+- evidence F1: `1.0000`
+- evidence precision: `1.0000`
 - evidence recall: `1.0000`
 - section coverage: `100.00%`
 - section quality score: `100.00%`
@@ -92,8 +92,8 @@
 - scenario: `Рособрнадзор + колледж + graduate registry package`
 - extraction F1: `1.0000`
 - applicability accuracy: `100.00%`
-- evidence F1: `0.8889`
-- evidence precision: `0.8000`
+- evidence F1: `1.0000`
+- evidence precision: `1.0000`
 - evidence recall: `1.0000`
 - section coverage: `100.00%`
 - section quality score: `100.00%`

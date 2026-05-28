@@ -42,9 +42,9 @@
 - `requirement extraction recall`: `1.0000`
 - `requirement extraction F1`: `1.0000`
 - `applicability accuracy`: `1.0000`
-- `evidence linking precision`: `0.8571`
+- `evidence linking precision`: `1.0000`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9231`
+- `evidence linking F1`: `1.0000`
 - `report sections source coverage`: `1.0000`
 - `report sections quality_score_mean`: `100.00%`
 
@@ -59,9 +59,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.8293`
+- `evidence linking precision`: `0.9444`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9067`
+- `evidence linking F1`: `0.9714`
 - `report sections source coverage mean`: `100.00%`
 - `report sections requirement_content_coverage_mean`: `100.00%`
 - `report sections quality_score_mean`: `100.00%`
@@ -76,7 +76,8 @@
 - extraction layer стабилен
 - applicability на committed corpus закрывается уверенно
 - section coverage и marker-based section quality не являются слабым местом на committed контуре
-- основной оставшийся challenge — точность evidence linking на более сложных и реалистичных кейсах
+- committed quality-контур после последней итерации уже близок к потолку на текущем suite
+- основной следующий challenge смещается в более жёсткие OCR-backed и case-level проверки, а не в базовый committed contour
 
 ## 4. Calibration-слой
 
@@ -100,8 +101,8 @@
 Причина:
 
 - и committed suite, и pilot `real_corpus` сейчас сходятся на `baseline_current`
-- но evidence precision на committed contour всё ещё заметно ниже идеального уровня
-- следовательно, следующий шаг — не искать новый набор порогов ради локального выигрыша, а расширять корпус и улучшать сам evidence linking
+- aggregate committed contour после последней итерации уже не является проблемной зоной по evidence precision
+- следовательно, следующий шаг — не искать новый набор порогов ради локального выигрыша, а расширять корпус и усиливать более сложные OCR-backed кейсы
 
 ## 5. Pilot `real_corpus`
 
@@ -128,9 +129,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.7500`
-- `evidence linking recall`: `0.9565`
-- `evidence linking F1`: `0.8408`
+- `evidence linking precision`: `1.0000`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `1.0000`
 - `report sections source coverage mean`: `100.00%`
 - `min source requirement pass share mean`: `100.00%`
 - `report sections requirement_content_coverage_mean`: `100.00%`
@@ -145,6 +146,7 @@
 
 - `cases_passed`: `5/5`
 - `targets_passed`: `20/20`
+- самый жёсткий case-level OCR-scenario: `college_gamma_ocr_package` с `evidence_f1 = 0.7742`
 
 Источник: [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md)
 
@@ -162,7 +164,7 @@
 Это один из самых важных выводов текущей итерации:
 
 - committed suite и pilot `real_corpus` сейчас сходятся на `baseline_current`
-- но это согласие не означает, что evidence linking уже полностью оптимален
+- но это согласие не означает, что OCR-backed case-level quality уже полностью оптимальна
 
 Следовательно, основной следующий шаг `MVP 2` — расширять real corpus и улучшать сам механизм evidence linking, а не надеяться закрыть задачу только подбором порогов.
 
@@ -171,7 +173,7 @@
 - marker-based проверка sections уже встроена и стабильна и на committed suite, и на текущем pilot `real_corpus`
 - слабый `structured-registry` кейс больше не проваливает section coverage и section-quality на текущем pilot-корпусе
 - `status_accuracy` и `section coverage` уже удерживаются на `100.00%` и на committed suite, и на pilot `real_corpus`
-- основной residual gap сместился в evidence precision и дальнейшую проверку на более широком real-world корпусе
+- основной residual gap сместился в расширение real-world корпуса и дальнейшую проверку на более жёстком OCR-backed case-level контуре
 
 ## 6. OCR metrics
 

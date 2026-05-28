@@ -54,7 +54,7 @@
 
 - `requirement extraction F1`: `1.0000`
 - `applicability accuracy`: `1.0000`
-- `evidence linking F1`: `0.9231`
+- `evidence linking F1`: `1.0000`
 - `report sections source coverage`: `1.0000`
 
 Источник: [docs/quality-benchmark-results.md](docs/quality-benchmark-results.md)
@@ -66,9 +66,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.8293`
+- `evidence linking precision`: `0.9444`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9067`
+- `evidence linking F1`: `0.9714`
 - `source requirement coverage mean`: `100.00%`
 - `section quality pass share mean`: `100.00%`
 
@@ -84,9 +84,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.7500`
-- `evidence linking recall`: `0.9565`
-- `evidence linking F1`: `0.8408`
+- `evidence linking precision`: `1.0000`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `1.0000`
 - `source requirement coverage mean`: `100.00%`
 - `section quality pass share mean`: `100.00%`
 
@@ -96,6 +96,8 @@
 - [docs/real-corpus-quality-suite-results.md](docs/real-corpus-quality-suite-results.md)
 - [docs/real-corpus-target-evaluation.md](docs/real-corpus-target-evaluation.md)
 
+При этом в более жёстком case-level target evaluation самым сложным сценарием остаётся `college_gamma_ocr_package`: там `evidence_f1 = 0.7742`, хотя aggregate suite и целевые критерии pilot-корпуса уже закрыты.
+
 ### Calibration
 
 Сейчас есть два разных calibration-среза:
@@ -103,7 +105,7 @@
 - на committed `7`-сценарном suite лучшим профилем остался `baseline_current`
 - на pilot `real_corpus` устойчивым базовым профилем остался `baseline_current`
 
-Это важный вывод для roadmap: в `MVP 2` нужно не только калибровать пороги, но и улучшать сам evidence linking на большем real-world корпусе.
+Это важный вывод для roadmap: в `MVP 2` нужно не только калибровать пороги, но и расширять корпус, усиливать OCR-backed кейсы и проверять качество на более строгом case-level контуре.
 
 Источники:
 
@@ -142,10 +144,29 @@
 
 ### AI / XAI
 
-- embeddings: `Ollama + all-minilm`
-- local LLM: `Ollama + gemma3:270m`
+- embeddings: profile-aware `Ollama` runtime
+- local LLM: profile-aware `Ollama` runtime
 - rule-based applicability / confidence / risk logic
 - сохранённые XAI-объяснения
+
+### AI runtime profiles
+
+В `MVP 2` уже добавлен переключаемый слой локальных AI-профилей:
+
+- `baseline`:
+  - embeddings: `all-minilm`
+  - LLM: `gemma3:270m`
+  - цель: минимальная runtime-стоимость и быстрый локальный запуск
+- `quality`:
+  - embeddings: `nomic-embed-text -> mxbai-embed-large -> all-minilm`
+  - LLM: `qwen2.5:3b -> llama3.2:3b -> gemma3:1b -> gemma3:270m`
+  - цель: улучшение retrieval и section generation на умеренном железе
+- `quality_plus`:
+  - embeddings: `mxbai-embed-large -> nomic-embed-text -> all-minilm`
+  - LLM: `qwen2.5:7b -> llama3.1:8b -> qwen2.5:3b -> llama3.2:3b -> gemma3:1b -> gemma3:270m`
+  - цель: максимально сильный локальный профиль для тяжёлых benchmark и demo-сценариев
+
+Профиль задаётся через `XAI_APP_AI_RUNTIME_PROFILE`. По умолчанию система остаётся на `baseline`, а при запуске стека resolver сам подбирает лучшую локально доступную модель внутри выбранного профиля.
 
 ### Infra
 
@@ -173,6 +194,14 @@
 - benchmark качества разделов
 - более сильные локальные embeddings / LLM
 - воспроизводимая calibration-стратегия на большем корпусе
+
+Из этого блока уже реализована инфраструктурная часть для локальных моделей:
+
+- profile-aware выбор моделей `baseline / quality / quality_plus`
+- диагностика профиля через `/api/system/ai-status`
+- profile-aware launcher и Docker runtime
+
+Следующий подэтап внутри этого же шага: реальные comparative benchmark-прогоны на `quality` и `quality_plus` поверх расширенного `real_corpus`.
 
 ### Что входит в `MVP 3`
 
@@ -202,6 +231,13 @@
 6. сгенерировать проект отчёта
 7. выгрузить итоговый пакет
 8. отправить отчёт на согласование
+
+Дополнительно в текущей версии уже есть:
+
+- demo-pack из `10` тестовых организаций с комплектами документов
+- модальное редактирование организации
+- попытка автозаполнения реквизитов из обработанных вложений
+- более информативный web UI с progress-индикаторами и обновлёнными action-patterns
 
 Подробные пользовательские документы:
 
@@ -249,6 +285,27 @@ samples/   demo-корпус, benchmarks, real corpus, calibration-профил�
 
 ## Запуск проекта
 
+### Быстрый локальный запуск full stack
+
+Рекомендуемый локальный путь:
+
+```bash
+bash infra/start_full_stack.sh
+```
+
+Frontend:
+
+- `http://localhost:5173/login`
+
+Backend / Swagger:
+
+- `http://localhost:8000/docs`
+
+Тестовый логин:
+
+- `admin@example.com`
+- `ChangeMe123!`
+
 ### Базовый локальный запуск через Docker
 
 ```bash
@@ -266,6 +323,26 @@ bash infra/enable-ollama.sh
 
 ```bash
 COMPOSE_PROFILES=observability,local-ai docker compose -f infra/docker-compose.yml up --build
+```
+
+### Переключение AI runtime profile
+
+```bash
+XAI_APP_AI_RUNTIME_PROFILE=baseline bash infra/start_full_stack.sh
+XAI_APP_AI_RUNTIME_PROFILE=quality bash infra/start_full_stack.sh
+XAI_APP_AI_RUNTIME_PROFILE=quality_plus bash infra/start_full_stack.sh
+```
+
+### Demo-pack организаций
+
+В репозитории уже включён пакет из `10` демо-организаций и их синтетических документов:
+
+- [samples/demo_organizations/README.md](samples/demo_organizations/README.md)
+
+Импорт в текущую рабочую БД:
+
+```bash
+./.venv/bin/python backend/scripts/import_demo_organizations.py --user-email admin@example.com
 ```
 
 ## Команды проверки

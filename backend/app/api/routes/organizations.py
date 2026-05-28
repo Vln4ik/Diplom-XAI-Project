@@ -25,12 +25,14 @@ from app.schemas import (
     MemberCreate,
     MemberResponse,
     MemberUpdate,
+    OrganizationAutofillResponse,
     OrganizationCreate,
     OrganizationResponse,
     OrganizationUpdate,
 )
 from app.services.audit import log_action
 from app.services.auth import create_user
+from app.services.organization_autofill import suggest_organization_profile_from_documents
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -111,6 +113,19 @@ def update_organization(
     db.commit()
     db.refresh(organization)
     return organization
+
+
+@router.post("/{organization_id}/autofill", response_model=OrganizationAutofillResponse)
+def autofill_organization_from_documents(
+    organization_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> OrganizationAutofillResponse:
+    ensure_org_access(db, organization_id=organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    organization = db.scalar(select(Organization).where(Organization.id == organization_id))
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+    return suggest_organization_profile_from_documents(db, organization_id)
 
 
 @router.delete("/{organization_id}", response_model=OrganizationResponse)

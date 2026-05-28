@@ -51,24 +51,26 @@
   },
   "evidence_linking": {
     "expected_total": 6,
-    "predicted_total": 9,
+    "predicted_total": 6,
     "matched_total": 6,
-    "precision": 0.6667,
+    "matched_predicted_total": 6,
+    "precision": 1.0,
     "recall": 1.0,
-    "f1": 0.8,
+    "f1": 1.0,
     "grounded_requirements_share": 1.0,
     "per_requirement": [
       {
         "expected_id": "req_local_acts",
         "expected_total": 2,
-        "predicted_total": 3,
+        "predicted_total": 2,
         "matched_total": 2,
+        "matched_predicted_total": 2,
         "recall": 1.0,
-        "precision": 0.6667,
+        "precision": 1.0,
         "matches": [
           {
-            "expected_snippet": "website_sections_published | 2026 | 12",
-            "predicted_snippet": "website_sections_published | 2026 | 12",
+            "expected_snippet": "local_acts_published | 2026 | 18",
+            "predicted_snippet": "local_acts_published | 2026 | 18",
             "similarity": 1.0
           },
           {
@@ -83,6 +85,7 @@
         "expected_total": 3,
         "predicted_total": 3,
         "matched_total": 3,
+        "matched_predicted_total": 3,
         "recall": 1.0,
         "precision": 1.0,
         "matches": [
@@ -106,10 +109,11 @@
       {
         "expected_id": "req_programs",
         "expected_total": 1,
-        "predicted_total": 3,
+        "predicted_total": 1,
         "matched_total": 1,
+        "matched_predicted_total": 1,
         "recall": 1.0,
-        "precision": 0.3333,
+        "precision": 1.0,
         "matches": [
           {
             "expected_snippet": "Кадровый состав и сведения о реализуемых образовательных программах доступны в открытом доступе.",

@@ -1,0 +1,85 @@
+{
+  "organization": {
+    "name": "Казанский (Приволжский) федеральный университет",
+    "short_name": "КФУ",
+    "organization_type": "educational",
+    "website": "https://kpfu.ru/",
+    "city": "Казань",
+    "legal_address": "420008, г. Казань, ул. Кремлевская, д. 18",
+    "actual_address": "420008, г. Казань, ул. Кремлевская, д. 18, корп. Демо",
+    "inn": "1601006006",
+    "kpp": "160101006",
+    "ogrn": "1021600006006",
+    "okved": "85.22",
+    "email": "kpfu-demo@example.org",
+    "phone": "+7 843 600-60-06",
+    "director_name": "Ахметов Руслан Маратович",
+    "responsible_person": "Галимова Алина Ильдаровна",
+    "profile_json": {
+      "public_source_url": "https://kpfu.ru/about_university/about_universityiya-o-vuze/svedeniya-o-vuze-19670.html",
+      "public_source_note": "Официальный сайт КФУ.",
+      "demo_seed_pack": true,
+      "synthetic_profile": true,
+      "students_total": 30000,
+      "teachers_total": 4100
+    }
+  },
+  "files": [
+    {
+      "file_name": "01_organization_profile.txt",
+      "category": "evidence",
+      "tags": [
+        "profile",
+        "organization"
+      ]
+    },
+    {
+      "file_name": "02_license_reference.txt",
+      "category": "normative",
+      "tags": [
+        "license",
+        "accreditation"
+      ]
+    },
+    {
+      "file_name": "03_official_site_sections.txt",
+      "category": "evidence",
+      "tags": [
+        "website",
+        "publication"
+      ]
+    },
+    {
+      "file_name": "04_education_programs.csv",
+      "category": "data_table",
+      "tags": [
+        "programs",
+        "education"
+      ]
+    },
+    {
+      "file_name": "05_staff_registry.csv",
+      "category": "data_table",
+      "tags": [
+        "staff",
+        "teachers"
+      ]
+    },
+    {
+      "file_name": "06_local_acts_register.json",
+      "category": "data_table",
+      "tags": [
+        "local_acts",
+        "documents"
+      ]
+    },
+    {
+      "file_name": "07_contingent_summary.csv",
+      "category": "data_table",
+      "tags": [
+        "students",
+        "contingent"
+      ]
+    }
+  ]
+}

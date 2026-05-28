@@ -10,7 +10,10 @@ def test_system_health_and_metrics_endpoints(client):
 
     ai_status_response = test_client.get("/api/system/ai-status")
     assert ai_status_response.status_code == 200
+    assert "profile" in ai_status_response.json()
     assert "ocr" in ai_status_response.json()
+    assert "runtime_profile" in ai_status_response.json()["embeddings"]
+    assert "resolved_model" in ai_status_response.json()["llm"]
 
     integrations_response = test_client.get("/api/system/integrations")
     assert integrations_response.status_code == 200

@@ -91,6 +91,9 @@ CATEGORY_HINT_MARKERS = {
     "Кадровое обеспечение": {"teachers_total"},
     "Контингент обучающихся": {"students_total"},
 }
+GENERIC_ONLY_HINT_MARKERS = {"website_sections_published", "has_official_website"}
+NON_PROGRAM_SECONDARY_HINT_MARKERS = {"licensed_programs"}
+STAFF_SPECIFIC_ROOTS = {"кадр", "работник", "преподав", "teachers"}
 TOKEN_SUFFIXES = (
     "ирование",
     "ирования",
@@ -576,7 +579,15 @@ def generic_context_penalty(
     focus_overlap = overlapping_roots(focus_roots, fragment_roots)
     if focus_overlap:
         return 0.0
-    return round(min(0.2, 0.1 + 0.02 * len(generic_overlap)), 4)
+    requirement_signal_roots = overlapping_roots(HIGH_SIGNAL_TOKENS, set(contextual_token_roots(requirement_text)))
+    fragment_signal_roots = overlapping_roots(HIGH_SIGNAL_TOKENS, fragment_roots)
+    unrelated_signal_roots = {
+        root for root in fragment_signal_roots - requirement_signal_roots if root not in {"сайт", "официал"}
+    }
+    penalty = 0.1 + 0.02 * len(generic_overlap)
+    if unrelated_signal_roots:
+        penalty += min(0.08, 0.04 * len(unrelated_signal_roots))
+    return round(min(0.28, penalty), 4)
 
 
 def fragment_quality_adjustment(
@@ -697,6 +708,27 @@ def low_signal_quoted_value(
     return len(unique_significant_tokens(fragment_text)) <= 1
 
 
+def generic_hint_only_candidate(candidate: EvidenceCandidate) -> bool:
+    return bool(candidate.aligned_hint_markers) and set(candidate.aligned_hint_markers).issubset(GENERIC_ONLY_HINT_MARKERS)
+
+
+def misleading_program_like_quote(candidate: EvidenceCandidate, category: str) -> bool:
+    if candidate.evidence_kind != "quoted_value" or category == "Образовательные программы":
+        return False
+    fragment_roots = set(significant_token_roots(candidate.fragment.fragment_text))
+    if "образова" not in fragment_roots and "программ" not in fragment_roots:
+        return False
+    if category != "Кадровое обеспечение":
+        return False
+    return not overlapping_roots(STAFF_SPECIFIC_ROOTS, fragment_roots)
+
+
+def secondary_hint_only_candidate(candidate: EvidenceCandidate, category: str) -> bool:
+    if category == "Образовательные программы":
+        return False
+    return bool(candidate.aligned_hint_markers) and set(candidate.aligned_hint_markers).issubset(NON_PROGRAM_SECONDARY_HINT_MARKERS)
+
+
 def redundant_secondary_evidence(
     candidate: EvidenceCandidate,
     selected: list[EvidenceCandidate],
@@ -708,6 +740,7 @@ def redundant_secondary_evidence(
 ) -> bool:
     if not selected:
         return False
+    generic_hint_only = generic_hint_only_candidate(candidate)
     if category == "Образовательные программы" and candidate.evidence_kind in {"quoted_value", "structured_row"}:
         stronger_program_narrative = any(
             item.evidence_kind == "narrative"
@@ -727,7 +760,36 @@ def redundant_secondary_evidence(
         )
         if stronger_program_narrative:
             return True
-    if new_roots or new_focus_roots or candidate.aligned_hint_markers:
+    if misleading_program_like_quote(candidate, category) and not new_focus_roots:
+        stronger_staff_evidence = any(
+            item.score >= candidate.score - 0.1
+            and item.evidence_kind in {"narrative", "structured_row"}
+            and (item.focus_matched_count >= 1 or item.direct_matched_count >= 1 or bool(item.aligned_hint_markers))
+            for item in selected
+        )
+        if stronger_staff_evidence:
+            return True
+    if secondary_hint_only_candidate(candidate, category) and not new_focus_roots:
+        stronger_primary_evidence = any(
+            item.score >= candidate.score - 0.08
+            and (
+                item.direct_matched_count >= 1
+                or item.focus_matched_count >= 1
+                or bool(set(item.aligned_hint_markers) - NON_PROGRAM_SECONDARY_HINT_MARKERS)
+            )
+            for item in selected
+        )
+        if stronger_primary_evidence:
+            return True
+    if generic_hint_only and not new_focus_roots:
+        stronger_specific_marker = any(
+            set(item.aligned_hint_markers) - GENERIC_ONLY_HINT_MARKERS
+            for item in selected
+            if item.aligned_hint_markers
+        )
+        if stronger_specific_marker:
+            return True
+    if new_roots or new_focus_roots or (candidate.aligned_hint_markers and not generic_hint_only):
         return False
 
     stronger_narrative = any(
@@ -735,7 +797,10 @@ def redundant_secondary_evidence(
         and item.score >= candidate.score - 0.06
         and item.focus_matched_count >= candidate.focus_matched_count
         and item.direct_matched_count >= candidate.direct_matched_count
-        and len(item.fragment.fragment_text) <= len(candidate.fragment.fragment_text)
+        and (
+            candidate.evidence_kind != "narrative"
+            or len(item.fragment.fragment_text) <= len(candidate.fragment.fragment_text)
+        )
         for item in selected
     )
     stronger_structured = any(
@@ -1025,6 +1090,7 @@ def rank_evidence_candidates(
         focus_fragment_roots = set(significant_token_roots(candidate.fragment.fragment_text))
         focus_overlap = overlapping_roots(focus_roots, focus_fragment_roots)
         new_focus_roots = focus_overlap - covered_focus_roots
+        generic_hint_only = generic_hint_only_candidate(candidate)
 
         if (
             candidate.score < score_floor
@@ -1045,6 +1111,44 @@ def rank_evidence_candidates(
             aligned_marker_count=len(candidate.aligned_hint_markers),
         ):
             continue
+        if (
+            category == "Официальный сайт"
+            and candidate.evidence_kind == "narrative"
+            and candidate.focus_matched_count == 0
+            and not candidate.aligned_hint_markers
+            and candidate.direct_matched_count <= 2
+            and candidate.coverage_score <= 0.3
+            and generic_context_penalty(
+                requirement_text,
+                candidate.fragment.fragment_text,
+                category,
+                direct_focus_matches=candidate.focus_matched_count,
+                aligned_marker_count=len(candidate.aligned_hint_markers),
+            )
+            >= 0.18
+        ):
+            generic_site_alternative = any(
+                item.fragment.id != candidate.fragment.id
+                and generic_hint_only_candidate(item)
+                and item.score >= candidate.score - 0.12
+                for item in rescored
+            )
+            if generic_site_alternative:
+                continue
+        if generic_hint_only and not selected:
+            stronger_follow_up = any(
+                item.fragment.id != candidate.fragment.id
+                and item.score >= candidate.score - 0.12
+                and (
+                    bool(set(item.aligned_hint_markers) - GENERIC_ONLY_HINT_MARKERS)
+                    or item.direct_matched_count >= 1
+                    or item.focus_matched_count >= 1
+                )
+                for item in rescored
+            )
+            if stronger_follow_up:
+                deferred.append(candidate)
+                continue
         if not new_roots and not new_focus_roots and not candidate.aligned_hint_markers and candidate.score < 0.34:
             continue
         if (
@@ -1093,7 +1197,8 @@ def rank_evidence_candidates(
             focus_fragment_roots = set(significant_token_roots(candidate.fragment.fragment_text))
             focus_overlap = overlapping_roots(focus_roots, focus_fragment_roots)
             new_focus_roots = focus_overlap - covered_focus_roots
-            if candidate.score < score_floor:
+            generic_hint_only = generic_hint_only_candidate(candidate)
+            if candidate.score < score_floor and not generic_hint_only:
                 continue
             if candidate.evidence_kind == "boolean_flag" and candidate.focus_matched_count == 0 and not new_focus_roots:
                 continue

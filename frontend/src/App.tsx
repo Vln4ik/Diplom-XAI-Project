@@ -5,7 +5,7 @@ import { Layout } from "./components/Layout";
 import {
   approveReport,
   analyzeReport,
-  bulkUpdateRequirements,
+  autofillOrganizationFromDocuments,
   confirmRequirement,
   createOrganization,
   createReport,
@@ -351,6 +351,10 @@ function AppShell() {
     await reloadOrganizations(preferredOrganizationId);
   }
 
+  async function handleAutofillOrganization(organizationId: string) {
+    return autofillOrganizationFromDocuments(organizationId);
+  }
+
   async function handleUploadDocuments(payload: { files: File[]; category: string; tags?: string }) {
     if (!selectedOrganizationId) {
       throw new Error("Сначала выберите организацию в левой панели.");
@@ -563,19 +567,6 @@ function AppShell() {
     setSelectedRequirementId(requirementId);
   }
 
-  async function handleBulkUpdateRequirements(payload: {
-    requirement_ids: string[];
-    status?: string;
-    applicability_status?: string;
-    user_comment?: string;
-  }) {
-    if (!selectedOrganizationId) {
-      return;
-    }
-    await bulkUpdateRequirements(selectedOrganizationId, payload);
-    await refreshOrganizationState();
-  }
-
   async function handleMarkNotificationRead(notificationId: string) {
     await markNotificationRead(notificationId);
     await refreshOrganizationState();
@@ -698,6 +689,7 @@ function AppShell() {
               onCreateOrganization={handleCreateOrganization}
               onUpdateOrganization={handleUpdateOrganization}
               onDeleteOrganization={handleDeleteOrganization}
+              onAutofillOrganization={handleAutofillOrganization}
             />
           }
         />
@@ -753,7 +745,6 @@ function AppShell() {
               onConfirm={handleConfirmRequirement}
               onReject={handleRejectRequirement}
               onUpdateRequirement={handleUpdateRequirement}
-              onBulkUpdate={handleBulkUpdateRequirements}
               onRefreshArtifacts={handleRefreshRequirementArtifacts}
             />
           }

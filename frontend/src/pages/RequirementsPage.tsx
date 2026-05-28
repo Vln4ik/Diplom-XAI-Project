@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { PageGuide } from "../components/PageGuide";
 import type { RequirementItem } from "../lib/types";
-import { formatRequirementStatus, formatRiskLevel } from "../lib/ui";
+import { formatRequirementStatus, formatRiskLevel, getRiskTone, getScoreTone } from "../lib/ui";
 
 type Props = {
   requirements: RequirementItem[];
@@ -22,12 +22,6 @@ type Props = {
       status?: string;
     },
   ) => Promise<void>;
-  onBulkUpdate: (payload: {
-    requirement_ids: string[];
-    status?: string;
-    applicability_status?: string;
-    user_comment?: string;
-  }) => Promise<void>;
   onRefreshArtifacts: (requirementId: string) => Promise<void>;
 };
 
@@ -38,12 +32,10 @@ export function RequirementsPage({
   onConfirm,
   onReject,
   onUpdateRequirement,
-  onBulkUpdate,
   onRefreshArtifacts,
 }: Props) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftCategory, setDraftCategory] = useState("");
   const [draftText, setDraftText] = useState("");
@@ -80,12 +72,6 @@ export function RequirementsPage({
     setDraftComment(selectedRequirement.user_comment ?? "");
     setDraftApplicabilityReason(selectedRequirement.applicability_reason ?? "");
   }, [selectedRequirement]);
-
-  function toggleSelected(requirementId: string) {
-    setSelectedIds((current) =>
-      current.includes(requirementId) ? current.filter((item) => item !== requirementId) : [...current, requirementId],
-    );
-  }
 
   return (
     <div className="stack">
@@ -128,63 +114,68 @@ export function RequirementsPage({
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по требованию" />
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">Все статусы</option>
-            <option value="new">new</option>
-            <option value="data_found">data_found</option>
-            <option value="data_partial">data_partial</option>
-            <option value="data_missing">data_missing</option>
-            <option value="confirmed">confirmed</option>
-            <option value="rejected">rejected</option>
+            <option value="new">{formatRequirementStatus("new")}</option>
+            <option value="data_found">{formatRequirementStatus("data_found")}</option>
+            <option value="data_partial">{formatRequirementStatus("data_partial")}</option>
+            <option value="data_missing">{formatRequirementStatus("data_missing")}</option>
+            <option value="confirmed">{formatRequirementStatus("confirmed")}</option>
+            <option value="rejected">{formatRequirementStatus("rejected")}</option>
           </select>
-        </div>
-        <div className="report-actions bulk-bar">
-          <span>Выбрано: {selectedIds.length}</span>
-          <button
-            type="button"
-            disabled={selectedIds.length === 0}
-            onClick={() => void onBulkUpdate({ requirement_ids: selectedIds, status: "confirmed" })}
-          >
-            Подтвердить выбранные
-          </button>
-          <button
-            type="button"
-            disabled={selectedIds.length === 0}
-            onClick={() => void onBulkUpdate({ requirement_ids: selectedIds, status: "rejected" })}
-          >
-            Отклонить выбранные
-          </button>
         </div>
         <div className="list">
           {filteredRequirements.map((requirement) => (
-            <article key={requirement.id} className="list-item">
+            <article
+              key={requirement.id}
+              className={`list-item requirement-card ${selectedRequirementId === requirement.id ? "selected-row" : ""}`}
+            >
               <div className="requirement-row">
-                <label className="checkbox-row">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(requirement.id)}
-                    onChange={() => toggleSelected(requirement.id)}
-                  />
-                </label>
                 <div className="requirement-summary">
                   <strong>{requirement.title}</strong>
                   <p>
                     {requirement.category} · {formatRequirementStatus(requirement.status)} · {requirement.applicability_status}
                   </p>
                   <p>{requirement.text}</p>
+                  <div className="requirement-inline-actions">
+                    <button
+                      type="button"
+                      className="action-button action-success"
+                      onClick={() => void onConfirm(requirement.id)}
+                    >
+                      Подтвердить
+                    </button>
+                    <button
+                      type="button"
+                      className="action-button action-warning"
+                      onClick={() => void onReject(requirement.id)}
+                    >
+                      Отклонить
+                    </button>
+                    <button
+                      type="button"
+                      className="action-button action-light"
+                      onClick={() => onSelectRequirement(requirement.id)}
+                    >
+                      {selectedRequirementId === requirement.id ? "Открыто в редакторе" : "Открыть"}
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="report-actions">
-                <span>
-                  {Math.round(requirement.confidence_score * 100)}% · {formatRiskLevel(requirement.risk_level)}
+                <div className="status-meter compact-meter requirement-meter">
+                  <div className="meter-meta">
+                    <span>Confidence</span>
+                    <strong>{Math.round(requirement.confidence_score * 100)}%</strong>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className={`progress-fill tone-${getScoreTone(Math.round(requirement.confidence_score * 100))}`}
+                      style={{ width: `${Math.round(requirement.confidence_score * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <span className={`status-pill tone-${getRiskTone(requirement.risk_level)}`}>
+                  Риск: {formatRiskLevel(requirement.risk_level)}
                 </span>
-                <button type="button" onClick={() => onSelectRequirement(requirement.id)}>
-                  {selectedRequirementId === requirement.id ? "Выбрано" : "Объяснение"}
-                </button>
-                <button type="button" onClick={() => onConfirm(requirement.id)}>
-                  Подтвердить
-                </button>
-                <button type="button" onClick={() => onReject(requirement.id)}>
-                  Отклонить
-                </button>
               </div>
             </article>
           ))}
@@ -207,17 +198,17 @@ export function RequirementsPage({
               placeholder="Нормализованный текст требования"
             />
             <select value={draftApplicability} onChange={(event) => setDraftApplicability(event.target.value)}>
-              <option value="applicable">applicable</option>
-              <option value="not_applicable">not_applicable</option>
-              <option value="needs_clarification">needs_clarification</option>
+              <option value="applicable">Применимо</option>
+              <option value="not_applicable">Не применимо</option>
+              <option value="needs_clarification">Нужна проверка</option>
             </select>
             <select value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
-              <option value="new">new</option>
-              <option value="data_found">data_found</option>
-              <option value="data_partial">data_partial</option>
-              <option value="data_missing">data_missing</option>
-              <option value="confirmed">confirmed</option>
-              <option value="rejected">rejected</option>
+              <option value="new">{formatRequirementStatus("new")}</option>
+              <option value="data_found">{formatRequirementStatus("data_found")}</option>
+              <option value="data_partial">{formatRequirementStatus("data_partial")}</option>
+              <option value="data_missing">{formatRequirementStatus("data_missing")}</option>
+              <option value="confirmed">{formatRequirementStatus("confirmed")}</option>
+              <option value="rejected">{formatRequirementStatus("rejected")}</option>
             </select>
             <input
               value={draftApplicabilityReason}
@@ -233,6 +224,7 @@ export function RequirementsPage({
             <div className="report-actions">
               <button
                 type="button"
+                className="action-button action-primary"
                 onClick={() =>
                   void onUpdateRequirement(selectedRequirement.id, {
                     title: draftTitle,
@@ -247,7 +239,11 @@ export function RequirementsPage({
               >
                 Сохранить правку
               </button>
-              <button type="button" onClick={() => void onRefreshArtifacts(selectedRequirement.id)}>
+              <button
+                type="button"
+                className="action-button action-secondary"
+                onClick={() => void onRefreshArtifacts(selectedRequirement.id)}
+              >
                 Пересчитать XAI
               </button>
             </div>

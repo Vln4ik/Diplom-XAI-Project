@@ -92,3 +92,22 @@ class DashboardResponse(BaseModel):
     high_risks: int
     readiness_percent: float
     unread_notifications: int
+
+
+class OrganizationAutofillResponse(BaseModel):
+    name: str | None = None
+    short_name: str | None = None
+    inn: str | None = None
+    kpp: str | None = None
+    ogrn: str | None = None
+    legal_address: str | None = None
+    actual_address: str | None = None
+    okved: str | None = None
+    website: str | None = None
+    email: str | None = None
+    phone: str | None = None
+    director_name: str | None = None
+    responsible_person: str | None = None
+    matched_fields: list[str] = Field(default_factory=list)
+    source_documents: list[str] = Field(default_factory=list)
+    processed_documents_count: int = 0

@@ -34,8 +34,12 @@ git status -sb
 - backend на `FastAPI + SQLAlchemy + Alembic + Celery + Redis + PostgreSQL + pgvector`;
 - frontend на `React + TypeScript + Vite`;
 - локальный AI-контур через `Ollama`;
+- profile-aware AI runtime `baseline / quality / quality_plus`;
 - XAI, risk registry, report generation, exports, review-flow;
 - document pipeline и OCR-контур;
+- demo-pack из `10` организаций и import/smoke scripts;
+- autofill профиля организации из обработанных вложений;
+- обновлённый web UI с progress-индикаторами и более явными review-actions;
 - benchmark-suite для качества анализа;
 - OCR benchmark;
 - performance, load и stress baseline;

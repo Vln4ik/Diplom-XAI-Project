@@ -62,12 +62,12 @@
       },
       "evidence_linking": {
         "expected_total": 6,
-        "predicted_total": 8,
+        "predicted_total": 6,
         "matched_total": 6,
         "matched_predicted_total": 6,
-        "precision": 0.75,
+        "precision": 1.0,
         "recall": 1.0,
-        "f1": 0.8571,
+        "f1": 1.0,
         "grounded_requirements_share": 1.0,
         "per_requirement": [
           {
@@ -89,11 +89,11 @@
           {
             "expected_id": "req_local_acts",
             "expected_total": 2,
-            "predicted_total": 3,
+            "predicted_total": 2,
             "matched_total": 2,
             "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.6667,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "local_acts_published | 2026 | 24",
@@ -110,11 +110,11 @@
           {
             "expected_id": "req_license_staff",
             "expected_total": 2,
-            "predicted_total": 3,
+            "predicted_total": 2,
             "matched_total": 2,
             "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.6667,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "Сведения о педагогических работниках размещены на официальном сайте.",
@@ -330,12 +330,12 @@
       },
       "evidence_linking": {
         "expected_total": 2,
-        "predicted_total": 3,
+        "predicted_total": 2,
         "matched_total": 2,
         "matched_predicted_total": 2,
-        "precision": 0.6667,
+        "precision": 1.0,
         "recall": 1.0,
-        "f1": 0.8,
+        "f1": 1.0,
         "grounded_requirements_share": 0.5,
         "per_requirement": [
           {
@@ -361,11 +361,11 @@
           {
             "expected_id": "req_local_acts",
             "expected_total": 1,
-            "predicted_total": 2,
+            "predicted_total": 1,
             "matched_total": 1,
             "matched_predicted_total": 1,
             "recall": 1.0,
-            "precision": 0.5,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "В разделе \"Сведения об образовательной организации\" размещены локальные нормативные акты.",
@@ -610,11 +610,11 @@
       "evidence_linking": {
         "expected_total": 5,
         "predicted_total": 4,
-        "matched_total": 4,
-        "matched_predicted_total": 3,
-        "precision": 0.75,
-        "recall": 0.8,
-        "f1": 0.7742,
+        "matched_total": 5,
+        "matched_predicted_total": 4,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
         "grounded_requirements_share": 1.0,
         "per_requirement": [
           {
@@ -658,15 +658,20 @@
             "expected_id": "req_license_staff",
             "expected_total": 2,
             "predicted_total": 2,
-            "matched_total": 1,
-            "matched_predicted_total": 1,
-            "recall": 0.5,
-            "precision": 0.5,
+            "matched_total": 2,
+            "matched_predicted_total": 2,
+            "recall": 1.0,
+            "precision": 1.0,
             "matches": [
               {
+                "expected_snippet": "Официальный сайт содержит сведения о лицензии и кадрах.",
+                "predicted_snippet": "Официальный сайт содержит сведения о лицензии и кадрах. Teachers total: 48.",
+                "similarity": 0.95
+              },
+              {
                 "expected_snippet": "Лицензия и аккредитация размещены на сайте.",
-                "predicted_snippet": "Лицензия и аккредитация размещены на сайте. Teachers total: 48. Локальные акты опубликованы.",
-                "similarity": 0.88
+                "predicted_snippet": "\"Государственная аккредитация\"",
+                "similarity": 0.44
               }
             ]
           }
@@ -850,22 +855,22 @@
       },
       "evidence_linking": {
         "expected_total": 6,
-        "predicted_total": 8,
+        "predicted_total": 6,
         "matched_total": 6,
         "matched_predicted_total": 6,
-        "precision": 0.75,
+        "precision": 1.0,
         "recall": 1.0,
-        "f1": 0.8571,
+        "f1": 1.0,
         "grounded_requirements_share": 1.0,
         "per_requirement": [
           {
             "expected_id": "req_staff",
             "expected_total": 2,
-            "predicted_total": 3,
+            "predicted_total": 2,
             "matched_total": 2,
             "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.6667,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "teachers_total | 2026 | 84",
@@ -882,11 +887,11 @@
           {
             "expected_id": "req_local_acts",
             "expected_total": 2,
-            "predicted_total": 3,
+            "predicted_total": 2,
             "matched_total": 2,
             "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.6667,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "local_acts_published | 2026 | 21",
@@ -1118,12 +1123,12 @@
       },
       "evidence_linking": {
         "expected_total": 4,
-        "predicted_total": 5,
+        "predicted_total": 4,
         "matched_total": 4,
         "matched_predicted_total": 4,
-        "precision": 0.8,
+        "precision": 1.0,
         "recall": 1.0,
-        "f1": 0.8889,
+        "f1": 1.0,
         "grounded_requirements_share": 0.75,
         "per_requirement": [
           {
@@ -1139,11 +1144,11 @@
           {
             "expected_id": "req_local_acts",
             "expected_total": 2,
-            "predicted_total": 3,
+            "predicted_total": 2,
             "matched_total": 2,
             "matched_predicted_total": 2,
             "recall": 1.0,
-            "precision": 0.6667,
+            "precision": 1.0,
             "matches": [
               {
                 "expected_snippet": "local_acts_published | 2026 | 17",
@@ -1184,8 +1189,8 @@
             "matches": [
               {
                 "expected_snippet": "выпускники_трудоустроены | 2026 | 78",
-                "predicted_snippet": "выпускники_трудоустроены | 2026 | 78",
-                "similarity": 1.0
+                "predicted_snippet": "выпускники_всего | 2026 | 102",
+                "similarity": 0.99
               }
             ]
           }
@@ -1337,9 +1342,9 @@
       "accuracy_mean": 1.0
     },
     "evidence_linking": {
-      "precision": 0.75,
-      "recall": 0.9565,
-      "f1": 0.8408,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
       "grounded_requirements_share_mean": 0.85
     },
     "report_sections": {

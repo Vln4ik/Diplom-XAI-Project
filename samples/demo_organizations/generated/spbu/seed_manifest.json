@@ -1,0 +1,85 @@
+{
+  "organization": {
+    "name": "Санкт-Петербургский государственный университет",
+    "short_name": "СПбГУ",
+    "organization_type": "educational",
+    "website": "https://spbu.ru/",
+    "city": "Санкт-Петербург",
+    "legal_address": "199034, г. Санкт-Петербург, Университетская наб., д. 7/9",
+    "actual_address": "199034, г. Санкт-Петербург, Университетская наб., д. 7/9, корп. Демо",
+    "inn": "7801002002",
+    "kpp": "780101002",
+    "ogrn": "1027800002002",
+    "okved": "85.22",
+    "email": "spbu-demo@example.org",
+    "phone": "+7 812 200-20-02",
+    "director_name": "Смирнов Андрей Павлович",
+    "responsible_person": "Кузнецова Елена Викторовна",
+    "profile_json": {
+      "public_source_url": "https://spbu.ru/",
+      "public_source_note": "Официальный сайт СПбГУ.",
+      "demo_seed_pack": true,
+      "synthetic_profile": true,
+      "students_total": 28000,
+      "teachers_total": 3900
+    }
+  },
+  "files": [
+    {
+      "file_name": "01_organization_profile.txt",
+      "category": "evidence",
+      "tags": [
+        "profile",
+        "organization"
+      ]
+    },
+    {
+      "file_name": "02_license_reference.txt",
+      "category": "normative",
+      "tags": [
+        "license",
+        "accreditation"
+      ]
+    },
+    {
+      "file_name": "03_official_site_sections.txt",
+      "category": "evidence",
+      "tags": [
+        "website",
+        "publication"
+      ]
+    },
+    {
+      "file_name": "04_education_programs.csv",
+      "category": "data_table",
+      "tags": [
+        "programs",
+        "education"
+      ]
+    },
+    {
+      "file_name": "05_staff_registry.csv",
+      "category": "data_table",
+      "tags": [
+        "staff",
+        "teachers"
+      ]
+    },
+    {
+      "file_name": "06_local_acts_register.json",
+      "category": "data_table",
+      "tags": [
+        "local_acts",
+        "documents"
+      ]
+    },
+    {
+      "file_name": "07_contingent_summary.csv",
+      "category": "data_table",
+      "tags": [
+        "students",
+        "contingent"
+      ]
+    }
+  ]
+}

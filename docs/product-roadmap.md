@@ -64,6 +64,7 @@
 - улучшенный evidence reranking
 - более сильные embeddings
 - более сильная локальная LLM
+- profile-aware локальный AI runtime и benchmark-сравнение профилей
 - benchmark качества разделов
 - усиление OCR / vision-контура
 - воспроизводимая calibration-стратегия на более широком корпусе

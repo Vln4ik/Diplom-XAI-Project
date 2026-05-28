@@ -1,0 +1,85 @@
+{
+  "organization": {
+    "name": "Южный федеральный университет",
+    "short_name": "ЮФУ",
+    "organization_type": "educational",
+    "website": "https://sfedu.ru/",
+    "city": "Ростов-на-Дону",
+    "legal_address": "344006, г. Ростов-на-Дону, ул. Большая Садовая, д. 105/42",
+    "actual_address": "344006, г. Ростов-на-Дону, ул. Большая Садовая, д. 105/42, корп. Демо",
+    "inn": "6101009009",
+    "kpp": "610101009",
+    "ogrn": "1026100009009",
+    "okved": "85.22",
+    "email": "sfedu-demo@example.org",
+    "phone": "+7 863 900-90-09",
+    "director_name": "Киселев Георгий Иванович",
+    "responsible_person": "Чернова Ольга Максимовна",
+    "profile_json": {
+      "public_source_url": "https://sfedu.ru/",
+      "public_source_note": "Официальный сайт ЮФУ.",
+      "demo_seed_pack": true,
+      "synthetic_profile": true,
+      "students_total": 26000,
+      "teachers_total": 3400
+    }
+  },
+  "files": [
+    {
+      "file_name": "01_organization_profile.txt",
+      "category": "evidence",
+      "tags": [
+        "profile",
+        "organization"
+      ]
+    },
+    {
+      "file_name": "02_license_reference.txt",
+      "category": "normative",
+      "tags": [
+        "license",
+        "accreditation"
+      ]
+    },
+    {
+      "file_name": "03_official_site_sections.txt",
+      "category": "evidence",
+      "tags": [
+        "website",
+        "publication"
+      ]
+    },
+    {
+      "file_name": "04_education_programs.csv",
+      "category": "data_table",
+      "tags": [
+        "programs",
+        "education"
+      ]
+    },
+    {
+      "file_name": "05_staff_registry.csv",
+      "category": "data_table",
+      "tags": [
+        "staff",
+        "teachers"
+      ]
+    },
+    {
+      "file_name": "06_local_acts_register.json",
+      "category": "data_table",
+      "tags": [
+        "local_acts",
+        "documents"
+      ]
+    },
+    {
+      "file_name": "07_contingent_summary.csv",
+      "category": "data_table",
+      "tags": [
+        "students",
+        "contingent"
+      ]
+    }
+  ]
+}

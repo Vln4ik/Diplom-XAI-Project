@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
+AI_PROFILE="${XAI_APP_AI_RUNTIME_PROFILE:-baseline}"
 EMBED_MODEL="${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}"
 LLM_MODEL="${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}"
 AI_STATUS_URL="${AI_STATUS_URL:-http://localhost:8000/api/system/ai-status}"
@@ -10,11 +11,14 @@ OLLAMA_TAGS_URL="${OLLAMA_TAGS_URL:-http://localhost:11434/api/tags}"
 
 echo "Starting stack with Ollama profile..."
 COMPOSE_PROFILES=local-ai \
+XAI_APP_AI_RUNTIME_PROFILE="$AI_PROFILE" \
 XAI_APP_EMBEDDING_PROVIDER=ollama \
 XAI_APP_LLM_PROVIDER=ollama \
 XAI_APP_OLLAMA_EMBEDDING_MODEL="$EMBED_MODEL" \
 XAI_APP_OLLAMA_LLM_MODEL="$LLM_MODEL" \
 docker compose -f "$COMPOSE_FILE" up -d postgres redis backend worker frontend ollama
+
+echo "AI runtime profile: $AI_PROFILE"
 
 echo "Waiting for Ollama API..."
 for _ in $(seq 1 240); do

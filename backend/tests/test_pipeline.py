@@ -386,3 +386,119 @@ def test_organization_update_and_delete(client):
     list_response = test_client.get("/api/organizations", headers=headers)
     assert list_response.status_code == 200
     assert all(item["id"] != organization_id for item in list_response.json())
+
+
+def test_organization_autofill_from_processed_documents(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="autofill-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "autofill-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Autofill College", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    source_text = """
+    Полное наименование: Государственное бюджетное профессиональное образовательное учреждение «Колледж цифровых технологий»
+    Сокращенное наименование: ГБПОУ «КЦТ»
+    ИНН: 7701234567
+    КПП: 770101001
+    ОГРН: 1027700123456
+    Юридический адрес: 101000, г. Москва, ул. Учебная, д. 10
+    Фактический адрес: 101000, г. Москва, ул. Практическая, д. 12
+    ОКВЭД: 85.21
+    Официальный сайт: https://college.example.ru
+    Электронная почта: info@college.example.ru
+    Телефон: +7 (495) 123-45-67
+    Директор: Иванов Иван Иванович
+    Ответственный за подготовку: Петров Петр Петрович
+    """.strip()
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("org_profile.txt", source_text.encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+
+    autofill_response = test_client.post(f"/api/organizations/{organization_id}/autofill", headers=headers)
+    assert autofill_response.status_code == 200
+    payload = autofill_response.json()
+    assert payload["inn"] == "7701234567"
+    assert payload["kpp"] == "770101001"
+    assert payload["ogrn"] == "1027700123456"
+    assert payload["website"] == "https://college.example.ru"
+    assert payload["email"] == "info@college.example.ru"
+    assert payload["phone"] == "+7 495 123-45-67"
+    assert "org_profile.txt" in payload["source_documents"]
+    assert "inn" in payload["matched_fields"]
+
+
+def test_organization_autofill_uses_llm_refinement(client, monkeypatch):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="llm-autofill@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "llm-autofill@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "LLM Autofill College", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    source_text = """
+    Образовательная организация публикует сведения о лицензии, сайте и документах.
+    Реквизиты в явном виде в текстовом корпусе не выделены.
+    """.strip()
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("llm_profile.txt", source_text.encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+
+    class DummyProvider:
+        provider_name = "dummy"
+
+        def summarize(self, text: str) -> str:
+            return text
+
+        def generate_section(self, title: str, context: str) -> str:
+            return context
+
+        def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str | None:
+            return """
+            {
+              "website": "https://llm-demo.example.org",
+              "email": "office@llm-demo.example.org",
+              "responsible_person": "Сидорова Анна Игоревна"
+            }
+            """
+
+        def status(self) -> dict[str, object]:
+            return {"provider": self.provider_name, "mode": "model"}
+
+    monkeypatch.setattr("app.services.organization_autofill.get_llm_provider", lambda: DummyProvider())
+
+    autofill_response = test_client.post(f"/api/organizations/{organization_id}/autofill", headers=headers)
+    assert autofill_response.status_code == 200
+    payload = autofill_response.json()
+    assert payload["website"] == "https://llm-demo.example.org"
+    assert payload["email"] == "office@llm-demo.example.org"
+    assert payload["responsible_person"] == "Сидорова Анна Игоревна"

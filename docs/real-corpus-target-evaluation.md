@@ -1,6 +1,6 @@
 # Real Corpus Target Evaluation
 
-Дата фиксации: `2026-05-26`
+Дата фиксации: `2026-05-28`
 
 ## 1. Сводка
 
@@ -18,7 +18,7 @@
 - case_passed: `True`
 - requirement_f1: `1.0000`
 - status_accuracy: `1.0000`
-- evidence_f1: `0.8571`
+- evidence_f1: `1.0000`
 - section_coverage: `1.0000`
 
 Фокусы анализа:
@@ -29,7 +29,7 @@
 Сравнение с quality targets:
 - `requirement_f1_min`: actual `1.0000` vs target `0.9500` -> `True`
 - `status_accuracy_min`: actual `1.0000` vs target `0.7000` -> `True`
-- `evidence_f1_min`: actual `0.8571` vs target `0.6000` -> `True`
+- `evidence_f1_min`: actual `1.0000` vs target `0.6000` -> `True`
 - `section_coverage_min`: actual `1.0000` vs target `0.8500` -> `True`
 
 ### college_beta_gap_package
@@ -39,7 +39,7 @@
 - case_passed: `True`
 - requirement_f1: `1.0000`
 - status_accuracy: `1.0000`
-- evidence_f1: `0.8000`
+- evidence_f1: `1.0000`
 - section_coverage: `1.0000`
 
 Фокусы анализа:
@@ -50,7 +50,7 @@
 Сравнение с quality targets:
 - `requirement_f1_min`: actual `1.0000` vs target `0.9500` -> `True`
 - `status_accuracy_min`: actual `1.0000` vs target `0.9000` -> `True`
-- `evidence_f1_min`: actual `0.8000` vs target `0.7500` -> `True`
+- `evidence_f1_min`: actual `1.0000` vs target `0.7500` -> `True`
 - `section_coverage_min`: actual `1.0000` vs target `0.9500` -> `True`
 
 ### college_gamma_ocr_package
@@ -81,7 +81,7 @@
 - case_passed: `True`
 - requirement_f1: `1.0000`
 - status_accuracy: `1.0000`
-- evidence_f1: `0.8571`
+- evidence_f1: `1.0000`
 - section_coverage: `1.0000`
 
 Фокусы анализа:
@@ -92,7 +92,7 @@
 Сравнение с quality targets:
 - `requirement_f1_min`: actual `1.0000` vs target `0.9500` -> `True`
 - `status_accuracy_min`: actual `1.0000` vs target `0.7500` -> `True`
-- `evidence_f1_min`: actual `0.8571` vs target `0.6000` -> `True`
+- `evidence_f1_min`: actual `1.0000` vs target `0.6000` -> `True`
 - `section_coverage_min`: actual `1.0000` vs target `0.8500` -> `True`
 
 ### college_epsilon_graduate_registry
@@ -102,7 +102,7 @@
 - case_passed: `True`
 - requirement_f1: `1.0000`
 - status_accuracy: `1.0000`
-- evidence_f1: `0.8889`
+- evidence_f1: `1.0000`
 - section_coverage: `1.0000`
 
 Фокусы анализа:
@@ -113,6 +113,6 @@
 Сравнение с quality targets:
 - `requirement_f1_min`: actual `1.0000` vs target `0.9500` -> `True`
 - `status_accuracy_min`: actual `1.0000` vs target `0.7000` -> `True`
-- `evidence_f1_min`: actual `0.8889` vs target `0.5000` -> `True`
+- `evidence_f1_min`: actual `1.0000` vs target `0.5000` -> `True`
 - `section_coverage_min`: actual `1.0000` vs target `0.8000` -> `True`
 

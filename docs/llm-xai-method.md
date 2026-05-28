@@ -55,6 +55,27 @@
 - risk level
 - requirement / evidence status logic
 
+### 3.5. Runtime profiles для локальных моделей
+
+Начиная с активного этапа `MVP 2`, локальный AI runtime больше не жёстко привязан к одной паре моделей. В проекте введён слой `AI runtime profiles`, который позволяет переключать локальный контур без изменения прикладного кода.
+
+Текущие профили:
+
+- `baseline`
+  - embeddings: `all-minilm`
+  - LLM: `gemma3:270m`
+  - назначение: быстрый и дешёвый локальный запуск
+- `quality`
+  - embeddings: `nomic-embed-text`, fallback `mxbai-embed-large`, затем `all-minilm`
+  - LLM: `qwen2.5:3b`, fallback `llama3.2:3b`, затем `gemma3:1b`, затем `gemma3:270m`
+  - назначение: улучшение retrieval и generation без перехода на самые тяжёлые модели
+- `quality_plus`
+  - embeddings: `mxbai-embed-large`, fallback `nomic-embed-text`, затем `all-minilm`
+  - LLM: `qwen2.5:7b`, fallback `llama3.1:8b`, затем более лёгкие профили
+  - назначение: максимально сильный локальный runtime для benchmark и демонстраций на более мощной машине
+
+Выбор профиля задаётся через `XAI_APP_AI_RUNTIME_PROFILE`. При старте стека resolver проверяет доступные локальные модели в `Ollama` и выбирает наиболее сильную из списка профиля, которая реально присутствует на хосте.
+
 ## 4. Что не используется как завершённый контур
 
 В `MVP 1` не используются как полноценно реализованные слои:
@@ -155,14 +176,14 @@
 ### 7.1. Gold benchmark
 
 - `requirement extraction F1`: `1.0000`
-- `evidence linking F1`: `0.9231`
+- `evidence linking F1`: `1.0000`
 
 ### 7.2. Extended committed suite
 
 - `7` сценариев
 - `requirement extraction F1`: `1.0000`
-- `evidence linking precision`: `0.8293`
-- `evidence linking F1`: `0.9067`
+- `evidence linking precision`: `0.9444`
+- `evidence linking F1`: `0.9714`
 - `source requirement coverage`: `100.00%`
 - `section quality pass share`: `100.00%`
 
@@ -171,9 +192,9 @@
 - `5` кейсов, готовых к benchmark-проверке
 - `5 из 5` кейсов прошли проверку
 - `20 из 20` целевых критериев выполнены
-- `evidence linking precision`: `0.7500`
-- `evidence linking recall`: `0.9565`
-- `evidence linking F1`: `0.8408`
+- `evidence linking precision`: `1.0000`
+- `evidence linking recall`: `1.0000`
+- `evidence linking F1`: `1.0000`
 - `source requirement coverage`: `100.00%`
 - `section quality pass share`: `100.00%`
 
@@ -190,6 +211,15 @@
 - улучшение reranker / evidence linking
 - benchmark качества разделов
 - более широкую calibration-стратегию
+
+На текущий момент внутри этого блока уже реализован инфраструктурный фундамент:
+
+- profile-aware выбор локальной embedding-модели
+- profile-aware выбор локальной LLM
+- статус профиля и resolved model в `/api/system/ai-status`
+- запуск backend stack с profile-aware резолвингом моделей
+
+То есть шаг `более сильные локальные модели` уже начат инженерно; следующий подэтап — измерить прирост качества на `quality` и `quality_plus` в benchmark-контуре.
 
 Главная идея:
 

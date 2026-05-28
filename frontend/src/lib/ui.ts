@@ -97,6 +97,16 @@ export function formatRiskLevel(level: string): string {
   return labels[level] ?? level;
 }
 
+export function getRiskTone(level: string): UiTone {
+  if (level === "low") {
+    return "success";
+  }
+  if (level === "medium") {
+    return "warning";
+  }
+  return "danger";
+}
+
 export function formatNotificationStatus(status: string): string {
   return status === "unread" ? "Не прочитано" : status === "read" ? "Прочитано" : status;
 }
