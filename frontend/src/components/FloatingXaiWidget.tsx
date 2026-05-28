@@ -46,7 +46,7 @@ export function FloatingXaiWidget({ explanation, requirement, isOpen, onToggle, 
                   <div className="floating-xai-summary">
                     <div className="floating-xai-meter">
                       <div className="meter-meta">
-                        <span>Confidence</span>
+                        <span>Уверенность</span>
                         <strong>{confidencePercent}%</strong>
                       </div>
                       <div className="progress-track">
@@ -95,7 +95,7 @@ export function FloatingXaiWidget({ explanation, requirement, isOpen, onToggle, 
 
                   <div className="floating-xai-footer">
                     <Link className="action-button action-light floating-xai-link" to="/explanations">
-                      Полное XAI
+                      Полный XAI-разбор
                     </Link>
                   </div>
                 </>
@@ -103,7 +103,7 @@ export function FloatingXaiWidget({ explanation, requirement, isOpen, onToggle, 
                 <article className="floating-xai-card subtle">
                   <p>
                     Для выбранного требования XAI-объяснение пока не загружено. Запусти анализ или пересчитай артефакты,
-                    чтобы панель заполнилась.
+                    чтобы панель EX.AI заполнилась актуальной логикой решения.
                   </p>
                 </article>
               )}
@@ -113,7 +113,7 @@ export function FloatingXaiWidget({ explanation, requirement, isOpen, onToggle, 
               <article className="floating-xai-card subtle">
                 <p>
                   Выбери требование, строку матрицы или риск, связанный с требованием. После этого здесь появится
-                  компактное XAI-объяснение без перехода на отдельную вкладку.
+                  компактное XAI-объяснение без перехода в отдельный центр XAI.
                 </p>
               </article>
             </div>

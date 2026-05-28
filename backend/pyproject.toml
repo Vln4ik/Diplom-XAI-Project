@@ -1,7 +1,7 @@
 [project]
 name = "xai-report-builder-backend"
 version = "0.1.0"
-description = "Backend for XAI Report Builder"
+description = "Backend for EvidenceXAI"
 requires-python = ">=3.12"
 dependencies = [
   "alembic>=1.14.0",

@@ -14,6 +14,9 @@ from app.integrations.ocr import describe_ocr_provider
 from app.llm.local import describe_llm_provider
 from app.services.ai_profiles import describe_ai_runtime_profile
 from app.services.runtime_metrics import runtime_metrics
+from app.services.terminology_quality import describe_terminology_quality_rules
+from app.services.visual_quality import describe_visual_quality_provider
+from app.services.visual_signatures import describe_visual_signature_provider
 
 router = APIRouter(prefix="/system", tags=["system"])
 
@@ -25,6 +28,9 @@ def get_ai_status() -> dict[str, dict[str, object]]:
         "embeddings": describe_embedding_provider(),
         "llm": describe_llm_provider(),
         "ocr": describe_ocr_provider(),
+        "vision": describe_visual_signature_provider(),
+        "visual_quality": describe_visual_quality_provider(),
+        "terminology_quality": describe_terminology_quality_rules(),
     }
 
 
@@ -54,6 +60,8 @@ def get_system_health() -> dict[str, object]:
             "embedding_provider": get_settings().embedding_provider,
             "llm_provider": get_settings().llm_provider,
             "ocr_provider": get_settings().ocr_provider,
+            "visual_signature_provider": get_settings().visual_signature_provider,
+            "visual_quality_provider": get_settings().visual_quality_provider,
             "esign_provider": get_settings().esign_provider,
         },
     }

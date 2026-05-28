@@ -13,6 +13,7 @@ class DocumentResponse(TimestampedModel):
     uploaded_by_id: str | None
     file_name: str
     original_file_name: str
+    relative_path: str | None
     file_type: str
     file_size: int
     category: DocumentCategory

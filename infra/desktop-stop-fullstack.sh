@@ -7,7 +7,7 @@ COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 cd "$ROOT_DIR"
 
 echo
-echo "XAI Report Builder"
+echo "EvidenceXAI"
 echo "Остановка полного стека..."
 echo
 

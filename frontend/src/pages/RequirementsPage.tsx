@@ -123,10 +123,13 @@ export function RequirementsPage({
           </select>
         </div>
         <div className="list">
-          {filteredRequirements.map((requirement) => (
+          {filteredRequirements.map((requirement) => {
+            const confidencePercent = Math.round(requirement.confidence_score * 100);
+            const scoreTone = getScoreTone(confidencePercent);
+            return (
             <article
               key={requirement.id}
-              className={`list-item requirement-card ${selectedRequirementId === requirement.id ? "selected-row" : ""}`}
+              className={`list-item requirement-card tone-${scoreTone} ${selectedRequirementId === requirement.id ? "selected-row" : ""}`}
             >
               <div className="requirement-row">
                 <div className="requirement-summary">
@@ -163,14 +166,11 @@ export function RequirementsPage({
               <div className="report-actions">
                 <div className="status-meter compact-meter requirement-meter">
                   <div className="meter-meta">
-                    <span>Confidence</span>
+                    <span>Уверенность</span>
                     <strong>{Math.round(requirement.confidence_score * 100)}%</strong>
                   </div>
                   <div className="progress-track">
-                    <div
-                      className={`progress-fill tone-${getScoreTone(Math.round(requirement.confidence_score * 100))}`}
-                      style={{ width: `${Math.round(requirement.confidence_score * 100)}%` }}
-                    />
+                    <div className={`progress-fill tone-${scoreTone}`} style={{ width: `${confidencePercent}%` }} />
                   </div>
                 </div>
                 <span className={`status-pill tone-${getRiskTone(requirement.risk_level)}`}>
@@ -178,7 +178,8 @@ export function RequirementsPage({
                 </span>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       </section>
 

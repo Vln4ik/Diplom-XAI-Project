@@ -62,9 +62,14 @@ export type Dashboard = {
 
 export type DocumentItem = {
   id: string;
+  original_file_name?: string;
+  relative_path?: string | null;
   file_name: string;
+  file_size?: number;
   category: string;
   status: string;
+  processing_error?: string | null;
+  tags?: string[];
   processed_at?: string | null;
   created_at: string;
 };
@@ -87,6 +92,7 @@ export type ReportItem = {
   report_type: string;
   status: string;
   readiness_percent: number;
+  selected_document_ids?: string[];
   created_at: string;
 };
 

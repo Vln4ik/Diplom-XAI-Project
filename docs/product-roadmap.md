@@ -2,7 +2,13 @@
 
 ## 1. Назначение документа
 
-Этот документ является каноническим roadmap проекта `XAI Report Builder`.
+Этот документ является каноническим roadmap проекта `EvidenceXAI`.
+
+В narrative-слое roadmap используются обозначения:
+
+- `EvidenceXAI` — имя продукта
+- `EX.AI` — компактная UI-метка
+- `XAI` — explainability-функция внутри продукта
 
 Он фиксирует:
 
@@ -142,6 +148,19 @@
 - mobile branch / thin iOS client
 - масштабирование за пределы текущего pilot-scope
 
+## 7.1. Отдельный отраслевой трек: государственная экспертиза
+
+Помимо текущего сценария `Рособрнадзор + образовательная организация`, в roadmap добавлен новый отраслевой трек EvidenceXAI:
+
+- пользователь: проектировочная компания;
+- сценарий: предварительная проверка проектной документации перед государственной экспертизой;
+- ключевые функции: OCR/vision, орфография, подписи, основная надпись, ГОСТ/СПДС/ЕСКД-правила, интерактивные ссылки на источник, XAI по каждому замечанию;
+- финальный результат: полный отчет замечаний с рекомендациями, evidence, XAI и экспортным пакетом.
+
+Подробный roadmap направления: [state-expertise-roadmap.md](state-expertise-roadmap.md).
+
+Специализированное ТЗ по отчету государственной экспертизы в части проверки достоверности определения сметной стоимости: [state-expertise-estimate-cost-report-tz-roadmap.md](state-expertise-estimate-cost-report-tz-roadmap.md).
+
 ## 8. Приоритетность работ
 
 Текущий порядок развития:
@@ -157,3 +176,4 @@
 - master plan: [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md)
 - системный обзор: [system-handbook.md](system-handbook.md)
 - AI/XAI: [llm-xai-method.md](llm-xai-method.md)
+- государственная экспертиза: [state-expertise-roadmap.md](state-expertise-roadmap.md)

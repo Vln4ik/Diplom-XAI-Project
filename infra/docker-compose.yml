@@ -75,7 +75,7 @@ services:
     depends_on:
       - postgres
       - redis
-    command: celery -A app.workers.celery_app.celery_app worker --loglevel=INFO
+    command: sh -c "celery -A app.workers.celery_app.celery_app worker --loglevel=INFO --concurrency=$${CELERY_CONCURRENCY:-4} --prefetch-multiplier=1"
 
   ollama:
     profiles:

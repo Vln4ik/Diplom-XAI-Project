@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 
 import { FloatingXaiWidget } from "./components/FloatingXaiWidget";
 import { Layout } from "./components/Layout";
+import { PageGuideProvider } from "./components/PageGuideContext";
 import {
   approveReport,
   analyzeReport,
@@ -10,9 +11,10 @@ import {
   confirmRequirement,
   createOrganization,
   createReport,
+  deleteDocument,
   deleteOrganization,
+  deleteReport,
   exportReport,
-  fetchAuditLogs,
   fetchDashboard,
   fetchDocuments,
   fetchExplanation,
@@ -20,31 +22,25 @@ import {
   fetchMatrix,
   fetchNotifications,
   fetchOrganizations,
-  fetchReportVersions,
   fetchReports,
   fetchRequirements,
   refreshRequirementArtifacts,
   fetchRisks,
-  fetchSections,
   generateReport,
-  markAllNotificationsRead,
-  markNotificationRead,
   processDocument,
   rejectRequirement,
   resolveRisk,
-  restoreReportVersion,
   returnReportToRevision,
   submitReportForApproval,
   searchDocuments,
   updateOrganization,
   updateRequirement,
   updateRisk,
-  updateSection,
   uploadDocuments,
 } from "./lib/api";
 import { getAccessToken } from "./lib/session";
+import { useLiveDocumentProgress, useLiveReportProgress } from "./lib/liveProgress";
 import type {
-  AuditLogItem,
   Dashboard,
   DocumentSearchMatch,
   DocumentItem,
@@ -54,24 +50,19 @@ import type {
   Organization,
   ReportItem,
   ReportMatrixRow,
-  ReportSection,
-  ReportVersion,
   RequirementItem,
   RiskItem,
 } from "./lib/types";
-import { AuditLogPage } from "./pages/AuditLogPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { ExplanationsPage } from "./pages/ExplanationsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MatrixPage } from "./pages/MatrixPage";
 import { OrganizationsPage } from "./pages/OrganizationsPage";
-import { NotificationsPage } from "./pages/NotificationsPage";
-import { ReportEditorPage } from "./pages/ReportEditorPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { RequirementsPage } from "./pages/RequirementsPage";
 import { RisksPage } from "./pages/RisksPage";
-import { buildDashboardSignals, clampProgress, type UiTask } from "./lib/ui";
+import { clampProgress, getLiveDocumentProgressMeta, getLiveReportAnalysisProgress, type UiTask } from "./lib/ui";
 
 function AppShell() {
   const location = useLocation();
@@ -84,18 +75,17 @@ function AppShell() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [documentSearchResults, setDocumentSearchResults] = useState<DocumentSearchMatch[]>([]);
   const [reports, setReports] = useState<ReportItem[]>([]);
-  const [reportVersions, setReportVersions] = useState<ReportVersion[]>([]);
   const [matrixRows, setMatrixRows] = useState<ReportMatrixRow[]>([]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [risks, setRisks] = useState<RiskItem[]>([]);
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
-  const [sections, setSections] = useState<ReportSection[]>([]);
   const [explanation, setExplanation] = useState<Explanation | null>(null);
   const [manualTasks, setManualTasks] = useState<UiTask[]>([]);
   const taskTimersRef = useRef<Record<string, number>>({});
   const selectedOrganization = organizations.find((organization) => organization.id === selectedOrganizationId) ?? null;
+  const liveDocumentProgress = useLiveDocumentProgress(documents);
+  const liveReportProgress = useLiveReportProgress(reports);
   const selectedRequirement = useMemo(
     () => requirements.find((requirement) => requirement.id === selectedRequirementId) ?? null,
     [requirements, selectedRequirementId],
@@ -158,7 +148,11 @@ function AppShell() {
   async function reloadReports(organizationId: string, preferredReportId?: string | null) {
     const items = await fetchReports(organizationId);
     setReports(items);
-    const nextReportId = preferredReportId ?? selectedReportId ?? items[0]?.id ?? null;
+    const candidateReportId = arguments.length > 1 ? preferredReportId : selectedReportId;
+    const nextReportId =
+      candidateReportId && items.some((report) => report.id === candidateReportId)
+        ? candidateReportId
+        : items[0]?.id ?? null;
     setSelectedReportId(nextReportId);
     return { items, nextReportId };
   }
@@ -185,14 +179,11 @@ function AppShell() {
     setDocuments([]);
     setDocumentSearchResults([]);
     setReports([]);
-    setReportVersions([]);
     setMatrixRows([]);
     setRequirements([]);
     setRisks([]);
     setMembers([]);
     setNotifications([]);
-    setAuditLogs([]);
-    setSections([]);
     setExplanation(null);
     setSelectedReportId(null);
     setSelectedRequirementId(null);
@@ -207,11 +198,9 @@ function AppShell() {
     fetchDocuments(selectedOrganizationId).then(setDocuments).catch(() => setDocuments([]));
     fetchMembers(selectedOrganizationId).then(setMembers).catch(() => setMembers([]));
     fetchNotifications(selectedOrganizationId).then(setNotifications).catch(() => setNotifications([]));
-    fetchAuditLogs(selectedOrganizationId).then(setAuditLogs).catch(() => setAuditLogs([]));
     reloadReports(selectedOrganizationId)
       .then(async (items) => {
         if (!items.nextReportId) {
-          setSections([]);
           setMatrixRows([]);
         }
       })
@@ -229,14 +218,10 @@ function AppShell() {
 
   useEffect(() => {
     if (!selectedReportId) {
-      setSections([]);
       setMatrixRows([]);
-      setReportVersions([]);
       return;
     }
-    fetchSections(selectedReportId).then(setSections).catch(() => setSections([]));
     fetchMatrix(selectedReportId).then(setMatrixRows).catch(() => setMatrixRows([]));
-    fetchReportVersions(selectedReportId).then(setReportVersions).catch(() => setReportVersions([]));
   }, [selectedReportId]);
 
   useEffect(() => {
@@ -293,7 +278,6 @@ function AppShell() {
     await reloadReports(selectedOrganizationId, preferredReportId);
     fetchDashboard(selectedOrganizationId).then(setDashboard).catch(() => setDashboard(null));
     fetchNotifications(selectedOrganizationId).then(setNotifications).catch(() => setNotifications([]));
-    fetchAuditLogs(selectedOrganizationId).then(setAuditLogs).catch(() => setAuditLogs([]));
     fetchRequirements(selectedOrganizationId)
       .then((items) => {
         setRequirements(items);
@@ -307,9 +291,7 @@ function AppShell() {
       fetchExplanation(selectedRequirementId).then(setExplanation).catch(() => setExplanation(null));
     }
     if (preferredReportId) {
-      fetchSections(preferredReportId).then(setSections).catch(() => setSections([]));
       fetchMatrix(preferredReportId).then(setMatrixRows).catch(() => setMatrixRows([]));
-      fetchReportVersions(preferredReportId).then(setReportVersions).catch(() => setReportVersions([]));
     }
   }
 
@@ -377,16 +359,17 @@ function AppShell() {
     return autofillOrganizationFromDocuments(organizationId);
   }
 
-  async function handleUploadDocuments(payload: { files: File[]; category: string; tags?: string }) {
+  async function handleUploadDocuments(payload: { files: File[]; category: string; tags?: string; relativePaths?: string[] }) {
     if (!selectedOrganizationId) {
-      throw new Error("Сначала выберите организацию в левой панели.");
+      throw new Error("Сначала выберите организацию на вкладке «Организации».");
     }
+    const hasFolderStructure = payload.relativePaths?.some((path) => path.includes("/")) ?? false;
     const taskId = `upload-${Date.now()}`;
     beginTask(
       {
         id: taskId,
-        title: "Загрузка документов",
-        detail: `Загружаем ${payload.files.length} файл(ов) в организацию. После завершения они появятся в реестре документов.`,
+        title: hasFolderStructure ? "Загрузка папки документов" : "Загрузка документов",
+        detail: `Загружаем ${payload.files.length} файл(ов) в организацию. После завершения они появятся в дереве и реестре документов.`,
         progress: 12,
         tone: "info",
       },
@@ -437,6 +420,101 @@ function AppShell() {
     }
   }
 
+  async function handleProcessDocumentFolder(documentIds: string[]) {
+    const processableIds = documentIds.filter((documentId) => {
+      const document = documents.find((item) => item.id === documentId);
+      return document && !["queued", "processing"].includes(document.status);
+    });
+    if (processableIds.length === 0) {
+      return;
+    }
+
+    const taskId = `process-folder-${Date.now()}`;
+    beginTask(
+      {
+        id: taskId,
+        title: "Обработка ветки документов",
+        detail: `Передаем в pipeline ${processableIds.length} файл(ов) из выбранной папки.`,
+        progress: 14,
+        tone: "info",
+      },
+      64,
+    );
+    try {
+      await Promise.all(processableIds.map((documentId) => processDocument(documentId)));
+      updateTask(taskId, {
+        detail: "Файлы поставлены в очередь. Статусы ветки будут обновляться автоматически.",
+        progress: 78,
+      });
+      await refreshDocuments();
+    } finally {
+      finishTask(taskId);
+    }
+  }
+
+  async function handleDeleteDocument(document: DocumentItem) {
+    if (!window.confirm(`Удалить файл «${document.file_name}» из проекта?`)) {
+      return;
+    }
+    const taskId = `delete-document-${document.id}`;
+    beginTask(
+      {
+        id: taskId,
+        title: "Удаление документа",
+        detail: `Удаляем файл «${document.file_name}» и связанные фрагменты из базы.`,
+        progress: 18,
+        tone: "warning",
+      },
+      78,
+    );
+    try {
+      await deleteDocument(document.id);
+      updateTask(taskId, {
+        detail: "Документ удален. Обновляем дерево папок, отчеты и связанные показатели.",
+        progress: 92,
+        tone: "success",
+      });
+      await refreshDocuments();
+      await refreshOrganizationState();
+    } finally {
+      finishTask(taskId);
+    }
+  }
+
+  async function handleDeleteDocumentFolder(folderDocuments: DocumentItem[], folderPath: string) {
+    if (folderDocuments.length === 0) {
+      return;
+    }
+    if (!window.confirm(`Удалить папку «${folderPath}» и все файлы внутри (${folderDocuments.length})?`)) {
+      return;
+    }
+    const taskId = `delete-folder-${Date.now()}`;
+    beginTask(
+      {
+        id: taskId,
+        title: "Удаление папки документов",
+        detail: `Удаляем ${folderDocuments.length} файл(ов) из ветки «${folderPath}».`,
+        progress: 12,
+        tone: "warning",
+      },
+      82,
+    );
+    try {
+      for (const document of folderDocuments) {
+        await deleteDocument(document.id);
+      }
+      updateTask(taskId, {
+        detail: "Папка удалена. Обновляем реестр документов и отчеты.",
+        progress: 94,
+        tone: "success",
+      });
+      await refreshDocuments();
+      await refreshOrganizationState();
+    } finally {
+      finishTask(taskId);
+    }
+  }
+
   async function handleCreateReport(payload: { title: string; report_type: string; selected_document_ids: string[] }) {
     if (!selectedOrganizationId) {
       return;
@@ -460,6 +538,67 @@ function AppShell() {
         tone: "success",
       });
       await refreshOrganizationState(report.id);
+    } finally {
+      finishTask(taskId);
+    }
+  }
+
+  async function handleCreateAndAnalyzeReport(payload: { title: string; report_type: string; selected_document_ids: string[] }) {
+    if (!selectedOrganizationId) {
+      return;
+    }
+    const taskId = `create-analyze-report-${Date.now()}`;
+    beginTask(
+      {
+        id: taskId,
+        title: "Анализ папки документов",
+        detail: `Создаем отчет по выбранной папке и запускаем анализ ${payload.selected_document_ids.length} документ(ов).`,
+        progress: 12,
+        tone: "info",
+      },
+      74,
+    );
+    try {
+      const report = await createReport(selectedOrganizationId, payload);
+      updateTask(taskId, {
+        detail: "Отчет создан. Передаем папку в контур анализа требований, evidence и XAI.",
+        progress: 42,
+      });
+      await analyzeReport(report.id);
+      updateTask(taskId, {
+        detail: "Анализ запущен. Обновляем отчеты, матрицу, требования и риски.",
+        progress: 82,
+      });
+      await refreshOrganizationState(report.id);
+    } finally {
+      finishTask(taskId);
+    }
+  }
+
+  async function handleDeleteReport(report: ReportItem) {
+    if (!window.confirm(`Удалить отчет «${report.title}» и связанные результаты анализа?`)) {
+      return;
+    }
+    const taskId = `delete-report-${report.id}`;
+    beginTask(
+      {
+        id: taskId,
+        title: "Удаление отчета",
+        detail: `Удаляем отчет «${report.title}», матрицу, риски, XAI и export-связи.`,
+        progress: 18,
+        tone: "warning",
+      },
+      78,
+    );
+    try {
+      await deleteReport(report.id);
+      updateTask(taskId, {
+        detail: "Отчет удален. Обновляем список отчетов и показатели организации.",
+        progress: 92,
+        tone: "success",
+      });
+      const nextReportId = selectedReportId === report.id ? null : selectedReportId;
+      await refreshOrganizationState(nextReportId);
     } finally {
       finishTask(taskId);
     }
@@ -495,7 +634,7 @@ function AppShell() {
       {
         id: taskId,
         title: "Генерация разделов отчета",
-        detail: "Формируем текст разделов, версии отчета и данные для редактора.",
+        detail: "Формируем текст разделов, версию черновика и данные для экспорта.",
         progress: 18,
         tone: "info",
       },
@@ -504,7 +643,7 @@ function AppShell() {
     try {
       await generateReport(reportId);
       updateTask(taskId, {
-        detail: "Разделы сформированы. Обновляем редактор и версии отчета.",
+        detail: "Разделы сформированы. Обновляем отчет, матрицу и связанные артефакты.",
         progress: 90,
         tone: "success",
       });
@@ -528,27 +667,6 @@ function AppShell() {
     );
     try {
       await exportReport(reportId, exportType);
-    } finally {
-      finishTask(taskId);
-    }
-  }
-
-  async function handleSaveSection(reportId: string, sectionId: string, payload: { content: string }) {
-    const taskId = `save-section-${sectionId}`;
-    beginTask(
-      {
-        id: taskId,
-        title: "Сохранение раздела",
-        detail: "Обновляем текст раздела и синхронизируем редактор с сервером.",
-        progress: 28,
-        tone: "info",
-      },
-      86,
-    );
-    try {
-      await updateSection(reportId, sectionId, payload);
-      const freshSections = await fetchSections(reportId);
-      setSections(freshSections);
     } finally {
       finishTask(taskId);
     }
@@ -594,19 +712,6 @@ function AppShell() {
     setIsXaiWidgetOpen(true);
   }
 
-  async function handleMarkNotificationRead(notificationId: string) {
-    await markNotificationRead(notificationId);
-    await refreshOrganizationState();
-  }
-
-  async function handleMarkAllNotificationsRead() {
-    if (!selectedOrganizationId) {
-      return;
-    }
-    await markAllNotificationsRead(selectedOrganizationId);
-    await refreshOrganizationState();
-  }
-
   async function handleUpdateRisk(
     riskId: string,
     payload: { assigned_to_id?: string | null; status?: string; recommended_action?: string; description?: string },
@@ -620,26 +725,6 @@ function AppShell() {
     await refreshOrganizationState();
   }
 
-  async function handleRestoreReportVersion(versionId: string) {
-    const taskId = `restore-version-${versionId}`;
-    beginTask(
-      {
-        id: taskId,
-        title: "Восстановление версии",
-        detail: "Возвращаем сохраненное состояние разделов, матрицы и XAI-артефактов.",
-        progress: 24,
-        tone: "warning",
-      },
-      84,
-    );
-    try {
-      const report = await restoreReportVersion(versionId);
-      await refreshOrganizationState(report.id);
-    } finally {
-      finishTask(taskId);
-    }
-  }
-
   const derivedTasks = useMemo(() => {
     const tasks: UiTask[] = [];
     const queuedDocuments = documents.filter((document) => document.status === "queued");
@@ -648,15 +733,20 @@ function AppShell() {
 
     if (queuedDocuments.length > 0 || processingDocuments.length > 0) {
       const totalActive = queuedDocuments.length + processingDocuments.length;
-      const weightedProgress =
+      const liveProgress =
         totalActive === 0
           ? 0
-          : (queuedDocuments.length * 28 + processingDocuments.length * 68) / totalActive;
+          : [...queuedDocuments, ...processingDocuments].reduce(
+              (sum, document) =>
+                sum + getLiveDocumentProgressMeta(document.status, liveDocumentProgress.getDocumentElapsedMs(document)).progress,
+              0,
+            ) / totalActive;
       tasks.push({
         id: "documents-pipeline",
         title: "Обработка документов",
         detail: `В очереди: ${queuedDocuments.length}. В обработке: ${processingDocuments.length}. После завершения обновятся поиск и фрагменты.`,
-        progress: clampProgress(weightedProgress),
+        currentItemName: liveDocumentProgress.currentDocument?.file_name,
+        progress: clampProgress(liveProgress),
         tone: "warning",
       });
     }
@@ -664,43 +754,32 @@ function AppShell() {
     if (analyzingReports.length > 0) {
       const readinessMean =
         analyzingReports.reduce((sum, report) => sum + report.readiness_percent, 0) / analyzingReports.length;
+      const liveAnalysisProgress = liveReportProgress.currentReport
+        ? getLiveReportAnalysisProgress(readinessMean, liveReportProgress.getReportElapsedMs(liveReportProgress.currentReport))
+        : readinessMean;
       tasks.push({
         id: "reports-analysis",
         title: "Анализ отчета",
         detail: `Анализируется ${analyzingReports.length} отчет(ов). После завершения обновятся требования, матрица, риски и XAI-объяснения.`,
-        progress: clampProgress(Math.max(42, Math.min(88, readinessMean * 0.7 + 28))),
+        currentItemName: liveReportProgress.currentReport?.title,
+        progress: clampProgress(liveAnalysisProgress),
         tone: "info",
       });
     }
 
     return tasks;
-  }, [documents, reports]);
+  }, [documents, liveDocumentProgress, liveReportProgress, reports]);
 
   const activeTasks = useMemo(() => [...manualTasks, ...derivedTasks], [derivedTasks, manualTasks]);
 
-  const dashboardSignals = useMemo(
-    () =>
-      buildDashboardSignals({
-        dashboard,
-        notifications,
-        documents,
-        reports,
-        requirements,
-        risks,
-      }),
-    [dashboard, notifications, documents, reports, requirements, risks],
-  );
-
   return (
-    <Routes>
+    <PageGuideProvider>
+      <Routes>
       <Route
         path="/"
         element={
           <Layout
-            organizationId={selectedOrganizationId}
-            onSelectOrganization={setSelectedOrganizationId}
-            organizations={organizations}
-            unreadNotifications={dashboard?.unread_notifications ?? notifications.filter((item) => item.status === "unread").length}
+            organizationName={selectedOrganization?.name ?? null}
             activeTasks={activeTasks}
             floatingWidget={
               showXaiWidget ? (
@@ -716,7 +795,7 @@ function AppShell() {
           />
         }
       >
-        <Route index element={<DashboardPage dashboard={dashboard} notifications={notifications} signals={dashboardSignals} />} />
+        <Route index element={<DashboardPage dashboard={dashboard} documents={documents} />} />
         <Route
           path="organizations"
           element={
@@ -741,6 +820,9 @@ function AppShell() {
               searchResults={documentSearchResults}
               onUpload={handleUploadDocuments}
               onProcess={handleProcessDocument}
+              onProcessFolder={handleProcessDocumentFolder}
+              onDeleteDocument={handleDeleteDocument}
+              onDeleteFolder={handleDeleteDocumentFolder}
               onSearch={handleSearchDocuments}
             />
           }
@@ -754,6 +836,8 @@ function AppShell() {
               selectedReportId={selectedReportId}
               onSelectReport={setSelectedReportId}
               onCreateReport={handleCreateReport}
+              onCreateAndAnalyzeReport={handleCreateAndAnalyzeReport}
+              onDeleteReport={handleDeleteReport}
               onAnalyze={handleAnalyzeReport}
               onGenerate={handleGenerateReport}
               onExport={handleExportReport}
@@ -805,32 +889,11 @@ function AppShell() {
             />
           }
         />
-        <Route
-          path="notifications"
-          element={
-            <NotificationsPage
-              notifications={notifications}
-              onMarkRead={handleMarkNotificationRead}
-              onMarkAllRead={handleMarkAllNotificationsRead}
-            />
-          }
-        />
-        <Route path="audit" element={<AuditLogPage logs={auditLogs} />} />
-        <Route
-          path="editor"
-          element={
-            <ReportEditorPage
-              reportId={selectedReportId}
-              sections={sections}
-              versions={reportVersions}
-              onSaveSection={handleSaveSection}
-              onRestoreVersion={handleRestoreReportVersion}
-            />
-          }
-        />
         <Route path="explanations" element={<ExplanationsPage explanation={explanation} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
-    </Routes>
+      </Routes>
+    </PageGuideProvider>
   );
 }
 

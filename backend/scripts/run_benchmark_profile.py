@@ -53,7 +53,7 @@ PROFILE_PRESETS: dict[str, list[str]] = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run a named benchmark profile against the XAI Report Builder API.")
+    parser = argparse.ArgumentParser(description="Run a named benchmark profile against the EvidenceXAI API.")
     parser.add_argument("profile", choices=sorted(PROFILE_PRESETS))
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--email", default="admin@example.com")

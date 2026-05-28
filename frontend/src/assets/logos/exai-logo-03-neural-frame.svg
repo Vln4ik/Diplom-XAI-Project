@@ -1,0 +1,19 @@
+<svg width="360" height="112" viewBox="0 0 360 112" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">EX.AI Neural Frame</title>
+  <desc id="desc">EvidenceXAI logo with neural frame and document evidence motif.</desc>
+  <defs>
+    <linearGradient id="frameGradient" x1="25" y1="18" x2="334" y2="94" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.48" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="19" width="312" height="74" rx="16" stroke="url(#frameGradient)" stroke-width="4"/>
+  <path d="M52 35H94M52 55H80M52 75H102" stroke="#94A3B8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="118" cy="36" r="5" fill="#1D4ED8"/>
+  <circle cx="118" cy="75" r="5" fill="#06B6D4"/>
+  <circle cx="145" cy="56" r="6" fill="#2563EB"/>
+  <path d="M123 38.5L139 52M123 72.5L139 60" stroke="#60A5FA" stroke-width="3" stroke-linecap="round"/>
+  <text x="166" y="69" fill="#0F172A" font-family="Unbounded, Manrope, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="1.5">EX.AI</text>
+  <path d="M286 42L304 56L286 70" stroke="#06B6D4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

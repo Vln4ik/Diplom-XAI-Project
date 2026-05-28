@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-05-28T23:39:47.920470+03:00",
+  "manifest_path": "samples/estimate_expertise_corpus/manifest.json",
+  "manifest_name": "estimate-expertise-pilot-synthetic",
+  "manifest_version": "2026-05-28",
+  "strict_real_corpus": false,
+  "valid": true,
+  "case_total": 4,
+  "document_total": 12,
+  "target_total": 10,
+  "stage_target_counts": {
+    "completeness": 6,
+    "filename_content": 1,
+    "quality_spell_signature": 3
+  },
+  "error_count": 0,
+  "warning_count": 1,
+  "errors": [],
+  "warnings": [
+    {
+      "path": "$.privacy",
+      "message": "privacy block is absent; acceptable for synthetic corpus only"
+    }
+  ]
+}

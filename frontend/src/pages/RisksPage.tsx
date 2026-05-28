@@ -1,6 +1,6 @@
 import { PageGuide } from "../components/PageGuide";
 import type { MemberItem, RiskItem } from "../lib/types";
-import { formatRiskLevel } from "../lib/ui";
+import { formatRiskLevel, getRiskTone } from "../lib/ui";
 
 type Props = {
   risks: RiskItem[];
@@ -62,7 +62,9 @@ export function RisksPage({ risks, members, selectedRequirementId, onSelectRequi
             {risks.map((risk) => (
               <article
                 key={risk.id}
-                className={`list-item ${risk.requirement_id && selectedRequirementId === risk.requirement_id ? "selected-row" : ""}`}
+                className={`list-item risk-card tone-${getRiskTone(risk.risk_level)} ${
+                  risk.requirement_id && selectedRequirementId === risk.requirement_id ? "selected-row" : ""
+                }`}
                 onClick={() => {
                   if (risk.requirement_id) {
                     onSelectRequirement(risk.requirement_id);
@@ -89,7 +91,7 @@ export function RisksPage({ risks, members, selectedRequirementId, onSelectRequi
                   {risk.requirement_id ? <p className="helper-text">Клик по карточке открывает XAI по связанному требованию.</p> : null}
                 </div>
                 <div className="report-actions">
-                  <span>{formatRiskLevel(risk.risk_level)}</span>
+                  <span className={`status-pill tone-${getRiskTone(risk.risk_level)}`}>{formatRiskLevel(risk.risk_level)}</span>
                   <select
                     value={risk.assigned_to_id ?? ""}
                     onClick={(event) => event.stopPropagation()}

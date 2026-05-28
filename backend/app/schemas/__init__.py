@@ -2,6 +2,10 @@ from app.schemas.audit import AuditLogResponse
 from app.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest, TokenResponse, UserSummary
 from app.schemas.common import MessageResponse
 from app.schemas.document import DocumentFragmentResponse, DocumentProcessResponse, DocumentResponse, DocumentSearchMatchResponse
+from app.schemas.estimate_expertise import (
+    EstimateExpertiseDecisionRequest,
+    EstimateExpertiseWorkflowResponse,
+)
 from app.schemas.notification import NotificationMarkAllResponse, NotificationResponse
 from app.schemas.organization import (
     DashboardResponse,
@@ -33,6 +37,8 @@ __all__ = [
     "DocumentProcessResponse",
     "DocumentResponse",
     "DocumentSearchMatchResponse",
+    "EstimateExpertiseDecisionRequest",
+    "EstimateExpertiseWorkflowResponse",
     "ExplanationResponse",
     "RequirementBulkUpdate",
     "ExportFileResponse",

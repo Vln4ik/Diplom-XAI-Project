@@ -1,0 +1,216 @@
+{
+  "captured_at": "2026-05-28T23:54:33.695567+03:00",
+  "manifest_name": "estimate-expertise-pilot-synthetic",
+  "manifest_version": "2026-05-28",
+  "model_version": "estimate-expertise-local-terminology-baseline-v7",
+  "rule_version": "estimate-cost-rules-pack-v7",
+  "case_total": 4,
+  "cases_passed": 4,
+  "target_total": 10,
+  "targets_passed": 10,
+  "target_pass_rate": 1.0,
+  "stage_target_summary": {
+    "completeness": {
+      "passed": 6,
+      "total": 6,
+      "pass_rate": 1.0
+    },
+    "filename_content": {
+      "passed": 1,
+      "total": 1,
+      "pass_rate": 1.0
+    },
+    "quality_spell_signature": {
+      "passed": 3,
+      "total": 3,
+      "pass_rate": 1.0
+    }
+  },
+  "cases": [
+    {
+      "case_id": "estimate_pack_missing_core_documents",
+      "scenario": "Неполный комплект: есть только заявление и проектная документация, нет ключевых сметных документов.",
+      "document_count": 2,
+      "case_passed": true,
+      "findings_summary": {
+        "total": 16,
+        "by_severity": {
+          "danger": 4,
+          "info": 11,
+          "warning": 1
+        },
+        "by_stage": {
+          "completeness": 14,
+          "quality_spell_signature": 2
+        }
+      },
+      "targets": [
+        {
+          "stage_key": "completeness",
+          "title_contains": "Сводный сметный расчет",
+          "severity": "danger",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Не найден документ: Сводный сметный расчет"
+          ]
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Локальные сметные расчеты",
+          "severity": "danger",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Не найден документ: Локальные сметные расчеты"
+          ]
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Ведомости объемов работ",
+          "severity": "danger",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Не найден документ: Ведомости объемов работ, учтенных в сметных расчетах"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_filename_content_mismatch",
+      "scenario": "Файл назван как ЛСР, но фактическое содержание относится к коммерческому предложению.",
+      "document_count": 3,
+      "case_passed": true,
+      "findings_summary": {
+        "total": 18,
+        "by_severity": {
+          "danger": 4,
+          "info": 11,
+          "warning": 3
+        },
+        "by_stage": {
+          "completeness": 14,
+          "filename_content": 1,
+          "quality_spell_signature": 3
+        }
+      },
+      "targets": [
+        {
+          "stage_key": "filename_content",
+          "title_contains": "Название файла не совпадает",
+          "severity": "danger",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Название файла не совпадает с извлеченным содержанием"
+          ]
+        },
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Найдены подозрительные орфографические ошибки",
+          "severity": "warning",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Найдены подозрительные орфографические ошибки"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_scan_low_density",
+      "scenario": "PDF-скан с низкой плотностью текста и только текстовым признаком подписи.",
+      "document_count": 2,
+      "case_passed": true,
+      "findings_summary": {
+        "total": 19,
+        "by_severity": {
+          "danger": 5,
+          "info": 10,
+          "warning": 4
+        },
+        "by_stage": {
+          "completeness": 16,
+          "quality_spell_signature": 3
+        }
+      },
+      "targets": [
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Низкая плотность извлеченного текста",
+          "severity": "warning",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Низкая плотность извлеченного текста"
+          ]
+        },
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Текстовые признаки подписи или печати найдены",
+          "severity": "info",
+          "expected_absent": false,
+          "passed": true,
+          "matched_count": 1,
+          "matched_titles": [
+            "Текстовые признаки подписи или печати найдены"
+          ]
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_complete_baseline",
+      "scenario": "Базовый полный комплект без критичных missing findings по mandatory groups.",
+      "document_count": 5,
+      "case_passed": true,
+      "findings_summary": {
+        "total": 16,
+        "by_severity": {
+          "danger": 1,
+          "info": 12,
+          "warning": 3
+        },
+        "by_stage": {
+          "completeness": 13,
+          "quality_spell_signature": 3
+        }
+      },
+      "targets": [
+        {
+          "stage_key": "completeness",
+          "title_contains": "Сводный сметный расчет",
+          "severity": null,
+          "expected_absent": true,
+          "passed": true,
+          "matched_count": 0,
+          "matched_titles": []
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Локальные сметные расчеты",
+          "severity": null,
+          "expected_absent": true,
+          "passed": true,
+          "matched_count": 0,
+          "matched_titles": []
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Ведомости объемов работ",
+          "severity": null,
+          "expected_absent": true,
+          "passed": true,
+          "matched_count": 0,
+          "matched_titles": []
+        }
+      ]
+    }
+  ]
+}

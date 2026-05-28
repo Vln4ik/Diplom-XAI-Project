@@ -52,6 +52,7 @@ async def upload_documents(
     files: list[UploadFile] = File(...),
     category: DocumentCategory = Form(default=DocumentCategory.other),
     tags: str = Form(default=""),
+    relative_paths: list[str] | None = Form(default=None),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Document]:
@@ -62,18 +63,25 @@ async def upload_documents(
 
     saved: list[Document] = []
     tag_list = [item.strip() for item in tags.split(",") if item.strip()]
-    for file in files:
+    submitted_paths = relative_paths or []
+    for index, file in enumerate(files):
         content = await file.read()
+        file_name = file.filename or "document.bin"
+        submitted_path = submitted_paths[index] if index < len(submitted_paths) else None
+        normalized_path = (submitted_path or file_name).replace("\\", "/")
+        if file_name == ".DS_Store" or normalized_path.endswith("/.DS_Store") or normalized_path.startswith("__MACOSX/"):
+            continue
         saved.append(
             create_document(
                 db,
                 organization_id=organization.id,
                 uploaded_by_id=user.id,
-                file_name=file.filename or "document.bin",
+                file_name=file_name,
                 content=content,
                 content_type=file.content_type,
                 category=category,
                 tags=tag_list,
+                relative_path=submitted_path,
             )
         )
     return saved
@@ -109,7 +117,10 @@ def process_uploaded_document(
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     ensure_org_access(db, organization_id=document.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    if document.status in {DocumentStatus.queued, DocumentStatus.processing}:
+        return DocumentProcessResponse(document_id=document.id, status=document.status, task_id=None)
     document.status = DocumentStatus.queued
+    document.processing_error = None
     db.add(document)
     db.commit()
     task = document_process_task.delay(document_id)

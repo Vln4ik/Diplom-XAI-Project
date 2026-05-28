@@ -5,8 +5,9 @@ export function ExplanationsPage({ explanation }: { explanation: Explanation | n
   return (
     <div className="stack">
       <PageGuide
-        title="Объяснения XAI"
-        summary="Здесь пользователь видит не только итоговый вывод системы, но и его обоснование: какие evidence были выбраны, какая логическая цепочка сработала, почему уровень уверенности именно такой и что рекомендуется сделать дальше."
+        eyebrow="Контур XAI EvidenceXAI"
+        title="XAI-объяснения"
+        summary="Это XAI-центр внутри EvidenceXAI. Здесь пользователь видит не только итоговый вывод системы, но и его обоснование: какие evidence были выбраны, какая логическая цепочка сработала, почему уровень уверенности именно такой и что рекомендуется сделать дальше."
         blocks={[
           {
             title: "Что отсюда получать",
@@ -28,7 +29,7 @@ export function ExplanationsPage({ explanation }: { explanation: Explanation | n
       />
       <div className="panel">
         <div className="section-header">
-          <h2>XAI-объяснение</h2>
+          <h2>Центр XAI-объяснений</h2>
         </div>
         {explanation ? (
           <div className="stack">
@@ -67,7 +68,7 @@ export function ExplanationsPage({ explanation }: { explanation: Explanation | n
             </article>
           </div>
         ) : (
-          <p>Выберите организацию и создайте требования, чтобы получить XAI-объяснение.</p>
+          <p>Выберите организацию и создайте требования, чтобы получить XAI-объяснение внутри EvidenceXAI.</p>
         )}
       </div>
     </div>

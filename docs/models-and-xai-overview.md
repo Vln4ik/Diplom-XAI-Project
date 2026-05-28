@@ -10,6 +10,12 @@
 - что уже относится к `MVP 1`
 - что переносится в `MVP 2+`
 
+Внутри продукта это соотносится так:
+
+- `EvidenceXAI` — полное имя продукта
+- `EX.AI` — компактная бренд-метка в интерфейсе
+- `XAI` — explainability-функция и предмет дипломного метода
+
 ## 2. Короткий ответ
 
 В проекте уже используются:
@@ -140,6 +146,11 @@ XAI в проекте — это не отдельная нейросеть и �
 - профили `baseline / quality / quality_plus` реализованы
 - backend и launcher уже умеют их переключать
 - в `AI status` видно, какая модель была реально разрешена
+- в спецотчете государственной экспертизы добавлен гибридный classifier `rules + optional LLM` для проверки соответствия названия файла его содержанию
+- в этом же спецотчете добавлен `Quality baseline v7`: OCR/text-layer эвристики, scan-like detector по плотности текста, local terminology/spelling baseline, visual quality baseline, визуальный signature/seal baseline и XAI-сигналы по подписям/печатям
+- добавлен `local-terminology-rules-v1`: локальный словарь проектно-сметных терминов, типовых ошибок, OCR mixed-script noise и разрешенных сокращений
+- добавлен `layout-baseline-v1` для подписи/печати: анализ изображения или первой страницы PDF, signature-like/seal-like компоненты, bbox, confidence и XAI evidence
+- добавлен `layout-quality-baseline-v1` для качества скана: локальная оценка разрешения, контраста, резкости, dark/bright ratio и blank-like признаков
 
 Следующий инженерный шаг — не просто объявить более сильные модели, а прогнать на них benchmark и сравнить влияние на retrieval, evidence linking и section generation.
 

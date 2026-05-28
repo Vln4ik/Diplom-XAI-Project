@@ -22,6 +22,11 @@ export function ActivityPanel({ tasks }: { tasks: UiTask[] }) {
               <span>{task.progress}%</span>
             </div>
             <p>{task.detail}</p>
+            {task.currentItemName ? (
+              <div className="activity-current-item">
+                Сейчас в работе: <strong>{task.currentItemName}</strong>
+              </div>
+            ) : null}
             <div className="progress-track" aria-hidden="true">
               <div className="progress-fill" style={{ width: `${task.progress}%` }} />
             </div>

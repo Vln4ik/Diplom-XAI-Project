@@ -102,6 +102,10 @@
 - `MVP 2`: более сильные embeddings / локальная LLM / более зрелая calibration-стратегия
 - `Post-MVP`: fine-tuning и более зрелые multimodal stacks
 
+### Граница runtime
+
+Документы не отправляются во внешние OCR/LLM API. `Ollama`, `Tesseract` и vision baseline рассматриваются как локальные компоненты серверного контура. Подробно это зафиксировано в [local-runtime-boundaries.md](local-runtime-boundaries.md).
+
 ## 8. Гибридный AI-контур
 
 ### Решение
@@ -159,6 +163,7 @@
 - даёт уже работающий image/PDF fallback
 - закрывает базовые OCR-augmented benchmarks
 - не требует сложного vision-contour на старте
+- работает локально внутри backend/worker runtime и не отправляет документы во внешний OCR API
 
 ### Что не закрывает
 

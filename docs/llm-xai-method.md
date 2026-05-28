@@ -9,6 +9,12 @@
 - что подтверждено benchmark-артефактами
 - что относится к `MVP 2+`, а не к текущей версии
 
+В терминах бренда:
+
+- `EvidenceXAI` — название продукта
+- `EX.AI` — компактная UI-метка
+- `XAI` — explainability-слой внутри продукта
+
 ## 2. Общий принцип AI-контура
 
 В проекте используется не одна “магическая” модель, а гибридный pipeline:
@@ -45,6 +51,7 @@
 
 - provider: `Tesseract`
 - роль: базовое извлечение текста из image-files и image-only `PDF`
+- runtime: локальный backend/worker контур без отправки документов во внешний OCR API
 
 ### 3.4. Rule-based слой
 
@@ -218,6 +225,9 @@
 - profile-aware выбор локальной LLM
 - статус профиля и resolved model в `/api/system/ai-status`
 - запуск backend stack с profile-aware резолвингом моделей
+- гибридный classifier для спецотчета государственной экспертизы: `rules + optional LLM`, confidence и XAI evidence snippets для проверки `название файла -> содержание`
+- quality baseline для спецотчета: OCR/text-layer эвристики, scan-like detector по плотности текста и XAI-сигналы по подписям/печатям
+- layout-aware baseline для спецотчета: поиск signature-like/seal-like компонентов на изображении или первой странице PDF с bbox/confidence
 
 То есть шаг `более сильные локальные модели` уже начат инженерно; следующий подэтап — измерить прирост качества на `quality` и `quality_plus` в benchmark-контуре.
 

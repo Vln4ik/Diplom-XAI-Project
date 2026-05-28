@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import zipfile
 from pathlib import Path
 
-from app.models import Risk, RiskLevel, RiskStatus
+from app.models import Document, DocumentCategory, DocumentStatus, Report, Risk, RiskLevel, RiskStatus
 from app.services.auth import create_user
+from app.services.documents import describe_processing_error
+from app.services.estimate_expertise import ensure_estimate_expertise_workflow, recalculate_workflow_metrics
+
+
+def test_describe_processing_error_returns_user_facing_reason():
+    assert "Формат файла .dwg пока не поддерживается" in describe_processing_error(ValueError("Unsupported document format: .dwg"))
+    assert "превысила лимит времени" in describe_processing_error(TimeoutError("task time limit exceeded"))
+    assert "Исходный файл не найден" in describe_processing_error(FileNotFoundError("missing.pdf"))
 
 
 def _auth_headers(test_client, email: str, password: str) -> dict[str, str]:
@@ -11,6 +20,694 @@ def _auth_headers(test_client, email: str, password: str) -> dict[str, str]:
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
+
+
+def test_folder_upload_preserves_relative_paths(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="folder-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "folder-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Folder Upload College", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        files=[
+            ("category", (None, "evidence")),
+            ("relative_paths", (None, "audit-pack/license/license.txt")),
+            ("relative_paths", (None, "audit-pack/staff/staff.txt")),
+            ("files", ("license.txt", b"license evidence", "text/plain")),
+            ("files", ("staff.txt", b"staff evidence", "text/plain")),
+        ],
+    )
+    assert upload_response.status_code == 201
+    payload = upload_response.json()
+    assert [item["relative_path"] for item in payload] == [
+        "audit-pack/license/license.txt",
+        "audit-pack/staff/staff.txt",
+    ]
+
+    documents_response = test_client.get(f"/api/organizations/{organization_id}/documents", headers=headers)
+    assert documents_response.status_code == 200
+    listed_paths = {item["relative_path"] for item in documents_response.json()}
+    assert "audit-pack/license/license.txt" in listed_paths
+    assert "audit-pack/staff/staff.txt" in listed_paths
+
+
+def test_document_process_endpoint_is_idempotent_for_active_documents(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="idempotent-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "idempotent-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Idempotent Queue Company", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("active.txt", "active document".encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+
+    with session_factory() as session:
+        document = session.get(Document, document_id)
+        document.status = DocumentStatus.queued
+        session.add(document)
+        session.commit()
+
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+    payload = process_response.json()
+    assert payload["status"] == "queued"
+    assert payload["task_id"] is None
+
+    with session_factory() as session:
+        document = session.get(Document, document_id)
+        assert document.status == DocumentStatus.queued
+        assert document.extracted_text is None
+
+
+def test_state_expertise_estimate_cost_report_type_is_special_workflow(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="estimate-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "estimate-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Estimate Expertise Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Отчет государственной экспертизы по сметной стоимости",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [],
+        },
+    )
+    assert report_response.status_code == 201
+    payload = report_response.json()
+    assert payload["report_type"] == "state_expertise_estimate_cost_verification"
+
+    analyze_response = test_client.post(f"/api/reports/{payload['id']}/analyze", headers=headers)
+    assert analyze_response.status_code == 409
+    assert "specialized state expertise workflow" in analyze_response.json()["detail"]
+
+    generate_response = test_client.post(f"/api/reports/{payload['id']}/generate", headers=headers)
+    assert generate_response.status_code == 409
+    assert "specialized state expertise workflow" in generate_response.json()["detail"]
+
+    invalid_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={"title": "Invalid", "report_type": "unknown_report_type"},
+    )
+    assert invalid_response.status_code == 422
+
+
+def test_report_can_be_deleted_from_api(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="delete-report-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "delete-report-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Delete Report Company", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={"title": "Удаляемый отчет", "report_type": "readiness_report"},
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    delete_response = test_client.delete(f"/api/reports/{report_id}", headers=headers)
+    assert delete_response.status_code == 200
+    assert delete_response.json()["id"] == report_id
+
+    get_response = test_client.get(f"/api/reports/{report_id}", headers=headers)
+    assert get_response.status_code == 404
+    list_response = test_client.get(f"/api/organizations/{organization_id}/reports", headers=headers)
+    assert list_response.status_code == 200
+    assert list_response.json() == []
+
+
+def test_state_expertise_workflow_persists_findings_and_user_decisions(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="workflow-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "workflow-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Estimate Workflow Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("ЛСР_работы.txt", "Локальный сметный расчет по работам".encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет по сметной стоимости",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [document_id],
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    workflow = start_response.json()
+    assert workflow["report_id"] == report_id
+    assert workflow["total_files"] == 1
+    findings = [finding for stage in workflow["stages"] for finding in stage["findings"]]
+    assert any("ПП РФ N 145" in finding["normative_basis"] for finding in findings)
+    unresolved_before = workflow["unresolved_findings"]
+    assert unresolved_before > 0
+
+    finding_to_approve = next(finding for finding in findings if finding["severity"] in {"warning", "danger"})
+    approve_response = test_client.post(
+        f"/api/estimate-expertise/findings/{finding_to_approve['id']}/approve",
+        headers=headers,
+        json={},
+    )
+    assert approve_response.status_code == 200
+    approved_workflow = approve_response.json()
+    assert approved_workflow["unresolved_findings"] == unresolved_before - 1
+    approved_finding = next(
+        finding
+        for stage in approved_workflow["stages"]
+        for finding in stage["findings"]
+        if finding["id"] == finding_to_approve["id"]
+    )
+    assert approved_finding["decision"]["status"] == "approved"
+
+    replacement_target = next(
+        finding
+        for stage in approved_workflow["stages"]
+        for finding in stage["findings"]
+        if finding["severity"] in {"warning", "danger"} and finding["id"] != finding_to_approve["id"]
+    )
+    replacement_response = test_client.post(
+        f"/api/estimate-expertise/findings/{replacement_target['id']}/replacement",
+        headers=headers,
+        files={"file": ("ССР.txt", "Сводный сметный расчет".encode("utf-8"), "text/plain")},
+    )
+    assert replacement_response.status_code == 200
+    replacement_workflow = replacement_response.json()
+    replacement_finding = next(
+        finding
+        for stage in replacement_workflow["stages"]
+        for finding in stage["findings"]
+        if finding["id"] == replacement_target["id"]
+    )
+    assert replacement_finding["decision"]["status"] == "replacement_resolved"
+    assert replacement_finding["decision"]["replacement_file_name"] == "ССР.txt"
+    assert replacement_finding["decision"]["replacement_progress"] == 100
+
+    state_response = test_client.get(f"/api/reports/{report_id}/estimate-expertise/state", headers=headers)
+    assert state_response.status_code == 200
+    persisted_findings = [finding for stage in state_response.json()["stages"] for finding in stage["findings"]]
+    assert any(finding["decision"] and finding["decision"]["status"] == "approved" for finding in persisted_findings)
+
+
+    assert any(finding["decision"] and finding["decision"]["status"] == "replacement_resolved" for finding in persisted_findings)
+
+    export_docx = test_client.post(f"/api/reports/{report_id}/export/docx", headers=headers)
+    assert export_docx.status_code == 200
+    assert export_docx.json()["file_name"].endswith("_state_expertise_summary.docx")
+    assert Path(export_docx.json()["storage_path"]).exists()
+
+    export_matrix = test_client.post(f"/api/reports/{report_id}/export/matrix", headers=headers)
+    assert export_matrix.status_code == 200
+    assert export_matrix.json()["file_name"].endswith("_state_expertise_findings.xlsx")
+    assert Path(export_matrix.json()["storage_path"]).exists()
+
+    export_xai = test_client.post(f"/api/reports/{report_id}/export/explanations", headers=headers)
+    assert export_xai.status_code == 200
+    xai_path = Path(export_xai.json()["storage_path"])
+    assert xai_path.exists()
+    assert "XAI-объяснения спецпроверки" in xai_path.read_text(encoding="utf-8")
+
+    export_package = test_client.post(f"/api/reports/{report_id}/export/package", headers=headers)
+    assert export_package.status_code == 200
+    package_path = Path(export_package.json()["storage_path"])
+    assert package_path.exists()
+    with zipfile.ZipFile(package_path) as archive:
+        names = set(archive.namelist())
+    assert {"summary.docx", "findings.xlsx", "xai.html", "workflow.json"}.issubset(names)
+    assert any(name.startswith("source_documents/") for name in names)
+
+    audit_response = test_client.get(f"/api/organizations/{organization_id}/audit-logs", headers=headers)
+    assert audit_response.status_code == 200
+    audit_actions = {item["action"] for item in audit_response.json()}
+    assert "estimate_expertise_finding_approved" in audit_actions
+    assert "estimate_expertise_replacement_started" in audit_actions
+    assert "estimate_expertise_finding_replacement_resolved" in audit_actions
+    replacement_audit = next(item for item in audit_response.json() if item["action"] == "estimate_expertise_replacement_started")
+    assert replacement_audit["details"]["xai_summary"]
+
+
+def test_state_expertise_queued_workflow_is_not_marked_completed_by_state_recalculation(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="queued-workflow-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "queued-workflow-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Queued Workflow Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("ЛСР_работы.txt", "Локальный сметный расчет по работам".encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+    assert test_client.post(f"/api/documents/{document_id}/process", headers=headers).status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Очередь госэкспертизы",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [document_id],
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    with session_factory() as session:
+        report = session.get(Report, report_id)
+        workflow = ensure_estimate_expertise_workflow(session, report)
+        recalculate_workflow_metrics(session, workflow)
+        session.commit()
+        session.refresh(workflow)
+
+        assert workflow.status == "queued"
+        assert workflow.progress == 0
+        stages = sorted(workflow.stages, key=lambda item: item.order_number)
+        assert all(stage.status == "pending" for stage in stages)
+        assert all(stage.progress == 0 for stage in stages)
+
+
+def test_state_expertise_workflow_uses_extracted_text_for_mismatch_and_quality_findings(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="text-rules-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "text-rules-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Text Rules Estimate Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    mismatched_text = """
+    Коммерческое предложение на поставку оборудования.
+    Сметнная стоимоть оборудования приведена без подписи ответственного лица.
+    """.strip()
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("ЛСР_оборудование.txt", mismatched_text.encode("utf-8"), "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет с расхождением имени и содержания",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [document_id],
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+
+    mismatch_finding = next(finding for finding in findings if finding["title"] == "Название файла не совпадает с извлеченным содержанием")
+    assert mismatch_finding["severity"] == "danger"
+    assert "Локальные сметные расчеты" in mismatch_finding["description"]
+    assert "Обоснования стоимости" in mismatch_finding["description"]
+    assert any("Пересечения" in step for step in mismatch_finding["xai_summary"])
+
+    typo_finding = next(finding for finding in findings if finding["title"] == "Найдены подозрительные орфографические ошибки")
+    assert typo_finding["severity"] == "warning"
+    assert "сметнная" in typo_finding["description"]
+    assert "стоимоть" in typo_finding["description"]
+
+    signature_finding = next(finding for finding in findings if finding["title"] == "Не найдены текстовые признаки подписи или печати")
+    assert signature_finding["severity"] == "info"
+    assert "layout-aware vision" in " ".join(signature_finding["xai_summary"])
+
+    replacement_response = test_client.post(
+        f"/api/estimate-expertise/findings/{mismatch_finding['id']}/replacement",
+        headers=headers,
+        files={
+            "file": (
+                "ЛСР_замена.txt",
+                "Коммерческое предложение на поставку оборудования без подписи.".encode("utf-8"),
+                "text/plain",
+            )
+        },
+    )
+    assert replacement_response.status_code == 200
+    replacement_findings = [finding for stage in replacement_response.json()["stages"] for finding in stage["findings"]]
+    replacement_recheck_finding = next(
+        finding for finding in replacement_findings if finding["title"].startswith("После замены: Название файла не совпадает")
+    )
+    assert replacement_recheck_finding["severity"] == "danger"
+    assert "backend re-check replacement-файла" in " ".join(replacement_recheck_finding["xai_summary"])
+
+
+def test_state_expertise_filename_classifier_can_use_llm_provider(client, monkeypatch):
+    test_client, session_factory = client
+
+    class FakeLLMProvider:
+        @property
+        def provider_name(self) -> str:
+            return "fake-llm"
+
+        def complete(self, prompt: str, *, system: str = "", max_tokens: int = 256) -> str:
+            return '{"label": "price_justification", "confidence": 0.91, "reason": "Текст содержит коммерческое предложение."}'
+
+    from app.services import estimate_expertise
+
+    monkeypatch.setattr(estimate_expertise, "get_llm_provider", lambda: FakeLLMProvider())
+
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="llm-classifier-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "llm-classifier-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "LLM Classifier Estimate Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={
+            "files": (
+                "ЛСР_оборудование.txt",
+                "Коммерческое предложение на поставку оборудования. Стоимость оборудования указана поставщиком.".encode(
+                    "utf-8"
+                ),
+                "text/plain",
+            )
+        },
+    )
+    assert upload_response.status_code == 201
+    document_id = upload_response.json()[0]["id"]
+
+    process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+    assert process_response.status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет с LLM-классификатором",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [document_id],
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+    mismatch_finding = next(finding for finding in findings if finding["title"] == "Название файла не совпадает с извлеченным содержанием")
+
+    xai_text = " ".join(mismatch_finding["xai_summary"])
+    assert "LLM-классификатор" in xai_text
+    assert "price_justification" in xai_text
+    assert "Текст содержит коммерческое предложение" in xai_text
+
+
+def test_state_expertise_completeness_pack_marks_mandatory_and_conditional_groups(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="completeness-pack-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "completeness-pack-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Completeness Pack Estimate Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files=[
+            (
+                "files",
+                (
+                    "Заявление.txt",
+                    "Заявление о проведении государственной экспертизы".encode("utf-8"),
+                    "text/plain",
+                ),
+            ),
+            (
+                "files",
+                (
+                    "Проектная_документация.txt",
+                    "Проектная документация объекта капитального строительства".encode("utf-8"),
+                    "text/plain",
+                ),
+            ),
+        ],
+    )
+    assert upload_response.status_code == 201
+    document_ids = [item["id"] for item in upload_response.json()]
+    for document_id in document_ids:
+        process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+        assert process_response.status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет с проверкой комплектности",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": document_ids,
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+    completeness_findings = [finding for finding in findings if finding["stage_key"] == "completeness"]
+
+    assert all("Заявление о проведении" not in finding["title"] for finding in completeness_findings)
+    assert all("Проектная документация" not in finding["title"] for finding in completeness_findings)
+    assert any("ПП РФ N 145" in finding["normative_basis"] for finding in completeness_findings)
+    assert any("обязательная группа базового профиля" in " ".join(finding["xai_summary"]) for finding in completeness_findings)
+    assert any(finding["severity"] == "info" and "условная группа" in " ".join(finding["xai_summary"]) for finding in completeness_findings)
+
+
+def test_state_expertise_pp87_report_uses_pp87_completeness_rules(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="pp87-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "pp87-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "PP87 Estimate Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files=[
+            (
+                "files",
+                (
+                    "Пояснительная_записка.txt",
+                    "Пояснительная записка. Исходные данные и технико экономические показатели.".encode("utf-8"),
+                    "text/plain",
+                ),
+            ),
+            (
+                "files",
+                (
+                    "Смета_на_строительство.txt",
+                    "Смета на строительство. Сводный сметный расчет и локальный сметный расчет.".encode("utf-8"),
+                    "text/plain",
+                ),
+            ),
+        ],
+    )
+    assert upload_response.status_code == 201
+    document_ids = [item["id"] for item in upload_response.json()]
+    for document_id in document_ids:
+        process_response = test_client.post(f"/api/documents/{document_id}/process", headers=headers)
+        assert process_response.status_code == 200
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет по ПП 87",
+            "report_type": "state_expertise_estimate_cost_verification_pp87",
+            "selected_document_ids": document_ids,
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    payload = start_response.json()
+    stage_keys = [stage["stage_key"] for stage in payload["stages"]]
+    findings = [finding for stage in payload["stages"] for finding in stage["findings"]]
+    completeness_findings = [finding for finding in findings if finding["stage_key"] == "completeness"]
+    section_content_findings = [finding for finding in findings if finding["stage_key"] == "section_content"]
+
+    assert payload["rule_version"] == "estimate-cost-pp87-rules-pack-v3"
+    assert "completeness" not in stage_keys
+    assert "section_content" in stage_keys
+    assert completeness_findings == []
+    assert section_content_findings
+    assert any("Содержание раздела требует проверки по ПП 87" in finding["title"] for finding in section_content_findings)
+    assert any("ПП РФ N 87" in finding["normative_basis"] for finding in findings)
+    assert all("ПП РФ N 145" not in finding["normative_basis"] for finding in findings)
+
+
+def test_state_expertise_quality_stage_flags_scan_like_low_text_density(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        user = create_user(session, full_name="Org Admin", email="quality-stage-owner@example.com", password="ChangeMe123!")
+        user_id = user.id
+
+    headers = _auth_headers(test_client, "quality-stage-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Quality Stage Estimate Company", "organization_type": "other"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    with session_factory() as session:
+        document = Document(
+            organization_id=organization_id,
+            uploaded_by_id=user_id,
+            file_name="Скан_подписного_листа.pdf",
+            original_file_name="Скан_подписного_листа.pdf",
+            relative_path="estimate-pack/Скан_подписного_листа.pdf",
+            file_type="application/pdf",
+            file_size=256,
+            category=DocumentCategory.evidence,
+            storage_path="/tmp/scan.pdf",
+            status=DocumentStatus.processed,
+            extracted_text="Подпись",
+            page_count=2,
+            tags=[],
+        )
+        session.add(document)
+        session.commit()
+        document_id = document.id
+
+    report_response = test_client.post(
+        f"/api/organizations/{organization_id}/reports",
+        headers=headers,
+        json={
+            "title": "Спецотчет с визуальным PDF",
+            "report_type": "state_expertise_estimate_cost_verification",
+            "selected_document_ids": [document_id],
+        },
+    )
+    assert report_response.status_code == 201
+    report_id = report_response.json()["id"]
+
+    start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
+    assert start_response.status_code == 200
+    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+
+    density_finding = next(finding for finding in findings if finding["title"] == "Низкая плотность извлеченного текста")
+    assert density_finding["severity"] == "warning"
+    assert "Плотность текста" in " ".join(density_finding["xai_summary"])
+
+    signature_hint = next(finding for finding in findings if finding["title"] == "Текстовые признаки подписи или печати найдены")
+    assert signature_hint["severity"] == "info"
+    assert "vision detector" in " ".join(signature_hint["xai_summary"])
 
 
 def test_document_to_report_pipeline(client, tmp_path):

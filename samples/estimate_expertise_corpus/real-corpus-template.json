@@ -1,0 +1,35 @@
+{
+  "manifest_name": "estimate-expertise-real-corpus-template",
+  "description": "Шаблон для подключения обезличенных проектно-сметных кейсов. Не коммитить реальные закрытые документы без разрешения.",
+  "version": "YYYY-MM-DD",
+  "privacy": {
+    "contains_public_data_only": false,
+    "anonymized": true,
+    "allowed_for_repository": false,
+    "reviewed_by": "",
+    "reviewed_at": ""
+  },
+  "cases": [
+    {
+      "case_id": "real_case_001",
+      "scenario": "Краткое описание сценария проверки.",
+      "source_policy": "redacted-local-only",
+      "documents": [
+        {
+          "file_name": "Заявление.pdf",
+          "relative_path": "real_cases/case_001/Заявление.pdf",
+          "file_type": "application/pdf",
+          "page_count": 1,
+          "text": "Если файл закрытый и не коммитится, здесь допускается оставить только обезличенный текстовый экстракт."
+        }
+      ],
+      "targets": [
+        {
+          "stage_key": "completeness",
+          "title_contains": "Сводный сметный расчет",
+          "severity": "danger"
+        }
+      ]
+    }
+  ]
+}

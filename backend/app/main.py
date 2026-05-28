@@ -12,12 +12,14 @@ from app.core.config import get_settings
 from app.db.session import get_session_factory
 from app.services.bootstrap import bootstrap_system_admin
 from app.services.runtime_metrics import runtime_metrics
+from app.workers.celery_app import configure_celery_from_settings
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    configure_celery_from_settings()
     session = get_session_factory()()
     try:
         bootstrap_system_admin(session)

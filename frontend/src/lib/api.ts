@@ -1,5 +1,13 @@
 import { clearSession, getAccessToken, setAccessToken } from "./session";
 import type {
+  EstimateExpertiseDecision,
+  EstimateExpertiseFinding,
+  EstimateExpertiseStage,
+  EstimateExpertiseWorkflow,
+  ExpertiseFindingSeverity,
+  ExpertiseStageStatus,
+} from "./estimateExpertise";
+import type {
   AuditLogItem,
   Dashboard,
   DocumentSearchMatch,
@@ -182,12 +190,13 @@ export function fetchDocuments(organizationId: string): Promise<DocumentItem[]> 
 
 export function uploadDocuments(
   organizationId: string,
-  payload: { files: File[]; category: string; tags?: string },
+  payload: { files: File[]; category: string; tags?: string; relativePaths?: string[] },
 ): Promise<DocumentItem[]> {
   const formData = new FormData();
-  for (const file of payload.files) {
+  payload.files.forEach((file, index) => {
     formData.append("files", file);
-  }
+    formData.append("relative_paths", payload.relativePaths?.[index] || file.name);
+  });
   formData.append("category", payload.category);
   if (payload.tags) {
     formData.append("tags", payload.tags);
@@ -201,6 +210,12 @@ export function uploadDocuments(
 export function processDocument(documentId: string): Promise<{ document_id: string; status: string; task_id?: string | null }> {
   return request(`/api/documents/${documentId}/process`, {
     method: "POST",
+  });
+}
+
+export function deleteDocument(documentId: string): Promise<DocumentItem> {
+  return request<DocumentItem>(`/api/documents/${documentId}`, {
+    method: "DELETE",
   });
 }
 
@@ -244,6 +259,12 @@ export function createReport(
   });
 }
 
+export function deleteReport(reportId: string): Promise<ReportItem> {
+  return request<ReportItem>(`/api/reports/${reportId}`, {
+    method: "DELETE",
+  });
+}
+
 export function analyzeReport(reportId: string): Promise<ReportItem> {
   return request<ReportItem>(`/api/reports/${reportId}/analyze`, {
     method: "POST",
@@ -254,6 +275,163 @@ export function generateReport(reportId: string): Promise<ReportItem> {
   return request<ReportItem>(`/api/reports/${reportId}/generate`, {
     method: "POST",
   });
+}
+
+type RawEstimateExpertiseDecision = {
+  status: string;
+  label: string;
+  updated_at: string;
+  replacement_file_name?: string | null;
+  replacement_progress?: number;
+  decision_type?: string;
+  comment?: string | null;
+};
+
+type RawEstimateExpertiseFinding = {
+  id: string;
+  stage_id?: string | null;
+  stage_key: string;
+  stage_title: string;
+  document_id?: string | null;
+  document_name: string;
+  title: string;
+  description: string;
+  severity: string;
+  confidence_score: number;
+  normative_basis: string;
+  source_ref: string;
+  recommendation: string;
+  xai_summary: string[];
+  status: string;
+  decision?: RawEstimateExpertiseDecision | null;
+};
+
+type RawEstimateExpertiseStage = {
+  id: string;
+  stage_key: string;
+  title: string;
+  short_title: string;
+  order_number: number;
+  status: string;
+  progress: number;
+  checked_files: number;
+  total_files: number;
+  findings_count: number;
+  findings: RawEstimateExpertiseFinding[];
+};
+
+type RawEstimateExpertiseWorkflow = {
+  id: string;
+  status: string;
+  progress: number;
+  eta_seconds: number;
+  checked_files: number;
+  total_files: number;
+  unresolved_findings: number;
+  stages: RawEstimateExpertiseStage[];
+};
+
+function formatEstimateEta(etaSeconds: number): string {
+  const minutes = Math.max(1, Math.round(etaSeconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  if (hours === 0) {
+    return `${restMinutes} мин`;
+  }
+  return `${hours} ч ${restMinutes.toString().padStart(2, "0")} мин`;
+}
+
+function normalizeEstimateDecision(raw: RawEstimateExpertiseDecision): EstimateExpertiseDecision {
+  return {
+    status: raw.status as EstimateExpertiseDecision["status"],
+    label: raw.label,
+    updatedAt: raw.updated_at,
+    replacementFileName: raw.replacement_file_name ?? undefined,
+    replacementProgress: raw.replacement_progress,
+    decisionType: raw.decision_type,
+    comment: raw.comment,
+  };
+}
+
+function normalizeEstimateFinding(raw: RawEstimateExpertiseFinding): EstimateExpertiseFinding {
+  return {
+    id: raw.id,
+    stageId: raw.stage_id ?? raw.stage_key,
+    stageTitle: raw.stage_title,
+    documentName: raw.document_name,
+    title: raw.title,
+    description: raw.description,
+    severity: raw.severity as ExpertiseFindingSeverity,
+    confidence: raw.confidence_score,
+    normativeBasis: raw.normative_basis,
+    sourceRef: raw.source_ref,
+    recommendation: raw.recommendation,
+    xaiSummary: raw.xai_summary,
+    status: raw.status,
+    decision: raw.decision ? normalizeEstimateDecision(raw.decision) : null,
+  };
+}
+
+function normalizeEstimateWorkflow(raw: RawEstimateExpertiseWorkflow): EstimateExpertiseWorkflow {
+  const stages: EstimateExpertiseStage[] = raw.stages.map((stage) => ({
+    id: stage.stage_key,
+    order: stage.order_number,
+    title: stage.title,
+    shortTitle: stage.short_title,
+    status: stage.status as ExpertiseStageStatus,
+    progress: Math.round(stage.progress),
+    checkedFiles: stage.checked_files,
+    totalFiles: stage.total_files,
+    findings: stage.findings.map(normalizeEstimateFinding),
+  }));
+  return {
+    status: raw.status,
+    progress: Math.round(raw.progress),
+    etaLabel: formatEstimateEta(raw.eta_seconds),
+    checkedFiles: raw.checked_files,
+    totalFiles: raw.total_files,
+    unresolvedFindings: raw.unresolved_findings,
+    documents: [],
+    stages,
+  };
+}
+
+export async function startEstimateExpertiseWorkflow(reportId: string): Promise<EstimateExpertiseWorkflow> {
+  const raw = await request<RawEstimateExpertiseWorkflow>(`/api/reports/${reportId}/estimate-expertise/start`, {
+    method: "POST",
+  });
+  return normalizeEstimateWorkflow(raw);
+}
+
+export async function fetchEstimateExpertiseWorkflow(reportId: string): Promise<EstimateExpertiseWorkflow> {
+  const raw = await request<RawEstimateExpertiseWorkflow>(`/api/reports/${reportId}/estimate-expertise/state`);
+  return normalizeEstimateWorkflow(raw);
+}
+
+export async function approveEstimateExpertiseFinding(findingId: string): Promise<EstimateExpertiseWorkflow> {
+  const raw = await request<RawEstimateExpertiseWorkflow>(`/api/estimate-expertise/findings/${findingId}/approve`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return normalizeEstimateWorkflow(raw);
+}
+
+export async function skipEstimateExpertiseFinding(findingId: string): Promise<EstimateExpertiseWorkflow> {
+  const raw = await request<RawEstimateExpertiseWorkflow>(`/api/estimate-expertise/findings/${findingId}/skip`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  return normalizeEstimateWorkflow(raw);
+}
+
+export async function uploadEstimateExpertiseReplacement(findingId: string, file: File): Promise<EstimateExpertiseWorkflow> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const raw = await request<RawEstimateExpertiseWorkflow>(`/api/estimate-expertise/findings/${findingId}/replacement`, {
+    method: "POST",
+    body: formData,
+  });
+  return normalizeEstimateWorkflow(raw);
 }
 
 export function submitReportForApproval(reportId: string): Promise<ReportItem> {

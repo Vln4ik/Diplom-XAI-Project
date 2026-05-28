@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import zipfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -128,3 +129,79 @@ def test_extract_pdf_uses_ocr_fallback_for_blank_page(monkeypatch, tmp_path: Pat
     assert "Отсканированный приказ" in result.text
     assert len(result.fragments) == 1
     assert result.fragments[0].page_number == 1
+
+
+def test_extract_pdf_extension_zip_container_requires_review(tmp_path: Path):
+    container_path = tmp_path / "signed-container.pdf"
+    with zipfile.ZipFile(container_path, "w") as archive:
+        archive.writestr("payload/readme.txt", "Контейнер с проектной документацией")
+
+    result = extract_document(str(container_path))
+
+    assert result.requires_review is True
+    assert "ZIP-compatible container" in result.text
+    assert "Контейнер с проектной документацией" in result.text
+
+
+def test_extract_extended_real_case_formats(tmp_path: Path):
+    xml_path = tmp_path / "ON_EMCHD.xml"
+    xml_path.write_text(
+        """
+        <Доверенность Номер="123">
+          <Доверитель>ООО ПКФ Водоканалпроект</Доверитель>
+          <Представитель>Иванов Иван</Представитель>
+        </Доверенность>
+        """.strip(),
+        encoding="utf-8",
+    )
+
+    doc_path = tmp_path / "Сводная смета.doc"
+    doc_path.write_bytes("Сводный сметный расчет по объекту Водоканалпроект".encode("cp1251"))
+
+    signature_path = tmp_path / "Сводная смета.doc.sig"
+    signature_path.write_bytes(b"fake detached signature")
+
+    p7s_path = tmp_path / "statement.xml.p7s"
+    p7s_path.write_bytes(b"fake pkcs7 signature")
+
+    zip_path = tmp_path / "package.zip"
+    with zipfile.ZipFile(zip_path, "w") as archive:
+        archive.writestr("docs/readme.txt", "Заявление о проведении государственной экспертизы")
+        archive.writestr("docs/meta.xml", "<root><item>Комплект документов</item></root>")
+        archive.writestr("__MACOSX/.DS_Store", b"ignored")
+
+    gge_path = tmp_path / "estimate.gge"
+    gge_path.write_bytes(b"GGE binary placeholder")
+
+    ds_store_path = tmp_path / ".DS_Store"
+    ds_store_path.write_bytes(b"macos metadata")
+
+    xml_result = extract_document(str(xml_path))
+    doc_result = extract_document(str(doc_path))
+    sig_result = extract_document(str(signature_path))
+    p7s_result = extract_document(str(p7s_path))
+    zip_result = extract_document(str(zip_path))
+    gge_result = extract_document(str(gge_path))
+    ds_store_result = extract_document(str(ds_store_path))
+
+    assert "ООО ПКФ Водоканалпроект" in xml_result.text
+    assert "Сводный сметный расчет" in doc_result.text
+    assert doc_result.requires_review is True
+
+    assert "Electronic signature sidecar file" in sig_result.text
+    assert "Likely signed source file: Сводная смета.doc" in sig_result.text
+    assert sig_result.requires_review is False
+
+    assert "Electronic signature sidecar file" in p7s_result.text
+    assert "statement.xml" in p7s_result.text
+
+    assert "package.zip" in zip_result.text
+    assert "Заявление о проведении государственной экспертизы" in zip_result.text
+    assert "__MACOSX" not in zip_result.text
+
+    assert "GGE estimate container" in gge_result.text
+    assert gge_result.requires_review is True
+
+    assert ".DS_Store" in ds_store_result.text
+    assert ds_store_result.requires_review is False
+    assert ds_store_result.fragments == []

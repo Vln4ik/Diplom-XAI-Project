@@ -1,0 +1,173 @@
+{
+  "manifest_name": "estimate-expertise-pilot-synthetic",
+  "description": "Мини-корпус проектно-сметных кейсов для регрессионной проверки спецworkflow государственной экспертизы.",
+  "version": "2026-05-28",
+  "cases": [
+    {
+      "case_id": "estimate_pack_missing_core_documents",
+      "scenario": "Неполный комплект: есть только заявление и проектная документация, нет ключевых сметных документов.",
+      "documents": [
+        {
+          "file_name": "Заявление_на_госэкспертизу.txt",
+          "relative_path": "case-01/Заявление_на_госэкспертизу.txt",
+          "file_type": "text/plain",
+          "page_count": 1,
+          "text": "Заявление о проведении государственной экспертизы проектной документации и проверки достоверности определения сметной стоимости."
+        },
+        {
+          "file_name": "Проектная_документация_раздел_ПЗ.txt",
+          "relative_path": "case-01/Проектная_документация_раздел_ПЗ.txt",
+          "file_type": "text/plain",
+          "page_count": 3,
+          "text": "Проектная документация объекта капитального строительства. Раздел проектной документации. Объект капитального строительства."
+        }
+      ],
+      "targets": [
+        {
+          "stage_key": "completeness",
+          "title_contains": "Сводный сметный расчет",
+          "severity": "danger"
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Локальные сметные расчеты",
+          "severity": "danger"
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Ведомости объемов работ",
+          "severity": "danger"
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_filename_content_mismatch",
+      "scenario": "Файл назван как ЛСР, но фактическое содержание относится к коммерческому предложению.",
+      "documents": [
+        {
+          "file_name": "ЛСР_оборудование.txt",
+          "relative_path": "case-02/ЛСР_оборудование.txt",
+          "file_type": "text/plain",
+          "page_count": 1,
+          "text": "Коммерческое предложение на поставку оборудования. Стоимость оборудования указана поставщиком. Сметнная стоимоть требует проверки."
+        },
+        {
+          "file_name": "ССР_объект.txt",
+          "relative_path": "case-02/ССР_объект.txt",
+          "file_type": "text/plain",
+          "page_count": 4,
+          "text": "Сводный сметный расчет. Итого по сводному сметному расчету. Подпись ответственного лица."
+        },
+        {
+          "file_name": "ВОР_строительные_работы.txt",
+          "relative_path": "case-02/ВОР_строительные_работы.txt",
+          "file_type": "text/plain",
+          "page_count": 2,
+          "text": "Ведомость объемов работ. Объемы работ по строительным конструкциям."
+        }
+      ],
+      "targets": [
+        {
+          "stage_key": "filename_content",
+          "title_contains": "Название файла не совпадает",
+          "severity": "danger"
+        },
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Найдены подозрительные орфографические ошибки",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_scan_low_density",
+      "scenario": "PDF-скан с низкой плотностью текста и только текстовым признаком подписи.",
+      "documents": [
+        {
+          "file_name": "Скан_подписного_листа.pdf",
+          "relative_path": "case-03/Скан_подписного_листа.pdf",
+          "file_type": "application/pdf",
+          "page_count": 2,
+          "text": "Подпись"
+        },
+        {
+          "file_name": "Заявление.txt",
+          "relative_path": "case-03/Заявление.txt",
+          "file_type": "text/plain",
+          "page_count": 1,
+          "text": "Заявление о проведении государственной экспертизы."
+        }
+      ],
+      "targets": [
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Низкая плотность извлеченного текста",
+          "severity": "warning"
+        },
+        {
+          "stage_key": "quality_spell_signature",
+          "title_contains": "Текстовые признаки подписи или печати найдены",
+          "severity": "info"
+        }
+      ]
+    },
+    {
+      "case_id": "estimate_pack_complete_baseline",
+      "scenario": "Базовый полный комплект без критичных missing findings по mandatory groups.",
+      "documents": [
+        {
+          "file_name": "Заявление.txt",
+          "relative_path": "case-04/Заявление.txt",
+          "file_type": "text/plain",
+          "page_count": 1,
+          "text": "Заявление о проведении государственной экспертизы."
+        },
+        {
+          "file_name": "Проектная_документация.txt",
+          "relative_path": "case-04/Проектная_документация.txt",
+          "file_type": "text/plain",
+          "page_count": 8,
+          "text": "Проектная документация. Раздел проектной документации. Объект капитального строительства."
+        },
+        {
+          "file_name": "ЛСР_работы.txt",
+          "relative_path": "case-04/ЛСР_работы.txt",
+          "file_type": "text/plain",
+          "page_count": 4,
+          "text": "Локальный сметный расчет. Локальная смета на строительные работы. Подпись ГИП."
+        },
+        {
+          "file_name": "ССР_итог.txt",
+          "relative_path": "case-04/ССР_итог.txt",
+          "file_type": "text/plain",
+          "page_count": 5,
+          "text": "Сводный сметный расчет. Итого по сводному сметному расчету. М.П. Директор."
+        },
+        {
+          "file_name": "ВОР_строительные_работы.txt",
+          "relative_path": "case-04/ВОР_строительные_работы.txt",
+          "file_type": "text/plain",
+          "page_count": 3,
+          "text": "Ведомость объемов работ. Объемы работ учтены в сметных расчетах."
+        }
+      ],
+      "targets": [
+        {
+          "stage_key": "completeness",
+          "title_contains": "Сводный сметный расчет",
+          "expected_absent": true
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Локальные сметные расчеты",
+          "expected_absent": true
+        },
+        {
+          "stage_key": "completeness",
+          "title_contains": "Ведомости объемов работ",
+          "expected_absent": true
+        }
+      ]
+    }
+  ]
+}

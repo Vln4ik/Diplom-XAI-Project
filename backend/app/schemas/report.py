@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import date
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.enums import ExportStatus, ExportType, ReportStatus
 from app.schemas.common import SchemaModel, TimestampedModel
+from app.services.report_types import validate_report_type
 
 
 class ReportCreate(BaseModel):
@@ -18,6 +19,11 @@ class ReportCreate(BaseModel):
     comment: str | None = None
     selected_document_ids: list[str] = Field(default_factory=list)
 
+    @field_validator("report_type")
+    @classmethod
+    def validate_supported_report_type(cls, value: str) -> str:
+        return validate_report_type(value)
+
 
 class ReportUpdate(BaseModel):
     title: str | None = None
@@ -26,6 +32,13 @@ class ReportUpdate(BaseModel):
     responsible_user_id: str | None = None
     comment: str | None = None
     selected_document_ids: list[str] | None = None
+
+    @field_validator("report_type")
+    @classmethod
+    def validate_supported_report_type(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return validate_report_type(value)
 
 
 class ReportResponse(TimestampedModel):

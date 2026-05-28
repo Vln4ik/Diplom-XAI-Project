@@ -64,7 +64,7 @@ Grafana default credentials:
 
 ## 5. Что видно в Grafana
 
-Provisioned dashboard `XAI Report Builder Overview` показывает:
+Provisioned dashboard `EvidenceXAI Overview` показывает:
 
 - backend availability;
 - число task failures за последние `10m`;

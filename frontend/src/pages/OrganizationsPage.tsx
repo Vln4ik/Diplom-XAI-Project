@@ -278,6 +278,22 @@ export function OrganizationsPage({
         ]}
       />
 
+      <section className="panel organization-current-panel">
+        <div>
+          <p className="eyebrow">Текущий рабочий контур</p>
+          <h2>{selectedOrganization?.name ?? "Организация не выбрана"}</h2>
+          <p className="helper-text">
+            Выбор организации теперь выполняется здесь: нажмите на карточку ниже, чтобы сделать её активной и открыть
+            форму редактирования. Все документы, отчеты, требования и риски будут работать в рамках выбранной организации.
+          </p>
+        </div>
+        {selectedOrganization ? (
+          <span className="status-pill tone-success">Активна</span>
+        ) : (
+          <span className="status-pill tone-warning">Нужно выбрать</span>
+        )}
+      </section>
+
       <section className="panel">
         <div className="section-header">
           <h2>Новая организация</h2>
@@ -342,6 +358,7 @@ export function OrganizationsPage({
                 </p>
               </div>
               <span>{new Date(organization.updated_at).toLocaleDateString("ru-RU")}</span>
+              {selectedOrganizationId === organization.id ? <span className="status-pill tone-success">Текущая</span> : null}
             </button>
           ))}
         </div>

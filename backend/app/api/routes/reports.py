@@ -2,14 +2,35 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ensure_org_access, get_current_user, get_db
-from app.models import ExportFile, MemberRole, Organization, Report, ReportSection, ReportStatus, ReportVersion, User
+from app.models import (
+    DocumentCategory,
+    DocumentStatus,
+    Evidence,
+    ExpertiseFinding,
+    ExpertiseUserDecision,
+    ExpertiseWorkflow,
+    ExpertiseWorkflowStage,
+    Explanation,
+    ExportFile,
+    MemberRole,
+    Organization,
+    Report,
+    ReportSection,
+    ReportStatus,
+    ReportVersion,
+    Requirement,
+    Risk,
+    User,
+)
 from app.schemas import (
+    EstimateExpertiseDecisionRequest,
+    EstimateExpertiseWorkflowResponse,
     ExportFileResponse,
     ReportCreate,
     ReportMatrixRowResponse,
@@ -19,6 +40,14 @@ from app.schemas import (
     ReportUpdate,
     ReportVersionResponse,
 )
+from app.services.documents import create_document
+from app.services.estimate_expertise import (
+    ensure_estimate_expertise_workflow,
+    record_replacement_started,
+    record_finding_decision,
+    serialize_workflow,
+    workflow_needs_pipeline_run,
+)
 from app.services.exports import export_evidence_package, export_explanations_html, export_matrix_xlsx, export_report_docx
 from app.services.reports import (
     approve_report,
@@ -27,7 +56,14 @@ from app.services.reports import (
     return_report_to_revision,
     submit_report_for_approval,
 )
-from app.workers.tasks import report_analyze_task, report_generate_task
+from app.services.report_types import requires_special_workflow
+from app.workers.tasks import (
+    document_process_task,
+    estimate_expertise_replacement_recheck_task,
+    estimate_expertise_start_task,
+    report_analyze_task,
+    report_generate_task,
+)
 
 router = APIRouter(tags=["reports"])
 
@@ -45,6 +81,21 @@ def _ensure_report_status(report: Report, *, allowed: set[ReportStatus], action:
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Cannot {action} when report status is '{report.status.value}'",
         )
+
+
+def _ensure_special_workflow_report(report: Report) -> None:
+    if not requires_special_workflow(report.report_type):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This report type does not use the state expertise workflow",
+        )
+
+
+def _get_expertise_finding_or_404(db: Session, finding_id: str) -> ExpertiseFinding:
+    finding = db.scalar(select(ExpertiseFinding).where(ExpertiseFinding.id == finding_id))
+    if finding is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Expertise finding not found")
+    return finding
 
 
 @router.get("/organizations/{organization_id}/reports", response_model=list[ReportResponse])
@@ -75,6 +126,103 @@ def create_report(
     return report
 
 
+@router.post("/reports/{report_id}/estimate-expertise/start", response_model=EstimateExpertiseWorkflowResponse)
+def start_estimate_expertise_workflow(
+    report_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    report = _get_report_or_404(db, report_id)
+    ensure_org_access(db, organization_id=report.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    _ensure_special_workflow_report(report)
+    workflow = ensure_estimate_expertise_workflow(db, report)
+    if workflow_needs_pipeline_run(db, workflow):
+        estimate_expertise_start_task.delay(report.id)
+        db.refresh(workflow)
+    return serialize_workflow(db, workflow)
+
+
+@router.get("/reports/{report_id}/estimate-expertise/state", response_model=EstimateExpertiseWorkflowResponse)
+def get_estimate_expertise_workflow_state(
+    report_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    report = _get_report_or_404(db, report_id)
+    ensure_org_access(db, organization_id=report.organization_id, user=user)
+    _ensure_special_workflow_report(report)
+    workflow = ensure_estimate_expertise_workflow(db, report)
+    return serialize_workflow(db, workflow)
+
+
+@router.post("/estimate-expertise/findings/{finding_id}/approve", response_model=EstimateExpertiseWorkflowResponse)
+def approve_estimate_expertise_finding(
+    finding_id: str,
+    payload: EstimateExpertiseDecisionRequest | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    finding = _get_expertise_finding_or_404(db, finding_id)
+    ensure_org_access(db, organization_id=finding.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    workflow = record_finding_decision(db, finding, user_id=user.id, decision_type="approve", comment=payload.comment if payload else None)
+    return serialize_workflow(db, workflow)
+
+
+@router.post("/estimate-expertise/findings/{finding_id}/skip", response_model=EstimateExpertiseWorkflowResponse)
+def skip_estimate_expertise_finding(
+    finding_id: str,
+    payload: EstimateExpertiseDecisionRequest | None = None,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    finding = _get_expertise_finding_or_404(db, finding_id)
+    ensure_org_access(db, organization_id=finding.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    workflow = record_finding_decision(db, finding, user_id=user.id, decision_type="skip", comment=payload.comment if payload else None)
+    return serialize_workflow(db, workflow)
+
+
+@router.post("/estimate-expertise/findings/{finding_id}/replacement", response_model=EstimateExpertiseWorkflowResponse)
+async def upload_estimate_expertise_replacement(
+    finding_id: str,
+    file: UploadFile = File(...),
+    comment: str | None = Form(default=None),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> dict:
+    finding = _get_expertise_finding_or_404(db, finding_id)
+    ensure_org_access(db, organization_id=finding.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Replacement file is empty")
+    file_name = file.filename or "replacement.bin"
+    replacement_document = create_document(
+        db,
+        organization_id=finding.organization_id,
+        uploaded_by_id=user.id,
+        file_name=file_name,
+        content=content,
+        content_type=file.content_type,
+        category=DocumentCategory.evidence,
+        tags=["estimate_expertise_replacement"],
+        relative_path=f"estimate-expertise/replacements/{file_name}",
+    )
+    replacement_document.status = DocumentStatus.queued
+    db.add(replacement_document)
+    db.commit()
+    db.refresh(replacement_document)
+    workflow = record_replacement_started(
+        db,
+        finding,
+        user_id=user.id,
+        comment=comment,
+        replacement_document=replacement_document,
+    )
+    estimate_expertise_replacement_recheck_task.delay(finding.id, replacement_document.id, user.id, comment)
+    db.expire_all()
+    db.refresh(workflow)
+    return serialize_workflow(db, workflow)
+
+
 @router.get("/reports/{report_id}", response_model=ReportResponse)
 def get_report(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Report:
     report = _get_report_or_404(db, report_id)
@@ -99,6 +247,34 @@ def update_report(
     return report
 
 
+@router.delete("/reports/{report_id}", response_model=ReportResponse)
+def delete_report(report_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Report:
+    report = _get_report_or_404(db, report_id)
+    ensure_org_access(
+        db,
+        organization_id=report.organization_id,
+        user=user,
+        allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin],
+    )
+    workflow_ids = select(ExpertiseWorkflow.id).where(ExpertiseWorkflow.report_id == report_id)
+    requirement_ids = select(Requirement.id).where(Requirement.report_id == report_id)
+
+    db.execute(delete(ExpertiseUserDecision).where(ExpertiseUserDecision.workflow_id.in_(workflow_ids)))
+    db.execute(delete(ExpertiseFinding).where(ExpertiseFinding.report_id == report_id))
+    db.execute(delete(ExpertiseWorkflowStage).where(ExpertiseWorkflowStage.workflow_id.in_(workflow_ids)))
+    db.execute(delete(ExpertiseWorkflow).where(ExpertiseWorkflow.report_id == report_id))
+    db.execute(delete(Evidence).where(Evidence.requirement_id.in_(requirement_ids)))
+    db.execute(delete(Explanation).where(Explanation.requirement_id.in_(requirement_ids)))
+    db.execute(delete(Risk).where(Risk.report_id == report_id))
+    db.execute(delete(Requirement).where(Requirement.report_id == report_id))
+    db.execute(delete(ExportFile).where(ExportFile.report_id == report_id))
+    db.execute(delete(ReportSection).where(ReportSection.report_id == report_id))
+    db.execute(delete(ReportVersion).where(ReportVersion.report_id == report_id))
+    db.delete(report)
+    db.commit()
+    return report
+
+
 @router.post("/reports/{report_id}/analyze", response_model=ReportResponse)
 def analyze(
     report_id: str,
@@ -107,6 +283,11 @@ def analyze(
 ) -> Report:
     report = _get_report_or_404(db, report_id)
     ensure_org_access(db, organization_id=report.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    if requires_special_workflow(report.report_type):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This report type requires a specialized state expertise workflow",
+        )
     _ensure_report_status(report, allowed={ReportStatus.draft, ReportStatus.in_revision, ReportStatus.requires_review}, action="analyze")
     report.status = ReportStatus.analyzing
     db.add(report)
@@ -124,6 +305,11 @@ def generate(
 ) -> Report:
     report = _get_report_or_404(db, report_id)
     ensure_org_access(db, organization_id=report.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    if requires_special_workflow(report.report_type):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This report type requires a specialized state expertise workflow",
+        )
     _ensure_report_status(report, allowed={ReportStatus.requires_review, ReportStatus.in_revision, ReportStatus.draft}, action="generate")
     report_generate_task.delay(report.id)
     db.refresh(report)

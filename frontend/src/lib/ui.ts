@@ -6,6 +6,7 @@ import type {
   RequirementItem,
   RiskItem,
 } from "./types";
+import { getReportTypeLabel } from "./reportTypes";
 
 export type UiTone = "info" | "success" | "warning" | "danger";
 
@@ -14,6 +15,7 @@ export type UiTask = {
   title: string;
   detail: string;
   progress: number;
+  currentItemName?: string;
   tone?: UiTone;
 };
 
@@ -125,12 +127,7 @@ export function formatDocumentCategory(category: string): string {
 }
 
 export function formatReportType(reportType: string): string {
-  const labels: Record<string, string> = {
-    readiness_report: "Готовность к проверке",
-    template_report: "Отчет по шаблону",
-    document_completeness: "Комплектность документов",
-  };
-  return labels[reportType] ?? reportType;
+  return getReportTypeLabel(reportType);
 }
 
 export function getDocumentProgressMeta(status: string): ProgressMeta {
@@ -185,6 +182,71 @@ export function getDocumentProgressMeta(status: string): ProgressMeta {
     },
   };
   return map[status] ?? map.uploaded;
+}
+
+export function getDocumentProcessingReason(document: DocumentItem): string | null {
+  if (document.processing_error?.trim()) {
+    return formatStoredDocumentProcessingError(document.processing_error.trim());
+  }
+
+  if (document.status === "failed") {
+    return "Pipeline завершился с ошибкой, но backend не передал техническую причину. Повторите обработку; если ошибка сохранится, загрузите файл заново или проверьте формат.";
+  }
+
+  if (document.status === "requires_review") {
+    return "Документ был обработан частично: текст извлечен, но качество результата, структура файла или OCR-слой требуют ручной проверки перед анализом.";
+  }
+
+  return null;
+}
+
+function formatStoredDocumentProcessingError(reason: string): string {
+  const normalized = reason.toLowerCase();
+
+  if (normalized.includes("unsupported document format")) {
+    const suffix = reason.split(":").pop()?.trim() || "неизвестный формат";
+    return `Формат файла ${suffix} пока не поддерживается контуром извлечения текста. Загрузите PDF, DOCX, DOC, XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S, GGE или изображение, либо предварительно конвертируйте файл.`;
+  }
+
+  if (normalized.includes("invalid zip") || normalized.includes("badzipfile") || normalized.includes("file is not a zip file")) {
+    return "Архив или контейнер поврежден либо имеет неверную структуру. Проверьте файл, распакуйте его локально или загрузите корректную копию.";
+  }
+
+  if (normalized.includes("time limit") || normalized.includes("timelimit") || normalized.includes("timeout")) {
+    return "Обработка превысила лимит времени. Разделите пакет на несколько файлов, уменьшите размер сканов или повторите обработку.";
+  }
+
+  if (normalized.includes("no such file") || normalized.includes("filenotfound")) {
+    return "Исходный файл не найден в локальном хранилище. Вероятно, файл был удален или перемещен после загрузки; загрузите его повторно.";
+  }
+
+  return reason;
+}
+
+export function getLiveDocumentProgressMeta(status: string, liveElapsedMs = 0): ProgressMeta {
+  const meta = getDocumentProgressMeta(status);
+  const elapsedSeconds = Math.max(0, liveElapsedMs / 1000);
+
+  if (status === "queued") {
+    return {
+      ...meta,
+      progress: clampProgress(Math.min(64, 18 + elapsedSeconds * 0.55)),
+    };
+  }
+
+  if (status === "processing") {
+    return {
+      ...meta,
+      progress: clampProgress(Math.min(92, 64 + elapsedSeconds * 0.45)),
+    };
+  }
+
+  return meta;
+}
+
+export function getLiveReportAnalysisProgress(readinessPercent: number, liveElapsedMs = 0): number {
+  const elapsedSeconds = Math.max(0, liveElapsedMs / 1000);
+  return clampProgress(Math.max(readinessPercent, Math.min(88, 36 + elapsedSeconds * 0.5)));
 }
 
 export function getScoreTone(value: number): UiTone {

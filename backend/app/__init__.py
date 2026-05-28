@@ -1,1 +1,1 @@
-"""Backend package for XAI Report Builder."""
+"""Backend package for EvidenceXAI."""

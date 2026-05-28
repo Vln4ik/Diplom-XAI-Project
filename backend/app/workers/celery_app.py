@@ -12,7 +12,6 @@ from app.services.runtime_metrics import runtime_metrics
 settings = get_settings()
 
 celery_app = Celery("xai_report_builder", broker=settings.redis_url, backend=settings.redis_url)
-celery_app.conf.task_always_eager = settings.celery_task_always_eager
 celery_app.conf.task_serializer = "json"
 celery_app.conf.result_serializer = "json"
 celery_app.conf.accept_content = ["json"]
@@ -21,7 +20,26 @@ celery_app.conf.task_track_started = True
 celery_app.conf.task_send_sent_event = True
 celery_app.conf.worker_send_task_events = True
 celery_app.conf.worker_prefetch_multiplier = 1
+celery_app.conf.task_acks_late = False
 celery_app.conf.result_expires = 60 * 60 * 24
+
+
+def configure_celery_from_settings() -> None:
+    current_settings = get_settings()
+    celery_app.conf.update(
+        broker_url=current_settings.redis_url,
+        result_backend=current_settings.redis_url,
+        task_always_eager=current_settings.celery_task_always_eager,
+    )
+
+
+def register_project_tasks() -> None:
+    # Importing the module registers decorated tasks on the shared Celery app.
+    import app.workers.tasks  # noqa: F401
+
+
+configure_celery_from_settings()
+register_project_tasks()
 
 _task_started_at: dict[str, float] = {}
 _task_started_lock = Lock()

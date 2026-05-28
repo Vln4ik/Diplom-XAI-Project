@@ -9,7 +9,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="XAI_APP_", case_sensitive=False, extra="ignore")
 
-    app_name: str = "XAI Report Builder API"
+    app_name: str = "EvidenceXAI API"
     api_prefix: str = "/api"
     database_url: str = "sqlite:///./xai_report_builder.db"
     redis_url: str = "redis://localhost:6379/0"
@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     ocr_provider: str = "disabled"
     ocr_languages: str = "rus+eng"
     tesseract_cmd: str | None = None
+    visual_signature_provider: str = "layout_baseline"
+    visual_quality_provider: str = "layout_baseline"
     external_integrations_csv: str = ""
     esign_provider: str = "disabled"
     ollama_base_url: str = "http://localhost:11434/api"

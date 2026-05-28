@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import PurePosixPath
 
-from fastapi import UploadFile
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,55 @@ from app.processors.documents import extract_document
 from app.services.audit import log_action
 from app.services.retrieval import compute_embedding, rank_fragments, tokenize
 from app.services.storage import storage
+
+
+def describe_processing_error(exc: Exception) -> str:
+    raw_message = str(exc).strip()
+    raw = raw_message or exc.__class__.__name__
+    normalized = f"{exc.__class__.__name__}: {raw}".lower()
+
+    if "unsupported document format" in normalized:
+        suffix = raw.split(":", 1)[-1].strip() if ":" in raw else "неизвестный формат"
+        return (
+            f"Формат файла {suffix} пока не поддерживается контуром извлечения текста. "
+            "Загрузите документ в PDF, DOCX, DOC, XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S, GGE "
+            "или графическом формате, либо предварительно конвертируйте файл."
+        )
+
+    if "invalid zip/container file" in normalized or "badzipfile" in normalized or "file is not a zip file" in normalized:
+        return "Архив или контейнер поврежден либо имеет неверную структуру. Проверьте файл, распакуйте его локально или загрузите корректную копию."
+
+    if "jsondecodeerror" in normalized or "expecting value" in normalized:
+        return "JSON-файл не удалось прочитать: внутри нарушена структура JSON. Проверьте синтаксис или загрузите исправленную выгрузку."
+
+    if "permission" in normalized or "permission denied" in normalized:
+        return "Backend не получил доступ к файлу в локальном хранилище. Проверьте права на файл и повторите обработку."
+
+    if "filenotfounderror" in normalized or "no such file" in normalized:
+        return "Исходный файл не найден в локальном хранилище. Вероятно, файл был удален или перемещен после загрузки; загрузите его повторно."
+
+    if "softtimelimit" in normalized or "timelimit" in normalized or "time limit" in normalized or "timeout" in normalized:
+        return (
+            "Обработка превысила лимит времени. Обычно это происходит на больших сканах, тяжелых PDF или архивах. "
+            "Разделите пакет на несколько файлов, уменьшите размер сканов или повторите обработку."
+        )
+
+    if "ocr" in normalized or "tesseract" in normalized or "pdf ocr rendering" in normalized:
+        return "OCR-контур не смог распознать текст или подготовить страницу к распознаванию. Проверьте качество скана и доступность локальных OCR-зависимостей."
+
+    if "pdf" in normalized and ("eof" in normalized or "xref" in normalized or "startxref" in normalized or "malformed" in normalized):
+        return "PDF-файл выглядит поврежденным или неполным. Откройте его локально, пересохраните в PDF и загрузите новую копию."
+
+    if "encrypted" in normalized or "password" in normalized:
+        return "Документ защищен паролем или шифрованием. Снимите защиту или загрузите экспортируемую копию без пароля."
+
+    if "docx" in normalized or "package not found" in normalized or "word file" in normalized:
+        return "DOCX/DOC-файл не удалось разобрать как корректный документ Word. Проверьте, что файл не поврежден, и при необходимости пересохраните его."
+
+    if "openpyxl" in normalized or "excel" in normalized or "workbook" in normalized:
+        return "Excel-файл не удалось открыть как корректную книгу. Проверьте формат, защиту и целостность XLSX/XLSM-файла."
+
+    return f"Не удалось обработать документ: {raw}"
 
 
 def create_document(
@@ -23,13 +72,16 @@ def create_document(
     content_type: str | None,
     category: DocumentCategory,
     tags: list[str] | None = None,
+    relative_path: str | None = None,
 ) -> Document:
+    normalized_relative_path = normalize_document_relative_path(relative_path, fallback_file_name=file_name)
     storage_path = storage.save_document_bytes(organization_id, file_name, content)
     document = Document(
         organization_id=organization_id,
         uploaded_by_id=uploaded_by_id,
         file_name=file_name,
         original_file_name=file_name,
+        relative_path=normalized_relative_path,
         file_type=content_type or "application/octet-stream",
         file_size=len(content),
         category=category,
@@ -43,10 +95,30 @@ def create_document(
     return document
 
 
+def normalize_document_relative_path(relative_path: str | None, *, fallback_file_name: str) -> str | None:
+    if not relative_path:
+        return None
+
+    safe_parts: list[str] = []
+    for part in relative_path.replace("\\", "/").split("/"):
+        cleaned = part.strip()
+        if not cleaned or cleaned in {".", ".."}:
+            continue
+        safe_parts.append(cleaned)
+
+    if len(safe_parts) <= 1:
+        return None
+
+    safe_parts[-1] = PurePosixPath(fallback_file_name).name
+    return "/".join(safe_parts)[:1024]
+
+
 def process_document(db: Session, document_id: str) -> Document:
     document = db.scalar(select(Document).where(Document.id == document_id))
     if document is None:
         raise ValueError("Document not found")
+    if document.status not in {DocumentStatus.queued, DocumentStatus.processing}:
+        return document
 
     document.status = DocumentStatus.processing
     document.processing_error = None
@@ -95,7 +167,7 @@ def process_document(db: Session, document_id: str) -> Document:
         return document
     except Exception as exc:
         document.status = DocumentStatus.failed
-        document.processing_error = str(exc)
+        document.processing_error = describe_processing_error(exc)
         db.add(document)
         db.commit()
         raise

@@ -1,0 +1,23 @@
+<svg width="360" height="112" viewBox="0 0 360 112" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">EX.AI Evidence Seal</title>
+  <desc id="desc">EvidenceXAI logo with evidence seal, check trace and enterprise wordmark.</desc>
+  <defs>
+    <linearGradient id="sealGradient" x1="30" y1="22" x2="108" y2="90" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.52" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <linearGradient id="textGradient" x1="126" y1="31" x2="311" y2="78" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="0.62" stop-color="#1D4ED8"/>
+      <stop offset="1" stop-color="#0891B2"/>
+    </linearGradient>
+  </defs>
+  <path d="M70 18L111 34V60C111 80 94.9 92.6 70 99C45.1 92.6 29 80 29 60V34L70 18Z" fill="url(#sealGradient)"/>
+  <path d="M51 57.5L64 70L91 43" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M126 35H306" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <path d="M126 78H248" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round"/>
+  <text x="126" y="68" fill="url(#textGradient)" font-family="Unbounded, Manrope, Arial, sans-serif" font-size="42" font-weight="700" letter-spacing="1.2">EX.AI</text>
+  <circle cx="318" cy="35" r="7" fill="#06B6D4" fill-opacity="0.18"/>
+  <circle cx="318" cy="35" r="3" fill="#06B6D4"/>
+</svg>

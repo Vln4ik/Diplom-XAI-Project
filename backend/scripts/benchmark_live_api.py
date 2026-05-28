@@ -736,7 +736,7 @@ def run_benchmark(args: argparse.Namespace) -> dict[str, object]:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run a live benchmark against the XAI Report Builder API.")
+    parser = argparse.ArgumentParser(description="Run a live benchmark against the EvidenceXAI API.")
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--email", default="admin@example.com")
     parser.add_argument("--password", default="ChangeMe123!")

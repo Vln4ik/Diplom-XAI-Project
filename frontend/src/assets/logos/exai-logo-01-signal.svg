@@ -1,0 +1,22 @@
+<svg width="360" height="112" viewBox="0 0 360 112" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">EX.AI Signal Wordmark</title>
+  <desc id="desc">EvidenceXAI compact logo with signal nodes and blue cyan gradient.</desc>
+  <defs>
+    <linearGradient id="signalGradient" x1="16" y1="18" x2="344" y2="96" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4ED8"/>
+      <stop offset="0.54" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#06B6D4"/>
+    </linearGradient>
+    <filter id="softGlow" x="-20%" y="-40%" width="140%" height="180%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="#2563EB" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect x="16" y="18" width="328" height="76" rx="28" fill="url(#signalGradient)" filter="url(#softGlow)"/>
+  <path d="M59 65.5C75.4 39.7 93.6 39.7 110 65.5" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="57" cy="67" r="6" fill="white"/>
+  <circle cx="84.5" cy="48" r="5" fill="white" fill-opacity="0.86"/>
+  <circle cx="112" cy="67" r="6" fill="white"/>
+  <text x="139" y="69" fill="white" font-family="Unbounded, Manrope, Arial, sans-serif" font-size="38" font-weight="700" letter-spacing="1.8">EX.AI</text>
+  <circle cx="304" cy="56" r="8" fill="white" fill-opacity="0.22"/>
+  <circle cx="304" cy="56" r="3" fill="white"/>
+</svg>

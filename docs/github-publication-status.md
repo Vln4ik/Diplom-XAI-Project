@@ -16,6 +16,8 @@
 - repository: `https://github.com/Vln4ik/Diplom-XAI-Project`
 - branch: `main`
 
+Текущий публичный бренд проекта в коде и документации: `EvidenceXAI`, компактная метка `EX.AI`.
+
 Локальная ветка `main` должна быть синхронизирована с `origin/main` после каждого публикационного шага.
 
 Актуальный commit проверяется командами:
@@ -85,7 +87,7 @@ gh auth login
 
 Рекомендуемая смысловая формулировка:
 
-`Web-first XAI platform for evidence-grounded regulatory reporting with local AI, hybrid retrieval, OCR, and human-in-the-loop review.`
+`EvidenceXAI: web-first XAI platform for evidence-grounded regulatory reporting with local AI, hybrid retrieval, OCR, and human-in-the-loop review.`
 
 Ключевые теги:
 

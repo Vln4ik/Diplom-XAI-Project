@@ -87,6 +87,7 @@ class Document(IdMixin, TimestampMixin, Base):
     uploaded_by_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     file_name: Mapped[str] = mapped_column(String(255))
     original_file_name: Mapped[str] = mapped_column(String(255))
+    relative_path: Mapped[str | None] = mapped_column(String(1024))
     file_type: Mapped[str] = mapped_column(String(255))
     file_size: Mapped[int] = mapped_column(Integer)
     category: Mapped[DocumentCategory] = mapped_column(Enum(DocumentCategory), default=DocumentCategory.other)
@@ -175,6 +176,93 @@ class ReportVersion(IdMixin, TimestampMixin, Base):
     explanations_json: Mapped[list[dict]] = mapped_column(JSON, default=list)
 
     report: Mapped[Report] = relationship(back_populates="versions")
+
+
+class ExpertiseWorkflow(IdMixin, TimestampMixin, Base):
+    __tablename__ = "expertise_workflows"
+    __table_args__ = (UniqueConstraint("report_id", name="uq_expertise_workflows_report_id"),)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    report_id: Mapped[str] = mapped_column(ForeignKey("reports.id", ondelete="CASCADE"), index=True)
+    status: Mapped[str] = mapped_column(String(64), default="running")
+    progress: Mapped[float] = mapped_column(Float, default=0.0)
+    eta_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    checked_files: Mapped[int] = mapped_column(Integer, default=0)
+    total_files: Mapped[int] = mapped_column(Integer, default=0)
+    unresolved_findings: Mapped[int] = mapped_column(Integer, default=0)
+    current_stage_key: Mapped[str | None] = mapped_column(String(128))
+    model_version: Mapped[str] = mapped_column(String(128), default="frontend-skeleton-v1")
+    rule_version: Mapped[str] = mapped_column(String(128), default="estimate-cost-demo-rules-v1")
+    state_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    stages: Mapped[list["ExpertiseWorkflowStage"]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
+    findings: Mapped[list["ExpertiseFinding"]] = relationship(back_populates="workflow", cascade="all, delete-orphan")
+
+
+class ExpertiseWorkflowStage(IdMixin, TimestampMixin, Base):
+    __tablename__ = "expertise_workflow_stages"
+    __table_args__ = (UniqueConstraint("workflow_id", "stage_key", name="uq_expertise_stage_workflow_key"),)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(ForeignKey("expertise_workflows.id", ondelete="CASCADE"), index=True)
+    stage_key: Mapped[str] = mapped_column(String(128))
+    title: Mapped[str] = mapped_column(String(255))
+    short_title: Mapped[str] = mapped_column(String(128))
+    order_number: Mapped[int] = mapped_column(Integer)
+    status: Mapped[str] = mapped_column(String(64), default="pending")
+    progress: Mapped[float] = mapped_column(Float, default=0.0)
+    checked_files: Mapped[int] = mapped_column(Integer, default=0)
+    total_files: Mapped[int] = mapped_column(Integer, default=0)
+    findings_count: Mapped[int] = mapped_column(Integer, default=0)
+    summary_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    workflow: Mapped[ExpertiseWorkflow] = relationship(back_populates="stages")
+    findings: Mapped[list["ExpertiseFinding"]] = relationship(back_populates="stage", cascade="all, delete-orphan")
+
+
+class ExpertiseFinding(IdMixin, TimestampMixin, Base):
+    __tablename__ = "expertise_findings"
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    report_id: Mapped[str] = mapped_column(ForeignKey("reports.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(ForeignKey("expertise_workflows.id", ondelete="CASCADE"), index=True)
+    stage_id: Mapped[str | None] = mapped_column(ForeignKey("expertise_workflow_stages.id", ondelete="CASCADE"), index=True)
+    document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"), index=True)
+    stage_key: Mapped[str] = mapped_column(String(128))
+    title: Mapped[str] = mapped_column(String(255))
+    description: Mapped[str] = mapped_column(Text)
+    severity: Mapped[str] = mapped_column(String(32), default="warning")
+    confidence_score: Mapped[float] = mapped_column(Float, default=0.0)
+    normative_basis: Mapped[str] = mapped_column(Text)
+    source_ref: Mapped[str] = mapped_column(Text)
+    recommendation: Mapped[str] = mapped_column(Text)
+    xai_json: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(64), default="open")
+    user_decision_status: Mapped[str | None] = mapped_column(String(64))
+    replacement_document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    replacement_file_name: Mapped[str | None] = mapped_column(String(255))
+    replacement_progress: Mapped[int] = mapped_column(Integer, default=0)
+
+    workflow: Mapped[ExpertiseWorkflow] = relationship(back_populates="findings")
+    stage: Mapped[ExpertiseWorkflowStage | None] = relationship(back_populates="findings")
+    decisions: Mapped[list["ExpertiseUserDecision"]] = relationship(back_populates="finding", cascade="all, delete-orphan")
+
+
+class ExpertiseUserDecision(IdMixin, TimestampMixin, Base):
+    __tablename__ = "expertise_user_decisions"
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    workflow_id: Mapped[str] = mapped_column(ForeignKey("expertise_workflows.id", ondelete="CASCADE"), index=True)
+    finding_id: Mapped[str] = mapped_column(ForeignKey("expertise_findings.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    decision_type: Mapped[str] = mapped_column(String(64))
+    comment: Mapped[str | None] = mapped_column(Text)
+    replacement_document_id: Mapped[str | None] = mapped_column(ForeignKey("documents.id", ondelete="SET NULL"))
+    replacement_file_name: Mapped[str | None] = mapped_column(String(255))
+    replacement_progress: Mapped[int] = mapped_column(Integer, default=0)
+    payload_json: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    finding: Mapped[ExpertiseFinding] = relationship(back_populates="decisions")
 
 
 class Requirement(IdMixin, TimestampMixin, Base):

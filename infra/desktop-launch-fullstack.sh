@@ -8,7 +8,7 @@ API_DOCS_URL="${API_DOCS_URL:-http://localhost:8000/docs}"
 cd "$ROOT_DIR"
 
 echo
-echo "XAI Report Builder"
+echo "EvidenceXAI"
 echo "Запуск полного стека..."
 echo
 

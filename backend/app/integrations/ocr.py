@@ -48,6 +48,8 @@ class OCRProvider:
         return {
             "provider": self.provider_name(),
             "mode": self.mode(),
+            "runtime_scope": "local_server",
+            "sends_documents_to_external_services": False,
         }
 
 
@@ -237,6 +239,9 @@ class TesseractOCRProvider(OCRProvider):
             (max(vertical_lines[index][0] + 8, 0), min(vertical_lines[index + 1][1] - 8, grayscale.width))
             for index in range(min(3, len(vertical_lines) - 1))
         ]
+        column_bounds = [(left, right) for left, right in column_bounds if right > left]
+        if len(column_bounds) < 2:
+            return []
 
         rows: list[str] = []
         for index in range(len(horizontal_lines) - 1):
@@ -245,11 +250,14 @@ class TesseractOCRProvider(OCRProvider):
             if bottom - top < 40:
                 continue
 
-            row_text = self._ocr_table_row(
-                grayscale=grayscale,
-                row_bounds=(top, bottom),
-                column_bounds=column_bounds,
-            )
+            try:
+                row_text = self._ocr_table_row(
+                    grayscale=grayscale,
+                    row_bounds=(top, bottom),
+                    column_bounds=column_bounds,
+                )
+            except Exception:
+                continue
             if row_text:
                 rows.append(row_text)
 

@@ -10,10 +10,19 @@ def test_system_health_and_metrics_endpoints(client):
 
     ai_status_response = test_client.get("/api/system/ai-status")
     assert ai_status_response.status_code == 200
-    assert "profile" in ai_status_response.json()
-    assert "ocr" in ai_status_response.json()
-    assert "runtime_profile" in ai_status_response.json()["embeddings"]
-    assert "resolved_model" in ai_status_response.json()["llm"]
+    ai_status = ai_status_response.json()
+    assert "profile" in ai_status
+    assert "ocr" in ai_status
+    assert ai_status["ocr"]["runtime_scope"] == "local_server"
+    assert ai_status["ocr"]["sends_documents_to_external_services"] is False
+    assert ai_status["vision"]["runtime_scope"] == "local_server"
+    assert ai_status["vision"]["sends_documents_to_external_services"] is False
+    assert ai_status["visual_quality"]["runtime_scope"] == "local_server"
+    assert ai_status["visual_quality"]["sends_documents_to_external_services"] is False
+    assert ai_status["terminology_quality"]["runtime_scope"] == "local_server"
+    assert ai_status["terminology_quality"]["sends_documents_to_external_services"] is False
+    assert "runtime_profile" in ai_status["embeddings"]
+    assert "resolved_model" in ai_status["llm"]
 
     integrations_response = test_client.get("/api/system/integrations")
     assert integrations_response.status_code == 200

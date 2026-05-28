@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: XAI Report Builder
+  - name: EvidenceXAI
     orgId: 1
-    folder: XAI Report Builder
+    folder: EvidenceXAI
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

@@ -49,7 +49,7 @@ ORGANIZATION_FIELDS = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Import generated demo organizations into the current XAI Report Builder database.")
+    parser = argparse.ArgumentParser(description="Import generated demo organizations into the current EvidenceXAI database.")
     parser.add_argument("--user-email", required=True, help="Email of an existing user who should receive org_admin access.")
     parser.add_argument("--skip-processing", action="store_true", help="Only create organizations and upload files without document processing.")
     return parser.parse_args()
