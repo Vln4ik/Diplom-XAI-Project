@@ -1,5 +1,7 @@
 # Системный обзор
 
+Дата актуализации: `2026-05-29`
+
 ## 1. Назначение системы
 
 `EvidenceXAI` — это web-first платформа для подготовки объяснимой отчётности по проверочным и надзорным сценариям.
@@ -97,6 +99,7 @@
 - pilot `real_corpus`
 - calibration sweep
 - базовый observability-контур
+- synthetic benchmark проектно-сметного спецworkflow
 
 ## 5. Пользователи и роли
 
@@ -209,6 +212,7 @@
 - OCR benchmark
 - performance / load / stress artifacts
 - state expertise corpus validation
+- estimate expertise synthetic benchmark: `4/4` cases, `10/10` targets
 - реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`: `180` документов, `48` findings, `35` unresolved, корректный статус `blocked`
 
 Это даёт не только demo, но и формальный validation contour.
@@ -233,8 +237,11 @@
 - более сильный OCR / vision-контур
 - более сильные модели
 - более зрелая calibration-стратегия
+- real corpus проектно-сметной документации
+- снижение false-positive в `filename -> content`
+- comparative benchmark `baseline / quality / quality_plus`
 
-Инфраструктурная часть этого шага уже начата: локальные модели переключаются через runtime profiles, а следующий подэтап — сравнить эти профили на benchmark-контуре.
+Инфраструктурная часть этого шага уже начата: локальные модели переключаются через runtime profiles, спецworkflow государственной экспертизы перенесён в backend/Celery, synthetic benchmark проходит целевые проверки. Следующий подэтап — расширить real corpus и сравнить профили на одном benchmark-протоколе.
 
 ### `MVP 3`
 

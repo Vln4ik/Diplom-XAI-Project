@@ -1,189 +1,204 @@
 # Статус roadmap
 
+Дата актуализации: `2026-05-29`
+
 ## 1. Назначение документа
 
-Этот документ фиксирует не желаемый, а фактический статус проекта по отношению к актуальному roadmap.
+Этот документ является единой фактической веткой roadmap для `EvidenceXAI`.
 
-Канонический roadmap версий находится в [product-roadmap.md](product-roadmap.md).  
-Здесь фиксируется:
+Он не заменяет продуктовый roadmap, но фиксирует текущее состояние реализации:
 
-- что завершено
-- что частично готово
-- что отложено
-- какой этап сейчас активен
+- что уже закрыто;
+- что реализовано частично;
+- что осталось в активной работе;
+- какие документы и generated artifacts подтверждают статус.
+
+При расхождении narrative-документов и generated artifacts приоритет такой:
+
+1. код и тесты в `backend`, `frontend`, `infra`;
+2. generated artifacts в `docs/*.json` и соответствующие generated `*.md`;
+3. этот документ;
+4. остальные обзорные документы.
+
+Канонический roadmap версий: [product-roadmap.md](product-roadmap.md).
+Текущий runtime и последний реальный прогон: [current-project-status.md](current-project-status.md).
 
 ## 2. Сводка по версиям
 
-| Версия | Статус | Смысл |
+| Версия | Статус | Что означает сейчас |
 |---|---|---|
-| `MVP 1` | `завершён` | функциональное ядро реализовано |
-| `MVP 2` | `активный этап` | качество AI-контура и прикладное расширение на государственную экспертизу |
-| `MVP 3` | `запланирован` | процессный контур, интеграции, ЭП и governance |
-| `MVP 4` | `запланирован` | production/platform maturity |
-| `Post-MVP` | `исследовательский горизонт` | multimodal, fine-tuning, mobile branch |
+| `MVP 1` | `завершён` | web-first функциональное ядро, документы, требования, evidence, XAI, отчёты, экспорт, базовая валидация |
+| `MVP 2` | `активный этап` | усиление AI quality, OCR/vision, real corpus, прикладный трек государственной экспертизы |
+| `MVP 3` | `запланирован` | процессный контур, интеграции, ЭП, governance, multi-regulator templates |
+| `MVP 4` | `запланирован` | production/platform maturity, security, CI/CD, backup, stress `10x+`, mature observability |
+| `Post-MVP` | `исследовательский горизонт` | multimodal document understanding, fine-tuning, mobile branch, новые отрасли |
 
-## 3. Что реально закрыто в `MVP 1`
+## 3. Что закрыто в `MVP 1`
 
 ### 3.1. Продуктовый scope
 
-В `MVP 1` уже реализованы:
+Завершённый базовый контур включает:
 
-- web-first пользовательский сценарий
-- загрузка и обработка документов
-- реестр требований
-- матрица доказательств
-- risks
-- XAI explanations
-- report generation
-- export
-- базовый контур review / approval
+- web-first сценарий работы специалиста и approver;
+- multi-tenant организации, роли и membership;
+- загрузку документов и работу с папочным деревом;
+- обработку документов, фрагменты, поиск и embeddings;
+- реестр требований, applicability, evidence linking, confidence, risks;
+- сохранённые XAI-объяснения по требованиям;
+- генерацию разделов отчёта;
+- versioning, review / submit / approve;
+- export `DOCX`, `XLSX`, `ZIP`, `HTML`;
+- базовый demo/acceptance/benchmark contour.
 
 ### 3.2. Инженерный scope
 
 Реализованы:
 
-- `FastAPI + SQLAlchemy + Alembic`
-- `PostgreSQL + pgvector`
-- `Celery + Redis`
-- `React + TypeScript + Vite`
-- штатный baseline AI runtime без внешних API: `Ollama + all-minilm` для embeddings, `Ollama + gemma3:270m` для LLM и локальный `Tesseract`
-- fallback providers `hash-fallback` и `template-fallback` сохранены только как аварийная деградация, если Ollama недоступна
-- базовый OCR-контур через `Tesseract`
-- базовый observability-контур на `Prometheus + Grafana + Alertmanager`
+- backend: `FastAPI`, `SQLAlchemy 2`, `Alembic`, `Pydantic Settings`;
+- data layer: `PostgreSQL`, `pgvector`, local filesystem storage;
+- async layer: `Celery + Redis`;
+- frontend: `React 18`, `TypeScript`, `Vite`, `React Router`;
+- local AI runtime: `Ollama` для embeddings и LLM;
+- OCR: локальный `Tesseract`;
+- fallback providers: `hash-fallback` embeddings и `template-fallback` LLM как аварийная деградация;
+- observability baseline: `Prometheus`, `Grafana`, `Alertmanager`.
 
-### 3.3. Scope валидации
+### 3.3. Validation scope
 
-В репозитории уже есть:
+В репозитории есть:
 
-- backend tests
-- acceptance demo-сценарий
-- quality benchmark
-- extended committed benchmark-suite
-- pilot `real_corpus`
-- calibration sweep
-- performance / load / stress artifacts
-- прикладной state expertise corpus и validation artifacts
+- backend tests;
+- acceptance demo flow;
+- gold quality benchmark;
+- committed benchmark-suite;
+- pilot `real_corpus`;
+- calibration sweep;
+- OCR benchmark;
+- performance / load / stress artifacts;
+- synthetic benchmark для проектно-сметного спецworkflow;
+- manifest validator для будущего real corpus государственной экспертизы.
 
-## 4. Артефакты, подтверждающие статус `MVP 1`
+## 4. Подтверждающие артефакты
 
 ### 4.1. Core benchmark layer
 
-- gold benchmark: [quality-benchmark-results.md](quality-benchmark-results.md)
-- committed suite: [quality-benchmark-suite-results.md](quality-benchmark-suite-results.md)
-- calibration: [calibration-sweep-results.md](calibration-sweep-results.md)
+| Артефакт | Статус |
+|---|---|
+| [quality-benchmark-results.md](quality-benchmark-results.md) | gold benchmark: extraction, applicability, evidence, sections = `1.0000` |
+| [quality-benchmark-suite-results.md](quality-benchmark-suite-results.md) | `7` committed сценариев, evidence precision `0.9714`, recall `1.0000`, F1 `0.9855` |
+| [calibration-sweep-results.md](calibration-sweep-results.md) | recommended profile на committed suite: `baseline_current` |
 
 ### 4.2. Real corpus layer
 
-- corpus status: [real-corpus-status.md](real-corpus-status.md)
-- suite results: [real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md)
-- target evaluation: [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md)
-- calibration: [real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md)
+| Артефакт | Статус |
+|---|---|
+| [real-corpus-status.md](real-corpus-status.md) | pilot corpus готов к benchmark-проверке |
+| [real-corpus-quality-suite-results.md](real-corpus-quality-suite-results.md) | aggregate precision/recall/F1 = `1.0000` |
+| [real-corpus-target-evaluation.md](real-corpus-target-evaluation.md) | `5/5` cases, `20/20` targets |
+| [real-corpus-calibration-sweep.md](real-corpus-calibration-sweep.md) | recommended profile на pilot corpus: `baseline_current` |
 
-### 4.3. Performance and operations
+Жёсткий residual case: `college_gamma_ocr_package` в target evaluation всё ещё имеет `evidence_f1 = 0.7742`. Это уже выше target `0.3500`, но именно такой OCR-backed case-level слой остаётся хорошим фокусом `MVP 2`.
 
-- performance baseline: [performance-baseline.md](performance-baseline.md)
-- load baseline: [load-baseline.md](load-baseline.md)
-- stress baseline: [stress-baseline.md](stress-baseline.md)
-- stress `4x`: [stress-4x-baseline.md](stress-4x-baseline.md)
-- runtime comparison: [runtime-comparison-performance.md](runtime-comparison-performance.md)
-- observability stack: [observability-stack.md](observability-stack.md)
+### 4.3. OCR, runtime and operations
 
-## 5. Что ещё не входит в завершённый `MVP 1`
+| Артефакт | Статус |
+|---|---|
+| [ocr-benchmark-results.md](ocr-benchmark-results.md) | `char_similarity_mean = 0.9100`, `token_f1_mean = 0.9818`, `keyword_coverage_mean = 1.0000` |
+| [performance-baseline.md](performance-baseline.md) | живой пользовательский контур измерен на `Ollama + all-minilm + gemma3:270m` |
+| [runtime-comparison-performance.md](runtime-comparison-performance.md) | fallback быстрее, но `Ollama` нужен для качественной narrative generation |
+| [load-baseline.md](load-baseline.md), [stress-baseline.md](stress-baseline.md), [stress-4x-baseline.md](stress-4x-baseline.md) | базовые load/stress срезы зафиксированы |
+| [observability-stack.md](observability-stack.md) | baseline monitoring and alerting contour реализован |
 
-Это не блокеры статуса `MVP 1` как завершённой версии, а задачи следующих этапов.
+### 4.4. State expertise layer
 
-### 5.1. AI quality gaps
+| Артефакт | Статус |
+|---|---|
+| [state-expertise-roadmap.md](state-expertise-roadmap.md) | отраслевой roadmap государственной экспертизы |
+| [state-expertise-estimate-cost-report-tz-roadmap.md](state-expertise-estimate-cost-report-tz-roadmap.md) | детальное ТЗ и текущий статус спецworkflow |
+| [estimate-expertise-corpus-evaluation.md](estimate-expertise-corpus-evaluation.md) | synthetic corpus: `4/4` cases, `10/10` targets, rule pack `estimate-cost-pp145-rules-pack-v8` |
+| [estimate-expertise-corpus-validation.md](estimate-expertise-corpus-validation.md) | synthetic manifest валиден |
+| [current-project-status.md](current-project-status.md) | реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145` |
 
-- более широкий real-world benchmark corpus
-- более богатая оценка качества sections
-- более сильные embeddings / локальная LLM
-- более зрелый OCR / vision-контур
-- более сильная calibration-стратегия на широком корпусе
+Реальный локальный прогон `ПП 145`:
 
-### 5.2. Workflow / enterprise gaps
+- `180` выбранных документов;
+- `153 processed`;
+- `27 requires_review`;
+- `0 failed`;
+- workflow status: `blocked`;
+- `48` findings;
+- `35` unresolved findings.
 
-- richer process governance
-- электронная подпись
-- внешние интеграции
-- multi-regulator templates
+Статус `blocked` корректен: система нашла замечания, которые должен обработать пользователь.
 
-### 5.3. Platform gaps
+## 5. Что уже выполнено в активном `MVP 2`
 
-- CI/CD maturity
-- security hardening
-- retention / backup
-- stress-профили выше текущего базового уровня
-- more mature deployment profiles
+`MVP 2` уже не пустой план. В коде и артефактах закрыты следующие подзадачи:
 
-## 6. Активный следующий этап: `MVP 2`
+- profile-aware AI runtime: `baseline`, `quality`, `quality_plus`;
+- model resolver для `Ollama`: выбор лучшей доступной модели из профиля;
+- `/api/system/ai-status` показывает runtime profile, providers, candidate models, resolved models, fallback/model mode;
+- Docker Compose и launcher по умолчанию переводят backend/worker в `ollama` provider mode;
+- `quality-benchmark-suite` и pilot `real_corpus` стабилизированы после calibration work;
+- marker-based section quality уже измеряется и на committed suite, и на real corpus;
+- state expertise workflow для `ПП 145` и `ПП 87` перенесён в backend/Celery persistence contour;
+- для `ПП 145` реализованы этапы `start -> filename_content -> completeness -> quality_spell_signature -> final`;
+- для `ПП 87` вместо комплектности подачи по `ПП 145` используется этап `section_content`;
+- реализованы findings, user decisions, replacement re-check, audit trail, XAI summary и export для спецworkflow;
+- добавлены локальные baseline-провайдеры `layout-baseline-v1`, `layout-quality-baseline-v1`, `local-terminology-rules-v1`;
+- synthetic benchmark проектно-сметного спецworkflow проходит `4/4` cases и `10/10` targets;
+- реальный локальный пакет `Водоканалпроект / 1. ИРД` подтверждает работу на большом наборе документов.
 
-Текущий активный этап roadmap — `MVP 2`.
+## 6. Что остаётся в `MVP 2`
 
-### Главная цель
+Активные незакрытые задачи:
 
-Поднять качество AI-контура на более реалистичных данных.
-
-### Что уже удалось зафиксировать на текущем подэтапе
-
-- committed suite: `7` сценариев, `requirement extraction F1 = 1.0000`, `evidence linking precision = 0.9444`, `evidence linking F1 = 0.9714`
-- pilot `real_corpus`: `5/5` кейсов и `20/20` quality targets
-- pilot `real_corpus`: `requirement extraction F1 = 1.0000`, `status_accuracy_mean = 100.00%`, `source requirement coverage = 100.00%`, `section quality pass share = 100.00%`
-- pilot `real_corpus`: `evidence linking precision = 1.0000`, `recall = 1.0000`, `F1 = 1.0000`
-- реализован profile-aware локальный AI runtime: `baseline / quality / quality_plus`
-- `/api/system/ai-status` показывает активный профиль, фактические provider-ы и режим `fallback/model`
-- Docker runtime и launcher настроены на `ollama` provider-ы по умолчанию
-- реализован state expertise workflow для `ПП 145` и `ПП 87`
-- на реальном локальном кейсе `Водоканалпроект / 1. ИРД / ПП 145` обработано `180` документов: `153 processed`, `27 requires_review`, `0 failed`
-
-Это означает, что aggregate quality-контур `MVP 2` уже значительно усилился: статусы, section coverage и suite-level evidence linking больше не выглядят главным ограничением. Текущий самый жёсткий residual case сместился в строгий OCR-backed target evaluation, где `college_gamma_ocr_package` всё ещё даёт `evidence_f1 = 0.7742`.
-
-Отдельно подтвержден реальный прикладной прогон: спецworkflow `ПП 145` по кейсу `Водоканалпроект` сформировал `48` findings и корректно завершился в `blocked`, потому что осталось `35` нерешённых замечаний. Подробно: [current-project-status.md](current-project-status.md).
-
-### Ближайшие приоритеты
-
-1. расширение `real_corpus`
-2. улучшение OCR / vision-контура
-3. усиление reranker / evidence linking с лучшей precision на multi-evidence кейсах
-4. сравнительный benchmark профилей `quality` и `quality_plus` против `baseline`
-5. воспроизводимая calibration-стратегия на большем корпусе
-6. более глубокая semantic-оценка generated sections поверх текущего marker-based benchmark
-7. снижение false-positive в `filename -> content` classifier на реальных пакетах проектной документации
-8. оптимизация API списка документов: не возвращать полный `extracted_text` в реестре больших пакетов
+1. Расширить `real_corpus` за пределы текущего pilot-слоя.
+2. Добавить обезличенные реальные проектно-сметные кейсы поверх `samples/estimate_expertise_corpus/real-corpus-template.json`.
+3. Провести comparative benchmark профилей `baseline`, `quality`, `quality_plus`.
+4. Улучшить OCR-backed case-level evidence quality, особенно для mixed-layout и scan-heavy документов.
+5. Усилить reranker / evidence linking на multi-evidence кейсах без потери recall.
+6. Снизить false-positive в classifier `filename -> content` на хаотичных реальных названиях файлов.
+7. Оптимизировать API списка документов для больших папок: не возвращать полный `extracted_text` в реестре.
+8. Расширить semantic section quality поверх текущей marker-based проверки.
+9. Провести внутреннюю нормативную проверку rules pack государственной экспертизы перед pilot/production use.
+10. Усилить `.doc` converter/parser и определить дальнейшую стратегию по `.gge`.
 
 ## 7. Что запланировано на `MVP 3`
 
-После стабилизации `MVP 2` следующий основной продуктовый слой:
+После стабилизации `MVP 2` следующий слой:
 
-- развитие процессного контура
-- enterprise process governance
-- внешние интеграции
-- electronic signature
-- multi-regulator templates
+- расширенный approval/governance workflow;
+- task routing и richer notifications;
+- электронная подпись;
+- внешние интеграции;
+- multi-regulator templates;
+- более зрелая работа с версиями и выпуском пакета.
 
 ## 8. Что запланировано на `MVP 4`
 
-После `MVP 3` основной фокус смещается в platform maturity:
+Platform maturity:
 
-- security
-- deployment
-- observability maturity
-- stress `10x+`
-- backup / recovery / retention
+- security hardening;
+- CI/CD;
+- deployment profiles;
+- retention / backup / recovery;
+- stress `10x+`;
+- production-grade observability;
+- эксплуатационные runbooks.
 
-## 9. Что сознательно вынесено за ближайший горизонт
+## 9. Что не входит в текущий завершённый контур
 
-Вне ближайшего критического пути:
+Проект пока не следует описывать как:
 
-- thin iOS client
-- большой multimodal-контур document understanding
-- domain fine-tuning as separate research track
-- масштабирование на новые отрасли без завершения текущего образовательного сценария
+- production SaaS;
+- юридически финальную систему государственной экспертизы;
+- систему проверки подлинности подписи/печати;
+- полноценный multimodal document understanding stack;
+- domain-fine-tuned model;
+- решение с внешними OCR/LLM API;
+- iOS/mobile product.
 
-## 10. Текущий честный итог
+Корректная формулировка:
 
-Проект уже можно корректно описывать как:
-
-- завершённый `MVP 1`
-- с работающим продуктовым ядром
-- с верифицируемым benchmark и acceptance-контуром
-- с ясным следующим этапом `MVP 2`
+> `EvidenceXAI` — локально разворачиваемая web-first платформа объяснимой подготовки отчётности. `MVP 1` завершён, а активный `MVP 2` уже содержит profile-aware локальный AI runtime, расширенные benchmark-артефакты и прикладной спецworkflow государственной экспертизы с findings, XAI, user decisions и export, но production-grade vision, широкий real-world corpus и enterprise workflow ещё остаются задачами следующих этапов.

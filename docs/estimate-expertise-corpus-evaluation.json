@@ -1,9 +1,9 @@
 {
-  "captured_at": "2026-05-28T23:54:33.695567+03:00",
+  "captured_at": "2026-05-29T11:01:36.424190+03:00",
   "manifest_name": "estimate-expertise-pilot-synthetic",
   "manifest_version": "2026-05-28",
   "model_version": "estimate-expertise-local-terminology-baseline-v7",
-  "rule_version": "estimate-cost-rules-pack-v7",
+  "rule_version": "estimate-cost-pp145-rules-pack-v8",
   "case_total": 4,
   "cases_passed": 4,
   "target_total": 10,

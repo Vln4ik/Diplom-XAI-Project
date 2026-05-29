@@ -1,13 +1,13 @@
 # Benchmark проектно-сметного спецworkflow
 
-Дата фиксации: `2026-05-28`
+Дата фиксации: `2026-05-29`
 
 ## 1. Сводка
 
 - manifest: `estimate-expertise-pilot-synthetic`
 - manifest_version: `2026-05-28`
 - model_version: `estimate-expertise-local-terminology-baseline-v7`
-- rule_version: `estimate-cost-rules-pack-v7`
+- rule_version: `estimate-cost-pp145-rules-pack-v8`
 - cases: `4`
 - cases_passed: `4/4`
 - targets_passed: `10/10`

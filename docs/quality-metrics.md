@@ -1,6 +1,6 @@
 # Метрики качества
 
-Дата актуализации: `2026-05-26`
+Дата актуализации: `2026-05-29`
 
 ## 1. Назначение документа
 
@@ -59,9 +59,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.9444`
+- `evidence linking precision`: `0.9714`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9714`
+- `evidence linking F1`: `0.9855`
 - `report sections source coverage mean`: `100.00%`
 - `report sections requirement_content_coverage_mean`: `100.00%`
 - `report sections quality_score_mean`: `100.00%`
@@ -191,6 +191,24 @@
 
 - базовый OCR-контур уже рабочий
 - но layout-aware vision layer ещё не реализован как завершённый контур
+
+## 6.1. Synthetic benchmark государственной экспертизы
+
+Для проектно-сметного спецworkflow зафиксирован отдельный synthetic pilot corpus:
+
+- `case_total`: `4`
+- `cases_passed`: `4/4`
+- `targets_passed`: `10/10`
+- `rule_version`: `estimate-cost-pp145-rules-pack-v8`
+- stages covered: `filename_content`, `completeness`, `quality_spell_signature`
+
+Источник: [estimate-expertise-corpus-evaluation.md](estimate-expertise-corpus-evaluation.md)
+
+Практический смысл:
+
+- backend-логика findings и rules pack уже регрессионно проверяется;
+- это пока synthetic corpus, а не замена обезличенного реального корпуса проектно-сметных документов;
+- следующий шаг `MVP 2` — проверить precision/recall по stages на реальных обезличенных комплектах.
 
 ## 7. Нагрузочные и runtime-артефакты
 

@@ -1,6 +1,6 @@
 # Локальные границы runtime EvidenceXAI
 
-Дата фиксации: `2026-05-28`
+Дата фиксации: `2026-05-29`
 
 ## 1. Основное правило
 
@@ -22,6 +22,8 @@
 - `Tesseract` внутри backend/worker container для OCR;
 - локальные Python baseline-провайдеры для visual quality, signature/seal и terminology rules.
 
+Поверх базового режима есть profile-aware слой `baseline / quality / quality_plus`. Профиль не меняет архитектурную границу: все candidates должны быть доступны в локальном `Ollama`, а система выбирает resolved model из локального списка.
+
 Примеры допустимого локального runtime:
 
 - `Tesseract` внутри backend container;
@@ -38,6 +40,8 @@
 - строить обязательную проверку через внешний SaaS.
 
 Fallback providers `hash-fallback` и `template-fallback` остаются только как аварийная деградация, если локальный AI runtime временно недоступен. Для полноценной демонстрации и защиты проекта должен использоваться режим `ollama`.
+
+Диагностика фактического режима доступна через `/api/system/ai-status`: там видно configured provider, candidate models, resolved model, mode `model/fallback` и признак `sends_documents_to_external_services = false` для локальных OCR/vision providers.
 
 ## 3. Текущий OCR / vision contour
 

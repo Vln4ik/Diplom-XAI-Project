@@ -1,40 +1,29 @@
 # Продуктовый roadmap
 
+Дата актуализации: `2026-05-29`
+
 ## 1. Назначение документа
 
-Этот документ является каноническим roadmap проекта `EvidenceXAI`.
+Этот документ является каноническим продуктовым roadmap проекта `EvidenceXAI`.
 
-В narrative-слое roadmap используются обозначения:
+Обозначения:
 
-- `EvidenceXAI` — имя продукта
-- `EX.AI` — компактная UI-метка
-- `XAI` — explainability-функция внутри продукта
+- `EvidenceXAI` — имя продукта;
+- `EX.AI` — компактная UI-метка;
+- `XAI` — explainability-функция внутри продукта.
 
-Он фиксирует:
-
-- завершённый scope `MVP 1`
-- следующий активный этап `MVP 2`
-- дальнейшие версии `MVP 3`, `MVP 4+`
-- исследовательский горизонт после базовой продуктовой линии
+Фактический статус реализации ведётся отдельно в [roadmap-status.md](roadmap-status.md). Если нужен ответ "что уже сделано прямо сейчас", начинать нужно с него.
 
 ## 2. Текущее состояние
 
-Проект находится в статусе:
+Проект находится в состоянии:
 
-- `MVP 1` завершён
-- активный следующий этап: `MVP 2`
+- `MVP 1` завершён;
+- активный этап: `MVP 2`;
+- основной завершённый сценарий: `Рособрнадзор + образовательная организация`;
+- расширенный прикладной трек текущего кода: государственная экспертиза проектной документации, включая `ПП 145` и `ПП 87`.
 
-Текущий продукт уже покрывает базовый сценарий:
-
-- `Рособрнадзор`
-- образовательная организация
-- подготовка объяснимого проекта отчёта с доказательствами, рисками и XAI
-
-Кроме базового сценария в коде уже реализован прикладной трек государственной экспертизы:
-
-- `ПП 145`: предварительная проверка достоверности определения сметной стоимости и комплектности подачи;
-- `ПП 87`: проверка состава/содержания разделов проектной документации без ложной проверки комплектности подачи по `ПП 145`;
-- state expertise workflow с этапами, findings, user decisions, XAI и export.
+Текущий продукт уже закрывает базовый сценарий подготовки объяснимого проекта отчёта с требованиями, evidence, рисками, XAI и export.
 
 ## 3. `MVP 1` — функциональное ядро
 
@@ -42,83 +31,97 @@
 
 Собрать работоспособный web-first MVP для сквозного сценария подготовки отчётности.
 
-### Что входит
+### Состав
 
-- базовый backend, frontend и infra-контур
-- документный pipeline
-- реестр требований
-- матрица доказательств
-- XAI-объяснения
-- риски
-- генерация отчёта
-- экспорт
-- базовый контур review / approval
-- базовый OCR-контур
-- контур benchmark / acceptance / observability
+- backend, frontend и infra-контур;
+- document pipeline;
+- реестр требований;
+- матрица доказательств;
+- XAI-объяснения;
+- risks;
+- generation sections;
+- export;
+- базовый review / submit / approve;
+- OCR baseline;
+- benchmark / acceptance / observability baseline.
 
-### Что подтверждает завершение
+### Статус
 
-- основной web-сценарий работает без Swagger
-- экспорт и versioning работают
-- XAI и evidence доступны пользователю
-- benchmark-suite и пилотный `real_corpus` уже есть в репозитории
+`MVP 1` завершён.
+
+Завершение подтверждают:
+
+- основной web-сценарий без Swagger;
+- экспорт и versioning;
+- XAI и evidence в UI;
+- backend tests и acceptance flow;
+- committed benchmark-suite;
+- pilot `real_corpus`;
+- OCR benchmark;
+- runtime/load/stress artifacts.
 
 ## 4. `MVP 2` — AI quality first
 
 ### Цель
 
-Поднять качество аналитического контура на более реалистичных данных и усилить document understanding.
+Повысить качество аналитического контура на более реалистичных данных и усилить document understanding без отказа от локального runtime и auditable XAI.
 
-### Состав
+### Уже реализовано в рамках `MVP 2`
 
-- расширенный `real_corpus`
-- более богатая схема разметки
-- улучшенный evidence reranking
-- более сильные embeddings
-- более сильная локальная LLM
-- profile-aware локальный AI runtime и benchmark-сравнение профилей
-- benchmark качества разделов
-- усиление OCR / vision-контура
-- воспроизводимая calibration-стратегия на более широком корпусе
-- снижение false-positive на реальных пакетах проектно-сметной документации
-- оптимизация API и UI для больших папочных комплектов
+- profile-aware локальный AI runtime: `baseline`, `quality`, `quality_plus`;
+- выбор resolved model через `Ollama` candidate list;
+- `/api/system/ai-status` для проверки profile/provider/model/fallback state;
+- Docker/launcher default на `ollama` providers;
+- стабилизированный committed benchmark-suite;
+- pilot `real_corpus` с `5/5` cases и `20/20` targets;
+- marker-based section quality benchmark;
+- state expertise workflow для `ПП 145` и `ПП 87`;
+- synthetic benchmark проектно-сметного спецworkflow: `4/4` cases, `10/10` targets;
+- local baseline providers для terminology, visual quality, signature/seal evidence.
 
-### Ожидаемый результат
+### Что остаётся сделать
 
-- quality-контур становится устойчивее на реалистичных кейсах
-- снижается число слабых доказательств и ложных срабатываний
-- generated sections оцениваются не только по наличию, но и по качеству
+- расширить `real_corpus` за пределы pilot;
+- добавить обезличенный real corpus для проектно-сметного спецworkflow;
+- провести comparative benchmark `baseline` vs `quality` vs `quality_plus`;
+- усилить OCR/vision для scan-heavy и mixed-layout документов;
+- улучшить reranking/evidence linking на более сложных пакетах;
+- снизить false-positive в `filename -> content` classifier;
+- оптимизировать API/UI для больших папок документов;
+- расширить semantic evaluation generated sections.
 
 ### Критерии завершения
 
-- расширенный размеченный корпус включён в validation contour
-- real-corpus quality стабилизирована
-- section quality benchmark зафиксирован
-- OCR/vision контур заметно сильнее базового `Tesseract`
+`MVP 2` можно считать завершённым, когда:
 
-## 5. `MVP 3` — расширение процессного контура и интеграций
+- расширенный corpus включён в validation contour;
+- quality профили измерены на одинаковом benchmark-протоколе;
+- OCR-backed residual cases улучшены относительно текущего baseline;
+- state expertise real corpus проходит target evaluation;
+- section quality оценивается не только marker-based, но и более семантически;
+- большие папки документов не создают UI/API bottleneck.
+
+## 5. `MVP 3` — процессный контур и интеграции
 
 ### Цель
 
-Перевести систему от “аналитической подготовки” к более зрелому процессу согласования и выпуска пакета.
+Перевести систему от аналитической подготовки черновика к более зрелому процессу согласования и выпуска пакета.
 
 ### Состав
 
-- расширенный контур согласования
-- enterprise process governance
-- электронная подпись
-- внешние интеграции
-- multi-regulator templates
-- более богатая логика уведомлений и task-routing
-
-### Ожидаемый результат
-
-- система закрывает не только подготовку черновика, но и выпускной организационный контур
+- расширенный контур согласования;
+- enterprise process governance;
+- task routing;
+- более богатые уведомления;
+- электронная подпись;
+- внешние интеграции;
+- multi-regulator templates.
 
 ### Критерии завершения
 
-- сквозной процесс включает выпуск, согласование и пакетную фиксацию результата
-- поддерживается более одного шаблона регуляторного сценария
+- пользователь проходит не только подготовку отчёта, но и выпускной процесс;
+- поддерживается больше одного регуляторного шаблона;
+- согласование и выпуск опираются на встроенный процессный контур.
 
 ## 6. `MVP 4` — production / platform maturity
 
@@ -128,68 +131,64 @@
 
 ### Состав
 
-- security hardening
-- CI/CD
-- deployment profiles
-- retention и backup
-- зрелый observability-контур
-- stress `10x+`
-- эксплуатационные runbooks
-
-### Ожидаемый результат
-
-- решение готово не только как дипломный MVP, но и как эксплуатационный pilot
+- security hardening;
+- CI/CD;
+- deployment profiles;
+- retention / backup / recovery;
+- production-grade observability;
+- stress `10x+`;
+- эксплуатационные runbooks.
 
 ### Критерии завершения
 
-- есть стабильный deployment-контур
-- есть зрелый monitoring / alerting / recovery-контур
-- есть подтверждённый более высокий нагрузочный профиль
+- есть стабильный deployment-контур;
+- есть monitoring / alerting / recovery;
+- подтверждён более высокий нагрузочный профиль;
+- описаны эксплуатационные процедуры.
 
 ## 7. `Post-MVP / исследовательский горизонт`
 
-### Направления
+- multimodal document understanding;
+- layout-aware document vision beyond baseline;
+- domain fine-tuning;
+- mobile branch / thin iOS client;
+- масштабирование за пределы текущих pilot-сценариев.
 
-- multimodal document understanding
-- layout-aware vision pipeline
-- domain fine-tuning
-- mobile branch / thin iOS client
-- масштабирование за пределы текущего pilot-scope
+## 8. Отраслевой трек: государственная экспертиза
 
-## 7.1. Отдельный отраслевой трек: государственная экспертиза
+Этот трек расширяет `EvidenceXAI` на проектные организации и предварительную проверку проектной документации перед государственной экспертизой.
 
-Помимо текущего сценария `Рособрнадзор + образовательная организация`, в roadmap добавлен новый отраслевой трек EvidenceXAI:
+Уже реализованный прикладной слой:
 
-- пользователь: проектировочная компания;
-- сценарий: предварительная проверка проектной документации перед государственной экспертизой;
-- ключевые функции: OCR/vision, орфография, подписи, основная надпись, ГОСТ/СПДС/ЕСКД-правила, интерактивные ссылки на источник, XAI по каждому замечанию;
-- финальный результат: полный отчет замечаний с рекомендациями, evidence, XAI и экспортным пакетом.
+- report type `state_expertise_estimate_cost_verification` для `ПП 145`;
+- report type `state_expertise_estimate_cost_verification_pp87` для `ПП 87`;
+- backend/Celery workflow со stages, findings, user decisions, replacement re-check, audit trail, XAI и export;
+- local terminology / visual quality / signature-seal baseline;
+- synthetic benchmark and validator;
+- реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`.
 
-Подробный roadmap направления: [state-expertise-roadmap.md](state-expertise-roadmap.md).
+Ограничение: это предварительная автоматизированная проверка с XAI, а не юридическая замена государственной экспертизы.
 
-Специализированное ТЗ по отчету государственной экспертизы в части проверки достоверности определения сметной стоимости: [state-expertise-estimate-cost-report-tz-roadmap.md](state-expertise-estimate-cost-report-tz-roadmap.md).
+Подробно:
 
-Текущий статус этого трека:
+- [state-expertise-roadmap.md](state-expertise-roadmap.md);
+- [state-expertise-estimate-cost-report-tz-roadmap.md](state-expertise-estimate-cost-report-tz-roadmap.md);
+- [current-project-status.md](current-project-status.md).
 
-- реализованы report types `state_expertise_estimate_cost_verification` и `state_expertise_estimate_cost_verification_pp87`;
-- для `ПП 145` работает stage pipeline: запуск, название/содержание, комплектность, качество/орфография/подписи, финализация;
-- для `ПП 87` работает отдельный профиль: запуск, название/содержание, содержание разделов проектной документации, качество/орфография/подписи, финализация;
-- текущий runtime является предварительной автоматизированной проверкой и не заменяет государственную экспертизу;
-- реальный локальный тест `Водоканалпроект / 1. ИРД / ПП 145` зафиксирован в [current-project-status.md](current-project-status.md).
+## 9. Приоритетность работ
 
-## 8. Приоритетность работ
+Текущий порядок:
 
-Текущий порядок развития:
+1. Довести активный `MVP 2`.
+2. После стабилизации качества перейти к `MVP 3`.
+3. После зрелого процессного контура перейти к `MVP 4`.
+4. Исследовательские темы держать в `Post-MVP`, не смешивая их с завершённым `MVP 1`.
 
-1. `MVP 2`
-2. `MVP 3`
-3. `MVP 4`
-4. `Post-MVP / исследования`
+## 10. Связанные документы
 
-## 9. Связанные документы
-
-- фактический статус: [roadmap-status.md](roadmap-status.md)
-- master plan: [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md)
-- системный обзор: [system-handbook.md](system-handbook.md)
-- AI/XAI: [llm-xai-method.md](llm-xai-method.md)
-- государственная экспертиза: [state-expertise-roadmap.md](state-expertise-roadmap.md)
+- фактический статус: [roadmap-status.md](roadmap-status.md);
+- master plan: [../IMPLEMENTATION_PLAN.md](../IMPLEMENTATION_PLAN.md);
+- системный обзор: [system-handbook.md](system-handbook.md);
+- архитектура: [architecture.md](architecture.md);
+- AI/XAI метод: [llm-xai-method.md](llm-xai-method.md);
+- модели и XAI: [models-and-xai-overview.md](models-and-xai-overview.md).

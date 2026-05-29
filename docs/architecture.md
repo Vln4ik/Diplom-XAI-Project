@@ -1,163 +1,216 @@
 # Архитектура системы
 
+Дата актуализации: `2026-05-29`
+
 ## 1. Назначение документа
 
-Документ фиксирует текущую архитектуру `MVP 1` и направление её эволюции в `MVP 2`, `MVP 3` и `MVP 4`.
+Документ фиксирует текущую архитектуру `EvidenceXAI`, завершённый контур `MVP 1` и развитие в активном `MVP 2`.
 
-## 2. Архитектура `MVP 1`
+Фактический roadmap-статус: [roadmap-status.md](roadmap-status.md).
 
-### 2.1. Runtime-контур
+## 2. Runtime-контур
 
-Текущий runtime состоит из следующих компонентов:
+Текущий runtime состоит из:
 
-- `frontend` — web-клиент на `React + Vite`
-- `backend-api` — REST API на `FastAPI`
-- `backend-worker` — `Celery` worker для обработки документов и отчётов
-- `postgres` — транзакционные данные, full-text search и `pgvector`
-- `redis` — broker/result backend и shared runtime state
-- `filesystem storage` — исходные файлы и экспортные артефакты
-- `host Ollama` — штатный локальный AI runtime для embeddings и LLM
-- `ollama` compose service — optional runtime-вариант, если модели хранятся внутри Docker volume
-- `prometheus / grafana / alertmanager` — optional observability-профиль
+- `frontend` — web-клиент на `React 18 + TypeScript + Vite`;
+- `backend-api` — REST API на `FastAPI`;
+- `backend-worker` — `Celery` worker для долгих document/report/expertise задач;
+- `postgres` — transactional data, full-text search, `pgvector`;
+- `redis` — broker/result backend и shared runtime state;
+- `filesystem storage` — исходные документы и export artifacts;
+- `host Ollama` — штатный локальный AI runtime для embeddings и LLM;
+- optional `ollama` compose service — контейнерный вариант хранения моделей;
+- optional `prometheus / grafana / alertmanager` — observability profile.
 
-Локальный AI runtime уже работает в profile-aware режиме:
+Основной запуск для разработки и демонстрации:
 
-- `baseline`
-- `quality`
-- `quality_plus`
+```bash
+bash infra/start_full_stack.sh
+```
 
-### 2.2. Основные доменные контуры
+Он проверяет Docker, host Ollama, модели `all-minilm` и `gemma3:270m`, затем запускает backend/worker/frontend с `ollama` providers.
 
-- аутентификация и роли
-- организации и участники
-- документы и фрагменты
-- требования и доказательства
-- XAI-объяснения
-- риски
-- отчёты, версии и экспорты
-- аудит и уведомления
+## 3. Доменная модель
 
-## 3. Текущий прикладной pipeline
+Ключевые сущности:
 
-### 3.1. Документный pipeline
+- users, organizations, organization members;
+- documents, document fragments;
+- reports, sections, versions, exports;
+- requirements;
+- evidence;
+- explanations;
+- risks;
+- audit logs;
+- notifications;
+- expertise workflows, stages, findings, user decisions.
 
-1. Пользователь загружает документ в контексте организации.
-2. API сохраняет метаданные и файл.
-3. В очередь уходит `document_process`.
-4. Worker извлекает текст, дробит документ на фрагменты и индексирует их.
-5. Фрагменты и embeddings сохраняются в `PostgreSQL`.
+Смысл доменной цепочки:
 
-### 3.2. Аналитический pipeline
+`organization -> document -> fragment -> requirement -> evidence -> explanation/XAI -> risk -> report/export`
+
+Для государственной экспертизы добавляется:
+
+`report -> expertise workflow -> stages -> findings -> user decisions/replacements -> XAI/export`
+
+## 4. Документный pipeline
+
+1. Пользователь загружает документ или папочный набор.
+2. API сохраняет metadata, файл и `relative_path`.
+3. Задача уходит в `document_process`.
+4. Worker извлекает текст:
+   - parser для text/json/xml/csv/xlsx/docx/pdf;
+   - локальный converter/fallback для legacy `DOC`;
+   - nested extraction для `ZIP`;
+   - metadata/evidence handling для `SIG/P7S/GGE`;
+   - локальный `Tesseract` для image files и image-only PDF.
+5. Текст режется на fragments.
+6. Для fragments считаются embeddings.
+7. Fragments сохраняются в `PostgreSQL`, vector values — в `pgvector` или JSON fallback для SQLite tests.
+
+## 5. Аналитический pipeline
 
 1. Пользователь создаёт отчёт и выбирает документы.
-2. В очередь уходит `report_analyze`.
-3. Система выделяет требования.
-4. Система определяет применимость.
-5. Система подбирает evidence.
-6. Система рассчитывает `confidence`, `status`, `risk`.
-7. Система сохраняет XAI-цепочку.
-8. Система создаёт разделы отчёта и экспорты.
+2. Для обычных report types запускается `report_analyze`.
+3. Система выделяет requirements из нормативных fragments.
+4. Applicability считается rule-based.
+5. Evidence linking ранжирует candidate fragments.
+6. Confidence/status/risk рассчитываются по calibration settings.
+7. XAI сохраняется как `Explanation`.
+8. LLM генерирует sections на основе уже подготовленного context.
+9. Export формирует `DOCX`, `XLSX`, `ZIP`, `HTML`.
 
-## 4. AI/XAI контур `MVP 1`
+Спецтипы государственной экспертизы не используют обычные `analyze/generate`. Для них запускается отдельный state expertise workflow.
 
-### 4.1. Что работает сейчас
+## 6. AI/XAI контур
 
-- text-centric pipeline
-- embeddings через локальную neural-модель `all-minilm` в Ollama
-- локальная LLM `gemma3:270m` в Ollama для генерации/суммаризации там, где включён provider abstraction
-- profile-aware выбор локальной embedding-модели и LLM
-- гибридный retrieval
-- rule-based applicability / confidence / risk
-- сохранённый XAI-артефакт
-- базовый OCR-контур для image-файлов и image-only `PDF`
+### 6.1. Local AI providers
 
-### 4.2. Что не является частью `MVP 1`
+- embeddings: `OllamaEmbeddingProvider`;
+- LLM: `OllamaLLMProvider`;
+- fallback embeddings: `HashEmbeddingProvider`;
+- fallback LLM: `DeterministicFallbackLLMProvider`;
+- optional local transformers provider остаётся доступным как альтернативный локальный path, но штатный demo path сейчас через `Ollama`.
 
-- multimodal end-to-end reasoning
-- layout-aware document vision
-- domain fine-tuning
-- production-grade neural reranker
+### 6.2. Runtime profiles
 
-## 5. Хранение данных
+Поддерживаются профили:
 
-### 5.1. Где что хранится
+- `baseline`;
+- `quality`;
+- `quality_plus`.
 
-- бизнес-сущности: `PostgreSQL`
-- векторы фрагментов: `pgvector` в `PostgreSQL`
-- исходные файлы: локальное файловое хранилище
-- export-файлы: файловое хранилище + записи в БД
-- task runtime state: `Redis`
+Профиль задаёт ordered candidate list для embeddings и LLM. Resolver выбирает фактически доступную модель в локальном `Ollama`.
 
-### 5.2. Почему так устроено
+### 6.3. XAI storage
 
-- один транзакционный и retrieval-контур для MVP
-- минимально необходимая инфраструктура
-- локальная воспроизводимость стенда
-- прозрачная связь `document -> fragment -> requirement -> evidence -> report`
+XAI хранится не как transient response модели, а как persisted domain artifact:
 
-## 6. Контур наблюдаемости `MVP 1`
+- для requirements: `Explanation`;
+- для state expertise: `ExpertiseFinding.xai_json`;
+- для user decisions: audit payload with XAI snapshot;
+- для exports: XAI HTML и ZIP package.
 
-Сейчас уже доступны:
+Подробно: [llm-xai-method.md](llm-xai-method.md).
 
-- runtime metrics endpoint-ы
-- Celery lifecycle diagnostics
-- Redis-backed shared task metrics
-- `Prometheus` scraping
-- `Grafana` dashboard
-- базовая маршрутизация alert-уведомлений через `Alertmanager`
+## 7. State expertise architecture
 
-Это достаточно для инженерного MVP, но ещё не равно полноценной production-эксплуатации.
+Реализованы два спецтипа:
 
-## 7. Архитектурное развитие по версиям
+- `state_expertise_estimate_cost_verification` — `ПП 145`;
+- `state_expertise_estimate_cost_verification_pp87` — `ПП 87`.
 
-## 7.1. `MVP 2`
+Backend contour:
 
-Главные архитектурные усиления:
+- `ExpertiseWorkflow`;
+- `ExpertiseWorkflowStage`;
+- `ExpertiseFinding`;
+- `ExpertiseUserDecision`;
+- Celery task `estimate_expertise_start_task`;
+- Celery task `estimate_expertise_replacement_recheck_task`;
+- API endpoints `start/state/approve/skip/replacement`.
 
-- более широкий `real_corpus` и benchmark-слой
-- более сильный OCR / vision-контур
-- более сильный стек AI-моделей
-- более качественный evidence reranking
-- контур оценки качества sections
+`ПП 145` stages:
 
-Главный архитектурный переход:
+- `start`;
+- `filename_content`;
+- `completeness`;
+- `quality_spell_signature`;
+- `final`.
 
-- от базового text/OCR-контура к более сильному document-understanding контуру
+`ПП 87` stages:
 
-## 7.2. `MVP 3`
+- `start`;
+- `filename_content`;
+- `section_content`;
+- `quality_spell_signature`;
+- `final`.
 
-Главные архитектурные усиления:
+Stage logic включает:
 
-- enterprise workflow
-- более зрелый процесс согласования
-- внешние интеграции
-- электронная подпись
-- multi-regulator template layer
+- hybrid rules + optional LLM classifier;
+- rules pack для required document groups;
+- terminology baseline;
+- visual quality baseline;
+- signature/seal baseline;
+- XAI per finding;
+- user decision and replacement loop.
 
-Главный архитектурный переход:
+## 8. Storage boundaries
 
-- от изолированного reporting tool к workflow-aware integration platform
+- Business data: `PostgreSQL`.
+- Vectors: `pgvector` in `PostgreSQL`.
+- Source files: local filesystem / Docker volume.
+- Export files: filesystem + DB records.
+- Runtime task state: `Redis`.
+- Local model runtime: host `Ollama` или optional compose service.
 
-## 7.3. `MVP 4`
+Документы не отправляются во внешние OCR/LLM API.
 
-Главные архитектурные усиления:
+## 9. Observability
 
-- CI/CD maturity
-- security hardening
-- deployment profiles
-- retention / backup
-- stress `10x+`
-- production-grade observability
+Реализован baseline:
 
-Главный архитектурный переход:
+- `GET /api/system/health`;
+- `GET /api/system/ai-status`;
+- `GET /api/system/metrics`;
+- `GET /api/system/metrics/prometheus`;
+- Prometheus scraping;
+- Grafana dashboard `EvidenceXAI Overview`;
+- Alertmanager routing baseline;
+- alerts по backend availability, task failures, latency, queued tasks.
 
-- от pilot-ready product к operationally mature platform
+Это инженерный baseline, не полный production monitoring stack.
 
-## 8. Короткий итог
+## 10. Архитектурное развитие
 
-Текущая архитектура уже достаточна для завершённого `MVP 1`.  
-Следующий слой эволюции не связан с переделкой всего ядра, а строится как поэтапное усиление:
+### `MVP 2`
 
-- сначала `AI quality`
-- затем `процессный контур и integrations`
-- затем `production maturity`
+- расширенный `real_corpus`;
+- comparative AI profile benchmark;
+- OCR/vision beyond current baseline;
+- stronger evidence reranking;
+- semantic section quality;
+- real corpus для государственной экспертизы;
+- API/UI optimization для больших document folders.
+
+### `MVP 3`
+
+- enterprise workflow;
+- approval/governance;
+- electronic signature;
+- integrations;
+- multi-regulator templates.
+
+### `MVP 4`
+
+- security hardening;
+- CI/CD;
+- deployment profiles;
+- backup/recovery/retention;
+- stress `10x+`;
+- production-grade observability.
+
+## 11. Итог
+
+Архитектура уже достаточна для завершённого `MVP 1` и частично закрытого активного `MVP 2`: ядро не нужно переписывать, дальнейшее развитие идёт через усиление качества данных, моделей, OCR/vision, workflow и эксплуатации.

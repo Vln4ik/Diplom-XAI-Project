@@ -1,6 +1,6 @@
 # Чек-лист приёмки
 
-Дата актуализации: `2026-05-24`
+Дата актуализации: `2026-05-29`
 
 ## 1. Цель документа
 
@@ -32,6 +32,7 @@ cd frontend && npm run build
 | Риски, уведомления и аудит работают | risk / approval / notification flow | `backend/tests/test_pipeline.py` |
 | Экспорт работает | `DOCX/XLSX/ZIP/HTML` files | `backend/tests/test_pipeline.py` |
 | Web-сценарий можно показать без Swagger | страницы frontend и demo-сценарий | `docs/demo-scenario.md` |
+| Спецworkflow государственной экспертизы работает как backend workflow | `ПП 145/ПП 87`, findings, XAI, decisions | `backend/tests/test_pipeline.py`, `docs/estimate-expertise-corpus-evaluation.md` |
 
 ### 2.3. Что считается закрытым
 
@@ -50,6 +51,7 @@ cd frontend && npm run build
 - электронная подпись
 - iOS client
 - production-grade security / load contour
+- юридически финальная государственная экспертиза без human review
 
 ## 4. Что станет фокусом приёмки `MVP 2`
 
@@ -62,6 +64,9 @@ cd frontend && npm run build
 - более сильный evidence linking
 - benchmark качества разделов
 - calibration на более широком корпусе
+- comparative benchmark `baseline / quality / quality_plus`
+- обезличенный real corpus проектно-сметной документации
+- снижение false-positive в `filename -> content`
 
 ## 5. Артефакты приёмки `MVP 2`
 
@@ -72,6 +77,8 @@ cd frontend && npm run build
 - обновлённый OCR-benchmark
 - артефакты benchmark-проверки качества разделов
 - обновлённые calibration-отчёты
+- comparative runtime/quality отчёт по AI profiles
+- real-corpus target evaluation для state expertise stage findings
 
 ## 6. Короткий итог
 

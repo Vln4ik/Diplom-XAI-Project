@@ -1,6 +1,6 @@
 # Экспериментальные результаты
 
-Дата фиксации: `2026-05-25`
+Дата фиксации: `2026-05-29`
 
 ## 1. Назначение документа
 
@@ -79,8 +79,8 @@
 
 - committed suite: `7` сценариев
 - committed `requirement extraction F1`: `1.0000`
-- committed `evidence linking precision`: `0.9444`
-- committed `evidence linking F1`: `0.9714`
+- committed `evidence linking precision`: `0.9714`
+- committed `evidence linking F1`: `0.9855`
 - committed `section quality pass share`: `100.00%`
 - pilot real corpus: `5` кейсов
 - pilot real corpus `cases_passed`: `5/5`
@@ -91,6 +91,7 @@
 - pilot real corpus `evidence linking F1`: `1.0000`
 - pilot real corpus `source requirement coverage`: `100.00%`
 - pilot real corpus `section quality pass share`: `100.00%`
+- estimate expertise synthetic benchmark: `4/4` cases, `10/10` targets
 
 ## 10. Предварительная экспертно-инженерная оценка прироста качества
 

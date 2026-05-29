@@ -81,9 +81,9 @@
 - `requirement extraction F1`: `1.0000`
 - `status_accuracy_mean`: `100.00%`
 - `applicability accuracy mean`: `100.00%`
-- `evidence linking precision`: `0.9444`
+- `evidence linking precision`: `0.9714`
 - `evidence linking recall`: `1.0000`
-- `evidence linking F1`: `0.9714`
+- `evidence linking F1`: `0.9855`
 - `source requirement coverage mean`: `100.00%`
 - `section quality pass share mean`: `100.00%`
 
@@ -204,6 +204,7 @@
 - `Post-MVP` — исследовательский горизонт: multimodal, fine-tuning, mobile branch
 
 Канонический roadmap: [docs/product-roadmap.md](docs/product-roadmap.md)
+Единый фактический статус реализации: [docs/roadmap-status.md](docs/roadmap-status.md)
 
 ### Что входит в `MVP 2`
 
@@ -221,6 +222,8 @@
 - profile-aware launcher и Docker runtime
 
 Следующий подэтап внутри этого же шага: реальные comparative benchmark-прогоны на `quality` и `quality_plus` поверх расширенного `real_corpus`.
+
+По состоянию на `2026-05-29` в `MVP 2` уже также закрыт инженерный контур спецworkflow государственной экспертизы: `ПП 145`, `ПП 87`, stages, findings, user decisions, replacement re-check, XAI, export, synthetic benchmark `4/4` cases и реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`.
 
 ### Что входит в `MVP 3`
 

@@ -79,6 +79,7 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 - generated benchmark artifacts;
 - demo organization seed-pack;
 - corpus manifest для направления государственной экспертизы.
+- synthetic benchmark проектно-сметного спецworkflow: `4/4` cases, `10/10` targets, rule pack `estimate-cost-pp145-rules-pack-v8`.
 
 В GitHub не публикуются:
 
@@ -150,6 +151,7 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 - `.gge` пока сохраняется как evidence/metadata, но не разбирается семантически;
 - OCR для многостраничных сканов ограничен demo-limit;
 - список документов в API не должен по умолчанию возвращать полный `extracted_text` для больших пакетов.
+- comparative benchmark профилей `quality` и `quality_plus` против `baseline` ещё не проведён на едином протоколе.
 
 ## 7. Как посмотреть результат в текущей локальной базе
 

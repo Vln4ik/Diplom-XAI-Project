@@ -1,161 +1,189 @@
 # Модели и XAI: обзор для диплома и разработки
 
+Дата актуализации: `2026-05-29`
+
 ## 1. Зачем нужен этот документ
 
-Документ даёт короткое и точное объяснение:
+Документ даёт компактный, но проверенный по коду обзор:
 
-- какие модели есть в проекте сейчас
-- какие модели не используются
-- как именно работает XAI
-- что уже относится к `MVP 1`
-- что переносится в `MVP 2+`
+- какие модели и baseline-провайдеры используются сейчас;
+- какие методы принимают прикладные решения;
+- как устроен XAI;
+- что уже реализовано в `MVP 1` и начатом `MVP 2`;
+- что нельзя заявлять как готовую возможность.
 
-Внутри продукта это соотносится так:
-
-- `EvidenceXAI` — полное имя продукта
-- `EX.AI` — компактная бренд-метка в интерфейсе
-- `XAI` — explainability-функция и предмет дипломного метода
+Подробный метод описан в [llm-xai-method.md](llm-xai-method.md).
 
 ## 2. Короткий ответ
 
-В проекте уже используются:
+В проекте используются:
 
-- embedding-модель для semantic search
-- локальная generative LLM для генерации
-- rule-based decision layer
-- сохранённый XAI-слой
-- базовый OCR-контур
+- локальная embedding-модель для semantic retrieval;
+- локальная generative LLM для summary/section generation и optional classifier assist;
+- rule-based decision layer для applicability, status, confidence, risk и части спецworkflow;
+- локальный OCR через `Tesseract`;
+- локальные visual/terminology baselines;
+- persisted XAI как объяснимый trace результата.
 
-В проекте пока не используются как завершённый контур:
+В проекте не используется как готовый контур:
 
-- полноценные vision/CNN pipelines
-- multimodal end-to-end models
-- domain fine-tuning
+- end-to-end LLM decision making;
+- explainability внутренних весов модели;
+- production-grade multimodal vision;
+- domain fine-tuning;
+- юридическая проверка подлинности подписи/печати.
 
-## 3. Какие модели используются в `MVP 1`
+## 3. Текущие модели и providers
 
-### 3.1. Embedding-модель
+| Слой | Текущая реализация | Назначение |
+|---|---|---|
+| Embeddings | `Ollama + all-minilm` в `baseline` | semantic search по fragments |
+| LLM | `Ollama + gemma3:270m` в `baseline` | summary и generation sections |
+| OCR | `Tesseract` | image files и image-only PDF |
+| Visual signature/seal | `layout-baseline-v1` | bbox/confidence/evidence по signature-like/seal-like областям |
+| Visual quality | `layout-quality-baseline-v1` | contrast/sharpness/resolution/blank-like checks |
+| Terminology | `local-terminology-rules-v1` | проектно-сметная терминология, OCR noise, типовые ошибки |
+| Fallback embeddings | `hash-fallback` | аварийная деградация |
+| Fallback LLM | `template-fallback` | аварийная деградация |
 
-- `Ollama + all-minilm`
-- тип: encoder transformer
-- задача: векторизация фрагментов и semantic retrieval
+## 4. AI runtime profiles
 
-### 3.2. Локальная LLM
+Код поддерживает три локальных профиля:
 
-- `Ollama + gemma3:270m`
-- тип: generative transformer
-- задача: генерация разделов и narrative synthesis
+- `baseline`: `all-minilm + gemma3:270m`;
+- `quality`: `nomic-embed-text / mxbai-embed-large` + `qwen2.5:3b / llama3.2:3b / gemma3:1b / gemma3:270m`;
+- `quality_plus`: `mxbai-embed-large / nomic-embed-text` + `qwen2.5:7b / llama3.1:8b / qwen2.5:3b / llama3.2:3b / gemma3:1b / gemma3:270m`.
 
-### 3.3. Профили локального AI runtime
+Профиль задаётся через `XAI_APP_AI_RUNTIME_PROFILE`.
 
-Поверх базовой пары моделей в проект уже добавлен слой `AI runtime profiles`:
+`/api/system/ai-status` показывает:
 
-- `baseline`: `all-minilm + gemma3:270m`
-- `quality`: `nomic-embed-text` / `mxbai-embed-large` + `qwen2.5:3b` / `llama3.2:3b`
-- `quality_plus`: `mxbai-embed-large` / `nomic-embed-text` + `qwen2.5:7b` / `llama3.1:8b`
+- active profile;
+- configured provider;
+- candidate models;
+- resolved model;
+- доступность `Ollama`;
+- mode `model` или `fallback`;
+- статус OCR, vision, visual quality и terminology providers.
 
-Это не отдельная бизнес-логика, а инфраструктурный механизм выбора более сильной локальной модели без переписывания прикладного pipeline. При запуске система проверяет, какие модели реально есть в `Ollama`, и выбирает лучшую доступную в рамках профиля.
+## 5. Метод анализа
 
-### 3.4. Базовый OCR-контур
+Система работает как гибридный pipeline:
 
-- `Tesseract`
-- задача: извлечение текста из image-files и image-only `PDF`
+1. Документы загружаются и сохраняются локально.
+2. Backend извлекает текст или запускает локальный OCR.
+3. Текст делится на fragments.
+4. Fragments получают embeddings.
+5. Retrieval использует PostgreSQL full-text, `pgvector`, lexical overlap и fallback scoring.
+6. Нормативные fragments превращаются в candidate requirements.
+7. Applicability считается rule-based.
+8. Evidence linking ранжирует fragments через lexical/vector/focus/hint/penalty scoring.
+9. Confidence/status/risk рассчитываются на основе evidence и calibration settings.
+10. LLM генерирует sections только после evidence-grounded этапов.
+11. XAI сохраняет trace вывода и evidence payload.
 
-### 3.5. Rule-based logic
+Главная граница: LLM помогает с текстом и optional classification, но не заменяет audit-friendly decision logic.
 
-Хотя это не нейросеть, этот слой критичен для прикладного результата:
+## 6. Что такое XAI в EvidenceXAI
 
-- applicability
-- confidence
-- risk
-- requirement status
+XAI — это сохранённый прикладной trace, а не отдельная нейросеть.
 
-## 4. Какие модели не используются как основной контур
+Для требований XAI хранит:
 
-### 4.1. Не используется `CNN`-based vision stack
+- conclusion;
+- source requirement/document/fragment;
+- evidence snippets;
+- matched keywords;
+- direct/focus match ratios;
+- hint markers;
+- confidence;
+- risk;
+- recommended action.
 
-В `MVP 1` нет полноценного layout-aware document vision pipeline.
+Для findings государственной экспертизы XAI хранит:
 
-### 4.2. Не используется decision tree как core model
+- stage;
+- severity;
+- normative basis;
+- source reference;
+- confidence;
+- recommendation;
+- `xai_json` со steps, snippets, classifier/visual/terminology evidence.
 
-Прикладная логика частично rule-based, но проект не строится вокруг отдельной tree-based ML-модели.
+## 7. Что видит пользователь
 
-### 4.3. Не используется одна end-to-end LLM
+Пользователь получает ответы:
 
-Система не строится по принципу:
+- какое требование или замечание найдено;
+- почему оно применимо или проблемно;
+- какие документы и фрагменты стали evidence;
+- какие маркеры совпали;
+- насколько система уверена;
+- какой риск остаётся;
+- что делать дальше: подтвердить, отклонить, пропустить или загрузить замену.
 
-`загрузил PDF -> LLM сразу выдала финальный отчёт`
+## 8. Реализованный прикладной слой государственной экспертизы
 
-## 5. Как работает система по шагам
+В коде уже есть:
 
-1. Пользователь загружает документы.
-2. Система извлекает текст и режет его на фрагменты.
-3. Фрагменты векторизуются.
-4. Нормативные фрагменты превращаются в candidate requirements.
-5. Для требований подбираются evidence.
-6. Рассчитываются applicability, confidence и risks.
-7. LLM генерирует разделы отчёта.
-8. XAI сохраняет reasoned trace по выводу.
+- `ПП 145` спецworkflow: `filename_content`, `completeness`, `quality_spell_signature`, `final`;
+- `ПП 87` спецworkflow: `filename_content`, `section_content`, `quality_spell_signature`, `final`;
+- hybrid classifier `rules + optional LLM`;
+- local terminology and OCR-noise baseline;
+- visual quality baseline;
+- signature/seal-like baseline;
+- findings persistence;
+- user decisions;
+- replacement re-check;
+- audit trail;
+- export `DOCX/XLSX/XAI HTML/ZIP`.
 
-## 6. Что такое XAI у нас
+Текущий model/rule state:
 
-XAI в проекте — это не отдельная нейросеть и не explainability внутренних весов модели.
+- `MODEL_VERSION = estimate-expertise-local-terminology-baseline-v7`;
+- `ПП 145 RULE_VERSION = estimate-cost-pp145-rules-pack-v8`;
+- `ПП 87 RULE_VERSION = estimate-cost-pp87-rules-pack-v3`.
 
-Это сохранённый артефакт, который хранит:
+## 9. Подтверждающие метрики
 
-- requirement
-- evidence
-- logic chain
-- confidence
-- risk
-- recommended action
+Базовый gold benchmark:
 
-## 7. Что пользователь видит в XAI-блоке
+- requirement extraction F1: `1.0000`;
+- evidence linking F1: `1.0000`;
+- section source coverage: `1.0000`.
 
-Пользователь получает ответ на вопросы:
+Committed suite:
 
-- какое требование выделено
-- почему оно применимо
-- какие фрагменты его подтверждают
-- насколько система уверена
-- какой риск остаётся
-- что делать дальше
+- `7` scenarios;
+- evidence linking precision: `0.9714`;
+- evidence linking F1: `0.9855`;
+- section quality pass share: `100.00%`.
 
-## 8. Что уже можно честно утверждать по `MVP 1`
+Pilot `real_corpus`:
 
-По текущим benchmark-артефактам уже можно утверждать:
+- `5/5` cases;
+- `20/20` targets;
+- aggregate evidence precision/recall/F1: `1.0000`;
+- hardest OCR-backed residual case: `college_gamma_ocr_package`, `evidence_f1 = 0.7742`.
 
-- AI-контур не декларативный, а реально измеряемый
-- базовый OCR-контур уже рабочий
-- evidence/XAI/report sections покрываются формальными артефактами
-- пилотный `real_corpus` уже введён и закрывает `20 из 20` целевых критериев
+Estimate expertise synthetic benchmark:
 
-## 9. Что станет следующим шагом
-
-`MVP 2` по блоку моделей и XAI включает:
-
-- более сильные embeddings
-- более сильную локальную LLM
-- более сильный OCR / vision-контур
-- улучшенный reranking
-- более широкую calibration-стратегию на `real_corpus`
-- более зрелую оценку качества разделов
-
-При этом часть шага про модели уже материализована:
-
-- профили `baseline / quality / quality_plus` реализованы
-- backend и launcher уже умеют их переключать
-- в `AI status` видно, какая модель была реально разрешена
-- в спецотчете государственной экспертизы добавлен гибридный classifier `rules + optional LLM` для проверки соответствия названия файла его содержанию
-- в этом же спецотчете добавлен `Quality baseline v7`: OCR/text-layer эвристики, scan-like detector по плотности текста, local terminology/spelling baseline, visual quality baseline, визуальный signature/seal baseline и XAI-сигналы по подписям/печатям
-- добавлен `local-terminology-rules-v1`: локальный словарь проектно-сметных терминов, типовых ошибок, OCR mixed-script noise и разрешенных сокращений
-- добавлен `layout-baseline-v1` для подписи/печати: анализ изображения или первой страницы PDF, signature-like/seal-like компоненты, bbox, confidence и XAI evidence
-- добавлен `layout-quality-baseline-v1` для качества скана: локальная оценка разрешения, контраста, резкости, dark/bright ratio и blank-like признаков
-
-Следующий инженерный шаг — не просто объявить более сильные модели, а прогнать на них benchmark и сравнить влияние на retrieval, evidence linking и section generation.
+- `4/4` cases;
+- `10/10` targets;
+- rule pack in generated artifact: `estimate-cost-pp145-rules-pack-v8`.
 
 ## 10. Правильная формулировка для защиты
 
-Корректная короткая формулировка:
+> `EvidenceXAI` использует гибридный AI/XAI-контур: локальные transformer embeddings для retrieval, локальную generative LLM для generation и optional classifier assist, rule-based логику для applicability/confidence/risk, локальный OCR/visual baseline и persisted XAI. XAI объясняет прикладной вывод через evidence, logic chain, confidence, risk, normative basis и recommended action, а не внутренние веса модели.
 
-> Проект использует гибридный AI-контур: локальную embedding-модель для retrieval, локальную generative LLM для генерации, rule-based прикладную логику для applicability/confidence/risk и сохранённый XAI для объяснения каждого вывода. В `MVP 1` OCR реализован как базовый контур через `Tesseract`, а полноценный multimodal vision-contour относится к `MVP 2+`.
+## 11. Следующие шаги
+
+`MVP 2` по блоку моделей и XAI остаётся сфокусирован на:
+
+- comparative benchmark профилей `baseline / quality / quality_plus`;
+- расширении `real_corpus`;
+- реальном обезличенном корпусе проектно-сметной документации;
+- усилении OCR/vision beyond baseline;
+- снижении false-positive в `filename -> content`;
+- semantic section quality;
+- улучшении evidence reranking без потери recall.
