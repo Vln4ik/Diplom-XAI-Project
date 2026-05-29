@@ -15,10 +15,25 @@ type LayoutProps = {
 export function Layout({ organizationName, activeTasks, floatingWidget }: LayoutProps) {
   const { guide } = usePageGuide();
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     setIsHelpOpen(false);
   }, [guide?.title]);
+
+  useEffect(() => {
+    function updateScrollTopVisibility() {
+      setShowScrollTop(window.scrollY > 360);
+    }
+
+    updateScrollTopVisibility();
+    window.addEventListener("scroll", updateScrollTopVisibility, { passive: true });
+    return () => window.removeEventListener("scroll", updateScrollTopVisibility);
+  }, []);
+
+  function handleScrollToTop() {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <div className="shell">
@@ -30,19 +45,21 @@ export function Layout({ organizationName, activeTasks, floatingWidget }: Layout
           <NavLink to="/">Дашборд</NavLink>
           <NavLink to="/organizations">Организации</NavLink>
         </nav>
-        <div className="sidebar-footnote">
-          <span className="eyebrow">Рабочее пространство EX.AI</span>
-          <p>EvidenceXAI объединяет документы, доказательства, XAI и итоговый отчёт в один управляемый контур.</p>
+        <div className="sidebar-bottom">
+          <div className="sidebar-footnote">
+            <span className="eyebrow">Рабочее пространство EX.AI</span>
+            <p>EvidenceXAI объединяет документы, доказательства, XAI и итоговый отчёт в один управляемый контур.</p>
+          </div>
+          <button
+            className="ghost-button"
+            onClick={() => {
+              logout();
+              window.location.href = "/login";
+            }}
+          >
+            Выйти из аккаунта
+          </button>
         </div>
-        <button
-          className="ghost-button"
-          onClick={() => {
-            logout();
-            window.location.href = "/login";
-          }}
-        >
-          Выйти из аккаунта
-        </button>
       </aside>
       <main className="content">
         <header className="workspace-topbar">
@@ -106,6 +123,15 @@ export function Layout({ organizationName, activeTasks, floatingWidget }: Layout
         <ActivityPanel tasks={activeTasks} />
         <Outlet />
         {floatingWidget}
+        <button
+          type="button"
+          className={`scroll-top-button ${showScrollTop ? "active" : ""}`}
+          onClick={handleScrollToTop}
+          aria-label="Вернуться наверх"
+          title="Наверх"
+        >
+          ↑
+        </button>
       </main>
     </div>
   );

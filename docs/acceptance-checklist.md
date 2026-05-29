@@ -33,6 +33,8 @@ cd frontend && npm run build
 | Экспорт работает | `DOCX/XLSX/ZIP/HTML` files | `backend/tests/test_pipeline.py` |
 | Web-сценарий можно показать без Swagger | страницы frontend и demo-сценарий | `docs/demo-scenario.md` |
 | Спецworkflow государственной экспертизы работает как backend workflow | `ПП 145/ПП 87`, findings, XAI, decisions | `backend/tests/test_pipeline.py`, `docs/estimate-expertise-corpus-evaluation.md` |
+| Dashboard readiness не является фиктивным счётчиком | weighted score по documents/reports/requirements/unresolved risks | `backend/tests/test_pipeline.py` |
+| macOS installer собирается и имеет проверяемые runtime scripts | `.command` package, install/start/stop/open/check scripts | `INSTALL_RU.md`, `infra/macos-installer` |
 
 ### 2.3. Что считается закрытым
 
@@ -42,6 +44,7 @@ cd frontend && npm run build
 - backend tests зелёные
 - frontend build проходит
 - для исходных требований отчёта доступны explanation и evidence
+- installer scripts проходят shell syntax checks
 
 ## 3. Что не входит в приёмку `MVP 1`
 

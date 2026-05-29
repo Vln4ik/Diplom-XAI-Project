@@ -31,6 +31,10 @@
 - риски;
 - XAI-объяснения;
 - экспорт `DOCX`, `XLSX`, `HTML`, `ZIP`.
+- dashboard готовности, который считает weighted readiness по документам, отчётам, требованиям и открытым рискам;
+- live-progress UI для документов, отчётов и спецworkflow государственной экспертизы;
+- сортировка документов от проблемных состояний к готовым;
+- верхняя панель действий выбранного отчёта.
 
 Из UI сознательно убраны отдельные вкладки `Аудит`, `Уведомления` и `Редактор отчёта`. Audit/notification logic частично остаётся в backend как системный контур, но не является отдельной пользовательской вкладкой текущего интерфейса.
 
@@ -66,6 +70,12 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 
 Для штатного запуска нужно использовать `bash infra/start_full_stack.sh`. Скрипт проверяет Docker, проверяет host Ollama, скачивает/проверяет модели и запускает backend/worker/frontend с provider-ами `ollama`.
 
+Инфраструктурный слой также поддерживает:
+
+- overrides портов `XAI_BACKEND_PORT`, `XAI_FRONTEND_PORT`, `XAI_POSTGRES_PORT`, `XAI_REDIS_PORT`;
+- единый `COMPOSE_PROJECT_NAME=evidencxai` для stop/start helper scripts;
+- online installer для Apple Silicon Mac: [../INSTALL_RU.md](../INSTALL_RU.md).
+
 ## 4. Что опубликовано в GitHub
 
 В GitHub опубликованы:
@@ -74,6 +84,7 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 - Alembic migrations;
 - backend services для document pipeline, reports, exports, state expertise workflow;
 - frontend UI EvidenceXAI;
+- macOS installer package scripts и инструкция [../INSTALL_RU.md](../INSTALL_RU.md);
 - документация;
 - synthetic benchmark corpora;
 - generated benchmark artifacts;
@@ -141,6 +152,7 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 - поддержка `PDF`, `DOCX`, `DOC`, `XLSX`, `XML`, `ZIP`, `SIG`, `P7S`, `GGE`, `JPG`;
 - OCR baseline;
 - state expertise workflow;
+- staged frontend workflow, где активный этап требует решений пользователя перед переходом дальше;
 - XAI по findings;
 - export `DOCX`, `XLSX`, `HTML`, `ZIP`.
 
@@ -152,6 +164,7 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 - OCR для многостраничных сканов ограничен demo-limit;
 - список документов в API не должен по умолчанию возвращать полный `extracted_text` для больших пакетов.
 - comparative benchmark профилей `quality` и `quality_plus` против `baseline` ещё не проведён на едином протоколе.
+- online installer проверен статически и скриптово, но полный end-to-end прогон на чистом Mac остаётся отдельной эксплуатационной проверкой.
 
 ## 7. Как посмотреть результат в текущей локальной базе
 
@@ -177,4 +190,4 @@ XAI_APP_OLLAMA_LLM_MODEL=gemma3:270m
 
 Корректная формулировка:
 
-> EvidenceXAI — это локально разворачиваемая web-first платформа объяснимой подготовки отчётности. Базовый MVP завершён, а текущий код уже содержит расширенный прикладной трек государственной экспертизы с проверками ПП 145/ПП 87, workflow findings, XAI и экспортом. Штатный режим проекта использует локальные нейромодели через Ollama: `all-minilm` для embeddings и `gemma3:270m` для LLM, плюс локальный Tesseract OCR, rule-based decision layer, baseline vision/quality эвристики и обязательный XAI-слой по выводам.
+> EvidenceXAI — это локально разворачиваемая web-first платформа объяснимой подготовки отчётности. Базовый MVP завершён, а текущий код уже содержит расширенный прикладной трек государственной экспертизы с проверками ПП 145/ПП 87, workflow findings, staged user decisions, XAI и экспортом. Штатный режим проекта использует локальные нейромодели через Ollama: `all-minilm` для embeddings и `gemma3:270m` для LLM, плюс локальный Tesseract OCR, rule-based decision layer, baseline vision/quality эвристики, weighted readiness dashboard, macOS installer и обязательный XAI-слой по выводам.

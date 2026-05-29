@@ -33,6 +33,32 @@ function getSelectedRelativePath(file: File): string {
   return (file as FileWithRelativePath).webkitRelativePath || file.name;
 }
 
+const DOCUMENT_PROBLEM_SORT_WEIGHT: Record<string, number> = {
+  failed: 0,
+  requires_review: 1,
+  outdated: 2,
+  queued: 3,
+  processing: 4,
+  uploaded: 5,
+  archived: 6,
+  processed: 7,
+};
+
+function sortDocumentsByProblemSeverity(documents: DocumentItem[]): DocumentItem[] {
+  return [...documents].sort((left, right) => {
+    const leftWeight = DOCUMENT_PROBLEM_SORT_WEIGHT[left.status] ?? 50;
+    const rightWeight = DOCUMENT_PROBLEM_SORT_WEIGHT[right.status] ?? 50;
+    const leftCreatedAt = new Date(left.created_at).getTime();
+    const rightCreatedAt = new Date(right.created_at).getTime();
+
+    return (
+      leftWeight - rightWeight ||
+      rightCreatedAt - leftCreatedAt ||
+      left.file_name.localeCompare(right.file_name, "ru")
+    );
+  });
+}
+
 export function DocumentsPage({
   organizationName,
   canUpload,
@@ -65,7 +91,8 @@ export function DocumentsPage({
     requires_review: documents.filter((document) => document.status === "requires_review").length,
   };
   const { currentDocument, getDocumentElapsedMs } = useLiveDocumentProgress(documents);
-  const folderTree = useMemo(() => buildDocumentFolderTree(documents), [documents]);
+  const sortedDocuments = useMemo(() => sortDocumentsByProblemSeverity(documents), [documents]);
+  const folderTree = useMemo(() => buildDocumentFolderTree(sortedDocuments), [sortedDocuments]);
   const selectedFolderCount = relativePaths.filter((path) => path.includes("/")).length;
 
   function handleSelectedFiles(fileList: FileList | null) {
@@ -280,6 +307,7 @@ export function DocumentsPage({
           <DocumentFolderTree
             folders={folderTree}
             mode="manage"
+            sortByHealth
             getProgressMeta={(document) => getLiveDocumentProgressMeta(document.status, getDocumentElapsedMs(document))}
             onProcessFolder={onProcessFolder}
             onDeleteDocument={onDeleteDocument}
@@ -307,8 +335,9 @@ export function DocumentsPage({
           </div>
         </div>
         <p className="helper-text">
-          Кнопка «Обработать» ставит документ в pipeline извлечения текста. После статуса «Обработан» его уже можно
-          использовать в отчетах, поиске и привязке evidence.
+          Список отсортирован от худшего состояния к лучшему: сначала ошибки, ручная проверка и устаревшие файлы,
+          затем очередь/обработка, в конце полностью готовые документы. Кнопка «Обработать» ставит документ в pipeline
+          извлечения текста.
         </p>
         {isSearchOpen ? (
           <div className="inline-search-panel">
@@ -341,7 +370,7 @@ export function DocumentsPage({
           </div>
         ) : null}
         <div className="list">
-          {documents.map((document) => {
+          {sortedDocuments.map((document) => {
             const progressMeta = getLiveDocumentProgressMeta(document.status, getDocumentElapsedMs(document));
             const processingReason = getDocumentProcessingReason(document);
             return (

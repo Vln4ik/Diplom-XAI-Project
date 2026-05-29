@@ -72,10 +72,14 @@
 - выбор resolved model через `Ollama` candidate list;
 - `/api/system/ai-status` для проверки profile/provider/model/fallback state;
 - Docker/launcher default на `ollama` providers;
+- configurable runtime ports для backend/frontend/postgres/redis;
+- online installer для Apple Silicon Mac;
+- weighted readiness dashboard и более явный operational UI;
 - стабилизированный committed benchmark-suite;
 - pilot `real_corpus` с `5/5` cases и `20/20` targets;
 - marker-based section quality benchmark;
 - state expertise workflow для `ПП 145` и `ПП 87`;
+- staged frontend flow для findings, user decisions и replacement loop;
 - synthetic benchmark проектно-сметного спецworkflow: `4/4` cases, `10/10` targets;
 - local baseline providers для terminology, visual quality, signature/seal evidence.
 
@@ -163,6 +167,7 @@
 - report type `state_expertise_estimate_cost_verification` для `ПП 145`;
 - report type `state_expertise_estimate_cost_verification_pp87` для `ПП 87`;
 - backend/Celery workflow со stages, findings, user decisions, replacement re-check, audit trail, XAI и export;
+- frontend stage rail, sequential current-stage findings и отдельная верхняя панель действий выбранного отчёта;
 - local terminology / visual quality / signature-seal baseline;
 - synthetic benchmark and validator;
 - реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`.

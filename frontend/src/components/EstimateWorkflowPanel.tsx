@@ -18,6 +18,8 @@ import type {
 type Props = {
   reportId: string;
   workflow: EstimateExpertiseWorkflow;
+  showStageRail?: boolean;
+  onWorkflowUpdate?: (workflow: EstimateExpertiseWorkflow) => void;
 };
 
 const STAGE_STATUS_LABELS: Record<ExpertiseStageStatus, string> = {
@@ -39,6 +41,8 @@ const DECISION_STATUS_LABELS: Record<EstimateExpertiseDecision["status"], string
   replacement_processing: "Замена обрабатывается",
   replacement_resolved: "Замена прошла текущий этап",
 };
+
+const SEQUENTIAL_ANALYSIS_STAGE_IDS = new Set(["filename_content", "completeness", "section_content", "quality_spell_signature"]);
 
 function getFindingTone(finding: EstimateExpertiseFinding): string {
   if (finding.severity === "danger") {
@@ -64,22 +68,93 @@ function getDecisionTone(decision: EstimateExpertiseDecision): string {
   return "warning";
 }
 
-export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
+export function EstimateWorkflowPanel({ reportId, workflow, showStageRail = false, onWorkflowUpdate }: Props) {
   const [expandedFindingId, setExpandedFindingId] = useState<string | null>(null);
   const [persistedWorkflow, setPersistedWorkflow] = useState<EstimateExpertiseWorkflow | null>(null);
   const [localDecisions, setLocalDecisions] = useState<Record<string, EstimateExpertiseDecision>>({});
   const [backendState, setBackendState] = useState<"loading" | "ready" | "fallback">("loading");
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [activeAnalysisStageIndex, setActiveAnalysisStageIndex] = useState(0);
   const replacementTimersRef = useRef<number[]>([]);
   const activeWorkflow = persistedWorkflow ?? workflow;
   const findings = activeWorkflow.stages.flatMap((stage) => stage.findings);
+  const analysisStages = activeWorkflow.stages
+    .filter((stage) => SEQUENTIAL_ANALYSIS_STAGE_IDS.has(stage.id))
+    .sort((left, right) => left.order - right.order);
+  const activeAnalysisStage = analysisStages[activeAnalysisStageIndex] ?? analysisStages[analysisStages.length - 1] ?? null;
+  const activeStageFindings = activeAnalysisStage?.findings ?? [];
+  const activeStageBlockingFindings = activeStageFindings.filter((finding) => finding.severity !== "info");
+  const activeStageResolvedBlockingFindings = activeStageBlockingFindings.filter((finding) => isDecisionResolved(getFindingDecision(finding))).length;
+  const activeStageUnresolvedAfterDecisions = Math.max(0, activeStageBlockingFindings.length - activeStageResolvedBlockingFindings);
+  const canAdvanceAnalysisStage =
+    activeAnalysisStageIndex < analysisStages.length - 1 && activeStageUnresolvedAfterDecisions === 0;
+  const sequentialStageSummaries = analysisStages.map((stage, index) => {
+    const stageBlockingFindings = stage.findings.filter((finding) => finding.severity !== "info");
+    const stageResolvedBlockingFindings = stageBlockingFindings.filter((finding) => isDecisionResolved(getFindingDecision(finding))).length;
+    const stageUnresolvedFindings = Math.max(0, stageBlockingFindings.length - stageResolvedBlockingFindings);
+    const displayStatus: ExpertiseStageStatus =
+      index < activeAnalysisStageIndex
+        ? "completed"
+        : index === activeAnalysisStageIndex
+          ? stageUnresolvedFindings > 0
+            ? "blocked"
+            : "running"
+          : "pending";
+    return {
+      stage,
+      displayStatus,
+      actionRequired: stageBlockingFindings.length,
+      resolved: stageResolvedBlockingFindings,
+      unresolved: stageUnresolvedFindings,
+    };
+  });
   const blockingFindings = findings.filter((finding) => finding.severity !== "info");
   const resolvedBlockingFindings = blockingFindings.filter((finding) => isDecisionResolved(getFindingDecision(finding))).length;
   const unresolvedAfterDecisions = Math.max(0, blockingFindings.length - resolvedBlockingFindings);
+  const etaUnresolvedCount = activeStageUnresolvedAfterDecisions > 0 ? activeStageUnresolvedAfterDecisions : unresolvedAfterDecisions;
+  const isWaitingForUser = activeStageUnresolvedAfterDecisions > 0 || (activeWorkflow.status === "blocked" && unresolvedAfterDecisions > 0);
+  const etaTitle = isWaitingForUser
+    ? "Ожидает решения"
+    : activeWorkflow.status === "completed"
+      ? "Проверка завершена"
+      : "Осталось примерно";
+  const etaValue = isWaitingForUser
+    ? etaUnresolvedCount > 0
+      ? `${etaUnresolvedCount} замечаний`
+      : "пользователя"
+    : activeWorkflow.status === "completed"
+      ? "готово"
+      : activeWorkflow.etaLabel;
   const adjustedProgress =
     blockingFindings.length > 0
       ? Math.min(100, activeWorkflow.progress + Math.round((resolvedBlockingFindings / blockingFindings.length) * 6))
       : activeWorkflow.progress;
+
+  useEffect(() => {
+    setActiveAnalysisStageIndex(0);
+  }, [reportId]);
+
+  useEffect(() => {
+    setActiveAnalysisStageIndex((current) => Math.min(current, Math.max(analysisStages.length - 1, 0)));
+  }, [analysisStages.length]);
+
+  useEffect(() => {
+    if (!activeAnalysisStage || !canAdvanceAnalysisStage) {
+      return;
+    }
+    const delay = activeStageFindings.length > 0 ? 1400 : 650;
+    const timerId = window.setTimeout(() => {
+      setActiveAnalysisStageIndex((current) => Math.min(current + 1, Math.max(analysisStages.length - 1, 0)));
+    }, delay);
+    return () => window.clearTimeout(timerId);
+  }, [
+    activeAnalysisStage?.id,
+    activeAnalysisStageIndex,
+    activeStageFindings.length,
+    activeStageUnresolvedAfterDecisions,
+    analysisStages.length,
+    canAdvanceAnalysisStage,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -95,8 +170,7 @@ export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
             if (cancelled) {
               return;
             }
-            setPersistedWorkflow(nextWorkflow);
-            setBackendState("ready");
+            applyBackendWorkflow(nextWorkflow);
             schedulePoll(nextWorkflow);
           })
           .catch((error) => {
@@ -113,9 +187,7 @@ export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
         if (cancelled) {
           return;
         }
-        setPersistedWorkflow(backendWorkflow);
-        setBackendState("ready");
-        setBackendError(null);
+        applyBackendWorkflow(backendWorkflow);
         schedulePoll(backendWorkflow);
       })
       .catch((error) => {
@@ -153,6 +225,7 @@ export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
     setPersistedWorkflow(nextWorkflow);
     setBackendState("ready");
     setBackendError(null);
+    onWorkflowUpdate?.(nextWorkflow);
   }
 
   async function approveFinding(finding: EstimateExpertiseFinding) {
@@ -260,65 +333,114 @@ export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
           </p>
           {backendError ? <p className="helper-text">Backend fallback: {backendError}</p> : null}
         </div>
-        <div className="estimate-eta-card">
-          <span>Осталось примерно</span>
-          <strong>{activeWorkflow.etaLabel}</strong>
+        <div className={`estimate-eta-card ${isWaitingForUser ? "waiting" : ""}`}>
+          <span>{etaTitle}</span>
+          <strong>{etaValue}</strong>
           <p>
             Файлов проверено: {activeWorkflow.checkedFiles}/{activeWorkflow.totalFiles}
           </p>
           <p>Требует решения: {unresolvedAfterDecisions}</p>
+          {isWaitingForUser ? <p>Дальше маршрут продолжится после решения по замечаниям ниже.</p> : null}
         </div>
       </div>
 
-      <div className="estimate-progress-shell">
-        <div className="meter-meta">
-          <span>Общая готовность спецпроверки</span>
-          <strong>{adjustedProgress}%</strong>
-        </div>
-        <div className="estimate-stage-rail">
-          <div className="estimate-stage-rail-base" />
-          <div className="estimate-stage-rail-fill" style={{ width: `${adjustedProgress}%` }} />
-          <div className="estimate-stage-nodes">
+      {showStageRail ? (
+        <>
+          <div className="estimate-progress-shell">
+            <div className="meter-meta">
+              <span>Общая готовность спецпроверки</span>
+              <strong>{adjustedProgress}%</strong>
+            </div>
+            <div className="estimate-stage-rail">
+              <div className="estimate-stage-rail-base" />
+              <div className="estimate-stage-rail-fill" style={{ width: `${adjustedProgress}%` }} />
+              <div className="estimate-stage-nodes">
+                {activeWorkflow.stages.map((stage) => (
+                  <article key={stage.id} className={`estimate-stage-node ${stage.status}`}>
+                    <span>{stage.order}</span>
+                    <strong>{stage.shortTitle}</strong>
+                    <small>{STAGE_STATUS_LABELS[stage.status]}</small>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="estimate-stage-summary-grid">
             {activeWorkflow.stages.map((stage) => (
-              <article key={stage.id} className={`estimate-stage-node ${stage.status}`}>
-                <span>{stage.order}</span>
-                <strong>{stage.shortTitle}</strong>
-                <small>{STAGE_STATUS_LABELS[stage.status]}</small>
+              <article key={stage.id} className={`estimate-stage-summary ${stage.status}`}>
+                <div>
+                  <strong>{stage.title}</strong>
+                  <span>{STAGE_STATUS_LABELS[stage.status]}</span>
+                </div>
+                <div className="progress-track">
+                  <div className={`progress-fill tone-${stage.status === "blocked" ? "danger" : stage.status === "completed" ? "success" : "info"}`} style={{ width: `${stage.progress}%` }} />
+                </div>
+                <p>
+                  Файлы: {stage.checkedFiles}/{stage.totalFiles} · Выводы: {stage.findings.length}
+                </p>
               </article>
             ))}
           </div>
+        </>
+      ) : (
+        <div className="estimate-workflow-compact-status">
+          <div>
+            <span>Workflow без отдельного графика этапов</span>
+            <strong>{adjustedProgress}% готовности</strong>
+          </div>
+          <p>
+            Единая шкала этапов вынесена в верхний блок выбора типа отчета. В карточке остаются только выводы,
+            решения пользователя, замены файлов и XAI.
+          </p>
         </div>
-      </div>
-
-      <div className="estimate-stage-summary-grid">
-        {activeWorkflow.stages.map((stage) => (
-          <article key={stage.id} className={`estimate-stage-summary ${stage.status}`}>
-            <div>
-              <strong>{stage.title}</strong>
-              <span>{STAGE_STATUS_LABELS[stage.status]}</span>
-            </div>
-            <div className="progress-track">
-              <div className={`progress-fill tone-${stage.status === "blocked" ? "danger" : stage.status === "completed" ? "success" : "info"}`} style={{ width: `${stage.progress}%` }} />
-            </div>
-            <p>
-              Файлы: {stage.checkedFiles}/{stage.totalFiles} · Выводы: {stage.findings.length}
-            </p>
-          </article>
-        ))}
-      </div>
+      )}
 
       <div className="estimate-findings-board">
         <div className="section-header compact-header">
-          <h4>Выводы этапов 2/3/4</h4>
+          <h4>
+            {activeAnalysisStage
+              ? `Выводы этапа ${activeAnalysisStage.order}: ${activeAnalysisStage.shortTitle}`
+              : "Выводы этапов 2/3/4"}
+          </h4>
           <span>
-            {findings.length} · решено {resolvedBlockingFindings}/{blockingFindings.length}
+            {activeStageFindings.length} · решено {activeStageResolvedBlockingFindings}/{activeStageBlockingFindings.length}
           </span>
         </div>
-        {findings.length === 0 ? (
-          <div className="empty-state">Замечаний на демонстрационном слое не найдено.</div>
+        <div className="estimate-sequential-steps">
+          {sequentialStageSummaries.map((item, index) => (
+            <article
+              key={item.stage.id}
+              className={`estimate-sequential-step ${item.displayStatus} ${index === activeAnalysisStageIndex ? "active" : ""}`}
+            >
+              <span>{item.stage.order}</span>
+              <strong>{item.stage.shortTitle}</strong>
+              <small>
+                {item.unresolved > 0
+                  ? `Ждет действий: ${item.unresolved}`
+                  : item.actionRequired > 0
+                    ? `Решено: ${item.resolved}/${item.actionRequired}`
+                    : "Действий нет"}
+              </small>
+            </article>
+          ))}
+        </div>
+        {canAdvanceAnalysisStage ? (
+          <div className="estimate-stage-auto-advance">
+            На этапе «{activeAnalysisStage?.shortTitle}» нет открытых действий. EvidenceXAI переходит к следующему
+            этапу проверки.
+          </div>
+        ) : null}
+        {!activeAnalysisStage ? (
+          <div className="empty-state">Этапы проверки еще не сформированы.</div>
+        ) : activeStageFindings.length === 0 ? (
+          <div className="empty-state">
+            На этапе «{activeAnalysisStage.shortTitle}» замечаний нет. Если это не финальный этап, система перейдет
+            дальше автоматически.
+          </div>
         ) : (
           <div className="estimate-findings-list">
-            {findings.map((finding) => {
+            {activeStageFindings.map((finding) => {
               const isExpanded = expandedFindingId === finding.id;
               const decision = getFindingDecision(finding);
               const isResolved = isDecisionResolved(decision);
@@ -355,22 +477,28 @@ export function EstimateWorkflowPanel({ reportId, workflow }: Props) {
                     <span>{finding.normativeBasis}</span>
                     <span>Источник: {finding.sourceRef}</span>
                   </div>
-                  <div className="estimate-decision-actions">
-                    <button type="button" className="action-button action-success" onClick={() => void approveFinding(finding)}>
-                      Одобрить
-                    </button>
-                    <button type="button" className="action-button action-warning" onClick={() => void skipFinding(finding)}>
-                      Пропустить
-                    </button>
-                    <label className="action-button action-secondary file-action-button">
-                      Загрузить замену
-                      <input
-                        type="file"
-                        onChange={(event) => uploadReplacement(finding, event)}
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.json,.png,.jpg,.jpeg"
-                      />
-                    </label>
-                  </div>
+                  {finding.severity !== "info" && !isResolved ? (
+                    <div className="estimate-decision-actions">
+                      <button type="button" className="action-button action-success" onClick={() => void approveFinding(finding)}>
+                        Одобрить
+                      </button>
+                      <button type="button" className="action-button action-warning" onClick={() => void skipFinding(finding)}>
+                        Пропустить
+                      </button>
+                      <label className="action-button action-secondary file-action-button">
+                        Загрузить замену
+                        <input
+                          type="file"
+                          onChange={(event) => uploadReplacement(finding, event)}
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.json,.png,.jpg,.jpeg"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <div className={`estimate-action-note ${isResolved ? "resolved" : "info"}`}>
+                      {isResolved ? "Действие по этому выводу уже сохранено." : "Этот вывод информационный, решение пользователя не требуется."}
+                    </div>
+                  )}
                   {decision ? (
                     <div className={`estimate-decision-state tone-${getDecisionTone(decision)}`}>
                       <div>

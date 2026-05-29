@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: xai
       POSTGRES_PASSWORD: xai
     ports:
-      - "5432:5432"
+      - "${XAI_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
@@ -14,7 +14,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${XAI_REDIS_PORT:-6379}:6379"
 
   backend:
     build:
@@ -42,9 +42,10 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ../backend:/app
+      - ../samples:/samples:ro
       - backend_storage:/app/storage
     ports:
-      - "8000:8000"
+      - "${XAI_BACKEND_PORT:-8000}:8000"
     depends_on:
       - postgres
       - redis
@@ -75,6 +76,7 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ../backend:/app
+      - ../samples:/samples:ro
       - backend_storage:/app/storage
     depends_on:
       - postgres
@@ -95,12 +97,12 @@ services:
     build:
       context: ../frontend
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
       NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
     volumes:
       - ../frontend:/app
     ports:
-      - "5173:5173"
+      - "${XAI_FRONTEND_PORT:-5173}:5173"
     depends_on:
       - backend
     command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"

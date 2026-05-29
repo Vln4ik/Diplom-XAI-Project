@@ -48,6 +48,7 @@
 - реестр требований, матрицу доказательств, реестр рисков
 - сохранённые XAI-объяснения
 - генерацию отчёта, версионность и экспорт `DOCX`, `XLSX`, `ZIP`, `HTML`
+- weighted readiness dashboard по документам, отчётам, требованиям и открытым рискам
 - базовый OCR-контур на `Tesseract` для image-файлов и image-only `PDF`
 - специализированный workflow государственной экспертизы по проверке достоверности сметной стоимости:
   - `ПП 145`: проверка соответствия названия содержанию, комплектности, качества, подписей/печатей и XAI по findings;
@@ -259,13 +260,17 @@
 - demo-pack из `10` тестовых организаций с комплектами документов
 - модальное редактирование организации
 - попытка автозаполнения реквизитов из обработанных вложений
-- более информативный web UI с progress-индикаторами и обновлёнными action-patterns
+- более информативный web UI с weighted readiness, progress-индикаторами и обновлёнными action-patterns
+- сортировка документов от проблемных состояний к готовым
+- верхняя панель действий выбранного отчёта и staged UI для спецworkflow государственной экспертизы
+- macOS online installer для чистого Apple Silicon Mac
 
 Подробные пользовательские документы:
 
 - [docs/user-flow.md](docs/user-flow.md)
 - [docs/demo-scenario.md](docs/demo-scenario.md)
 - [docs/acceptance-checklist.md](docs/acceptance-checklist.md)
+- [INSTALL_RU.md](INSTALL_RU.md)
 
 ## Документация проекта
 
@@ -309,6 +314,18 @@ samples/   demo-корпус, benchmarks, real corpus, calibration-профил�
 
 ## Запуск проекта
 
+### Установка на чистый Mac
+
+Для Apple Silicon Mac добавлен online installer:
+
+```bash
+./Build\ EvidenceXAI\ Installer.command
+```
+
+Он собирает пакет в `dist/installers/`. Пользовательская инструкция: [INSTALL_RU.md](INSTALL_RU.md).
+
+Пакет содержит `.command`-скрипты для установки, запуска, остановки, открытия интерфейса и проверки установки. Установщик сам копирует проект в `~/EvidenceXAI`, проверяет Docker Desktop и Ollama, скачивает baseline-модели `all-minilm` / `gemma3:270m`, запускает full stack и открывает `http://localhost:5173/login`.
+
 ### Быстрый локальный запуск full stack
 
 Рекомендуемый локальный путь:
@@ -329,6 +346,17 @@ Backend / Swagger:
 
 - `admin@example.com`
 - `ChangeMe123!`
+
+Если стандартные порты заняты, launcher и Docker Compose поддерживают overrides:
+
+```bash
+XAI_BACKEND_PORT=18000 \
+XAI_FRONTEND_PORT=15173 \
+XAI_POSTGRES_PORT=15432 \
+XAI_REDIS_PORT=16379 \
+XAI_INCLUDE_FRONTEND=1 \
+bash infra/start_full_stack.sh
+```
 
 ### Базовый локальный запуск через Docker
 

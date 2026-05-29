@@ -7,7 +7,12 @@ import {
   buildDocumentFolderTree,
   summarizeFolderDocuments,
 } from "../lib/documentTree";
-import { buildEstimateExpertiseWorkflow } from "../lib/estimateExpertise";
+import {
+  buildEstimateExpertiseWorkflow,
+  type EstimateExpertiseStage,
+  type EstimateExpertiseWorkflow,
+  type ExpertiseStageStatus,
+} from "../lib/estimateExpertise";
 import { useLiveReportProgress } from "../lib/liveProgress";
 import {
   getStateExpertiseRegulationLabel,
@@ -64,17 +69,6 @@ function getEstimateCostStages(reportType: string): string[] {
   return [...baseStages, "Лексика, орфография, подписи", "Финальная готовность"];
 }
 
-function estimateSelectionEtaSeconds(selectedDocuments: DocumentItem[], summary: ReturnType<typeof summarizeFolderDocuments>): number {
-  if (selectedDocuments.length === 0) {
-    return 0;
-  }
-  const baseSeconds = 180;
-  const perDocumentSeconds = selectedDocuments.length * 55;
-  const pendingPenalty = summary.pending * 70;
-  const failedPenalty = summary.failed * 90;
-  return Math.max(90, baseSeconds + perDocumentSeconds + pendingPenalty + failedPenalty);
-}
-
 function formatRealtimeEta(totalSeconds: number): string {
   if (totalSeconds <= 0) {
     return "ожидает выбора";
@@ -85,6 +79,102 @@ function formatRealtimeEta(totalSeconds: number): string {
     return `${seconds} сек`;
   }
   return `${minutes} мин ${seconds.toString().padStart(2, "0")} сек`;
+}
+
+const STAGE_STATUS_LABELS: Record<ExpertiseStageStatus, string> = {
+  completed: "Завершено",
+  running: "В работе",
+  blocked: "Требует решения",
+  pending: "Ожидает",
+};
+
+type EstimateRailStage = Pick<EstimateExpertiseStage, "id" | "order" | "shortTitle" | "status" | "progress" | "checkedFiles" | "totalFiles">;
+
+function buildPreviewEstimateStages(reportType: string, hasSelectedDocuments: boolean): EstimateRailStage[] {
+  return getEstimateCostStages(reportType).map((title, index) => {
+    const status: ExpertiseStageStatus =
+      hasSelectedDocuments && index === 0 ? "completed" : hasSelectedDocuments && index === 1 ? "running" : !hasSelectedDocuments && index === 0 ? "running" : "pending";
+    return {
+      id: `preview-${index + 1}`,
+      order: index + 1,
+      shortTitle: title,
+      status,
+      progress: status === "completed" ? 100 : status === "running" ? 35 : 0,
+      checkedFiles: 0,
+      totalFiles: 0,
+    };
+  });
+}
+
+function getCurrentEstimateStage(stages: EstimateRailStage[]): EstimateRailStage | null {
+  return stages.find((stage) => stage.status !== "completed") ?? stages[stages.length - 1] ?? null;
+}
+
+function normalizeEstimateRailStagesForDisplay(stages: EstimateRailStage[]): EstimateRailStage[] {
+  let reachedCurrentStage = false;
+  return stages.map((stage) => {
+    if (reachedCurrentStage) {
+      return {
+        ...stage,
+        status: "pending",
+        progress: 0,
+        checkedFiles: 0,
+      };
+    }
+
+    if (stage.status !== "completed") {
+      reachedCurrentStage = true;
+    }
+
+    return stage;
+  });
+}
+
+function getEstimateRailProgress(stages: EstimateRailStage[]): number {
+  if (stages.length <= 1) {
+    return stages[0]?.status === "completed" ? 100 : 0;
+  }
+  const currentIndex = stages.findIndex((stage) => stage.status !== "completed");
+  if (currentIndex === -1) {
+    return 100;
+  }
+  if (currentIndex <= 0) {
+    return 0;
+  }
+  return Math.round((currentIndex / (stages.length - 1)) * 100);
+}
+
+function estimateCurrentStageEtaSeconds(stage: EstimateRailStage | null, selectedDocumentsCount: number): number {
+  if (!stage || stage.status === "completed" || stage.status === "blocked") {
+    return 0;
+  }
+  const fileCount = Math.max(1, stage.totalFiles || selectedDocumentsCount);
+  const remainingStageWork = Math.max(8, 100 - stage.progress);
+  return Math.ceil(fileCount * 18 + remainingStageWork * 1.15);
+}
+
+function formatStageEta(stage: EstimateRailStage | null, seconds: number): string {
+  if (!stage) {
+    return "ожидает выбора";
+  }
+  if (stage.status === "completed") {
+    return "этап завершен";
+  }
+  if (stage.status === "blocked") {
+    return "ожидает решения пользователя";
+  }
+  return formatRealtimeEta(seconds);
+}
+
+function getFullyReadyFilesCount(workflow: EstimateExpertiseWorkflow | null): number {
+  if (!workflow) {
+    return 0;
+  }
+  const finalStage = workflow.stages[workflow.stages.length - 1];
+  if (!finalStage || finalStage.status !== "completed") {
+    return 0;
+  }
+  return finalStage.checkedFiles || workflow.totalFiles;
 }
 
 function getDocumentIssueItems(document: DocumentItem | null): Array<{ tone: "success" | "warning" | "danger" | "info"; title: string; detail: string }> {
@@ -156,12 +246,10 @@ export function ReportsPage({
   const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
   const [exportMenuReportId, setExportMenuReportId] = useState<string | null>(null);
   const [selectionRailProgress, setSelectionRailProgress] = useState(0);
-  const [etaSecondsRemaining, setEtaSecondsRemaining] = useState(0);
+  const [stageEtaSecondsRemaining, setStageEtaSecondsRemaining] = useState(0);
   const [inspectedDocumentId, setInspectedDocumentId] = useState<string | null>(null);
+  const [estimateWorkflowByReportId, setEstimateWorkflowByReportId] = useState<Record<string, EstimateExpertiseWorkflow>>({});
   const isSpecialEstimateCostReport = isStateExpertiseEstimateCostReport(reportType);
-  const estimateRegulationLabel = getStateExpertiseRegulationLabel(reportType);
-  const estimateCostStages = getEstimateCostStages(reportType);
-  const hasSpecialEstimateReport = reports.some((report) => report.report_type === reportType);
   const { getReportElapsedMs } = useLiveReportProgress(reports);
 
   const processedDocuments = useMemo(
@@ -177,9 +265,28 @@ export function ReportsPage({
     () => documents.find((document) => document.id === inspectedDocumentId) ?? null,
     [documents, inspectedDocumentId],
   );
+  const selectedReport = useMemo(
+    () => reports.find((report) => report.id === selectedReportId) ?? null,
+    [reports, selectedReportId],
+  );
+  const selectedSpecialReport = selectedReport && isStateExpertiseEstimateCostReport(selectedReport.report_type) ? selectedReport : null;
+  const matchingSpecialReport = selectedSpecialReport ?? reports.find((report) => report.report_type === reportType && isStateExpertiseEstimateCostReport(report.report_type)) ?? null;
+  const displayEstimateReportType = matchingSpecialReport?.report_type ?? reportType;
+  const estimateRegulationLabel = getStateExpertiseRegulationLabel(displayEstimateReportType);
+  const showEstimateWorkflowGraph = isSpecialEstimateCostReport || Boolean(matchingSpecialReport);
+  const activeEstimateWorkflow = matchingSpecialReport
+    ? estimateWorkflowByReportId[matchingSpecialReport.id] ?? buildEstimateExpertiseWorkflow(matchingSpecialReport, documents)
+    : null;
   const selectedSummary = summarizeFolderDocuments(selectedDocuments);
-  const selectionRailTarget = selectedDocuments.length === 0 ? 8 : Math.min(36, 16 + selectedSummary.averageProgress * 0.2);
-  const estimatedEtaTarget = estimateSelectionEtaSeconds(selectedDocuments, selectedSummary);
+  const estimateRailStages: EstimateRailStage[] = normalizeEstimateRailStagesForDisplay(
+    activeEstimateWorkflow?.stages ?? buildPreviewEstimateStages(displayEstimateReportType, selectedDocuments.length > 0),
+  );
+  const currentEstimateStage = getCurrentEstimateStage(estimateRailStages);
+  const selectionRailTarget = getEstimateRailProgress(estimateRailStages);
+  const currentStageEtaTarget = estimateCurrentStageEtaSeconds(currentEstimateStage, selectedDocuments.length);
+  const currentStageEtaLabel = formatStageEta(currentEstimateStage, stageEtaSecondsRemaining);
+  const fullyReadyFilesCount = getFullyReadyFilesCount(activeEstimateWorkflow);
+  const totalWorkflowFiles = activeEstimateWorkflow?.totalFiles ?? selectedSummary.total;
   const inspectedIssues = getDocumentIssueItems(inspectedDocument);
 
   useEffect(() => {
@@ -191,15 +298,15 @@ export function ReportsPage({
   }, [selectionRailTarget]);
 
   useEffect(() => {
-    setEtaSecondsRemaining(estimatedEtaTarget);
-    if (!isSpecialEstimateCostReport || estimatedEtaTarget <= 0) {
+    setStageEtaSecondsRemaining(currentStageEtaTarget);
+    if (!showEstimateWorkflowGraph || currentStageEtaTarget <= 0 || currentEstimateStage?.status === "blocked") {
       return;
     }
     const intervalId = window.setInterval(() => {
-      setEtaSecondsRemaining((current) => Math.max(0, current - 1));
+      setStageEtaSecondsRemaining((current) => Math.max(0, current - 1));
     }, 1000);
     return () => window.clearInterval(intervalId);
-  }, [estimatedEtaTarget, isSpecialEstimateCostReport]);
+  }, [currentEstimateStage?.id, currentEstimateStage?.status, currentStageEtaTarget, showEstimateWorkflowGraph]);
 
   function getSelectableReportDocuments(folderDocuments: DocumentItem[]) {
     return folderDocuments.filter((document) => ["processed", "requires_review"].includes(document.status));
@@ -240,6 +347,11 @@ export function ReportsPage({
   function canApprove(status: string): boolean {
     return status === "awaiting_approval";
   }
+
+  const selectedReportActions = selectedReport ? {
+    isSpecialReport: isStateExpertiseEstimateCostReport(selectedReport.report_type),
+    exports: isStateExpertiseEstimateCostReport(selectedReport.report_type) ? ESTIMATE_EXPORT_OPTIONS : EXPORT_OPTIONS,
+  } : null;
 
   async function handleCreateReport(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -309,7 +421,7 @@ export function ReportsPage({
               </option>
             ))}
           </select>
-          {isSpecialEstimateCostReport && !hasSpecialEstimateReport ? (
+          {showEstimateWorkflowGraph ? (
             <section className="estimate-workflow-preview field-span-2">
               <div>
                 <p className="eyebrow">Специализированный workflow</p>
@@ -320,16 +432,43 @@ export function ReportsPage({
                   качество документов, подписи, печати, орфография и XAI по каждому выводу.
                 </p>
               </div>
-              <div className="estimate-stage-preview">
-                {estimateCostStages.map((stage, index) => (
-                  <article key={stage} className={index === 0 ? "active" : ""}>
-                    <span>{index + 1}</span>
-                    <strong>{stage}</strong>
-                  </article>
-                ))}
-              </div>
+
+              <section className="estimate-selection-panel">
+                <div className="section-header">
+                  <h3>Единая шкала проверки выбранного пакета</h3>
+                  <span>
+                    Этап: {currentEstimateStage?.shortTitle ?? "ожидает"} · осталось: {currentStageEtaLabel}
+                  </span>
+                </div>
+                <p className="helper-text">
+                  Это общий график этапов для выбранного типа отчета. Кружок этапа закрашивается только после полного
+                  завершения этапа; во время работы линия доходит до текущего этапа, но не закрашивает его.
+                </p>
+                <div className="estimate-stage-rail compact-rail">
+                  <div className="estimate-stage-rail-base" />
+                  <div className="estimate-stage-rail-fill" style={{ width: `${selectionRailProgress}%` }} />
+                  <div className="estimate-stage-nodes">
+                    {estimateRailStages.map((stage) => (
+                      <article key={stage.id} className={`estimate-stage-node ${stage.status}`}>
+                        <span>{stage.order}</span>
+                        <strong>{stage.shortTitle}</strong>
+                        <small>{STAGE_STATUS_LABELS[stage.status]}</small>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+                <div className="folder-summary-grid">
+                  <span>Выбрано: {selectedSummary.total}</span>
+                  <span>
+                    Полностью готовы: {fullyReadyFilesCount}/{totalWorkflowFiles}
+                  </span>
+                  <span>Текущий этап: {currentEstimateStage?.shortTitle ?? "ожидает"}</span>
+                  <span>Таймер этапа: {currentStageEtaLabel}</span>
+                </div>
+              </section>
+
               <div className="estimate-folder-note">
-                <strong>Выбор источника для Phase 2</strong>
+                <strong>Выбор источника для workflow</strong>
                 <p>
                   Ниже показана вся структура папок организации. В спецотчет попадут только файлы со статусом
                   «обработан» или «нужна проверка», а неготовые файлы останутся видимыми как причина желтого или
@@ -338,60 +477,11 @@ export function ReportsPage({
               </div>
             </section>
           ) : null}
-          {isSpecialEstimateCostReport && selectedDocuments.length > 0 ? (
-            <section className="estimate-selection-panel field-span-2">
-              <div className="section-header">
-                <h3>Общая шкала проверки выбранного пакета</h3>
-                <span>{selectedDocuments.length} файл(ов) · осталось: {formatRealtimeEta(etaSecondsRemaining)}</span>
-              </div>
-              <p className="helper-text">
-                Это единая интерактивная шкала для всех выбранных папок и файлов. После создания спецотчета она будет
-                заменена backend workflow с реальными этапами, findings и XAI.
-              </p>
-              <div className="estimate-stage-rail compact-rail">
-                <div className="estimate-stage-rail-base" />
-                <div className="estimate-stage-rail-fill" style={{ width: `${selectionRailProgress}%` }} />
-                <div className="estimate-stage-nodes">
-                  {estimateCostStages.map((stage, index) => {
-                    const statusClass =
-                      selectedDocuments.length === 0
-                        ? index === 0
-                          ? "running"
-                          : "pending"
-                        : index === 0
-                          ? "completed"
-                          : index === 1
-                            ? "running"
-                            : "pending";
-                    return (
-                      <article key={stage} className={`estimate-stage-node ${statusClass}`}>
-                        <span>{index + 1}</span>
-                        <strong>{stage}</strong>
-                        <small>
-                          {index === 0 && selectedDocuments.length > 0
-                            ? "пакет выбран"
-                            : index === 1 && selectedDocuments.length > 0
-                              ? "следующий этап"
-                              : "ожидает"}
-                        </small>
-                      </article>
-                    );
-                  })}
-                </div>
-              </div>
-              <div className="folder-summary-grid">
-                <span>Выбрано: {selectedSummary.total}</span>
-                <span>Готовы: {selectedSummary.ready}</span>
-                <span>Не готовы: {selectedSummary.pending}</span>
-                <span>Ошибки: {selectedSummary.failed}</span>
-              </div>
-            </section>
-          ) : null}
 
           <section className="field-span-2">
             <div className="section-header compact-header">
               <h3>Выбор папок и файлов для отчета</h3>
-              <span>{processedDocuments.length} готово</span>
+              <span>{processedDocuments.length} доступно к выбору</span>
             </div>
             <p className="helper-text">
               Сначала показаны сводки по папкам. Откройте папку, чтобы выбрать файл; справа появятся ошибки обработки и
@@ -463,6 +553,93 @@ export function ReportsPage({
           Анализ формирует требования, матрицу и XAI-объяснения. Генерация создает черновик отчета и данные для
           экспорта. Риски появляются только если система нашла пробелы или несоответствия.
         </p>
+        {selectedReport && selectedReportActions ? (
+          <div className="selected-report-toolbar">
+            <div>
+              <span className="eyebrow">Действия выбранного отчета</span>
+              <strong>{selectedReport.title}</strong>
+              <p>
+                {formatReportType(selectedReport.report_type)} · {formatReportStatus(selectedReport.status)}
+              </p>
+            </div>
+            <div className="selected-report-actions">
+              {!selectedReportActions.isSpecialReport ? (
+                <>
+                  <button type="button" className="action-button action-primary" onClick={() => onAnalyze(selectedReport.id)}>
+                    Анализ
+                  </button>
+                  <button type="button" className="action-button action-secondary" onClick={() => onGenerate(selectedReport.id)}>
+                    Генерация
+                  </button>
+                  <button
+                    type="button"
+                    className="action-button action-ghost"
+                    disabled={!canSubmit(selectedReport.status)}
+                    onClick={() => onSubmitForApproval(selectedReport.id)}
+                  >
+                    На согласование
+                  </button>
+                </>
+              ) : (
+                <span className="status-pill tone-info">Спецworkflow управляется через задачи ниже</span>
+              )}
+              <div className="inline-menu-anchor">
+                <button
+                  type="button"
+                  className="action-button action-light"
+                  onClick={() => setExportMenuReportId((current) => (current === selectedReport.id ? null : selectedReport.id))}
+                >
+                  Скачать
+                </button>
+                {exportMenuReportId === selectedReport.id ? (
+                  <div className="inline-menu">
+                    {selectedReportActions.exports.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className="inline-menu-item"
+                        onClick={() => {
+                          setExportMenuReportId(null);
+                          void onExport(selectedReport.id, option.value);
+                        }}
+                      >
+                        <strong>{option.label}</strong>
+                        <span>{option.hint}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                className="action-button action-success"
+                disabled={!canApprove(selectedReport.status)}
+                onClick={() => onApprove(selectedReport.id)}
+              >
+                Согласовать
+              </button>
+              <button
+                type="button"
+                className="action-button action-warning"
+                disabled={!canApprove(selectedReport.status)}
+                onClick={() => onReturnToRevision(selectedReport.id)}
+              >
+                На доработку
+              </button>
+              <button type="button" className="action-button action-danger" onClick={() => void onDeleteReport(selectedReport)}>
+                Удалить
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="selected-report-toolbar empty-toolbar">
+            <div>
+              <span className="eyebrow">Действия отчета</span>
+              <strong>Выберите отчет</strong>
+              <p>Нажмите галочку слева у нужного отчета, чтобы открыть общие действия сверху.</p>
+            </div>
+          </div>
+        )}
         <div className="list">
           {reports.map((report) => {
             const isSelected = selectedReportId === report.id;
@@ -508,86 +685,18 @@ export function ReportsPage({
                       {report.status === "approved" ? "Отчет согласован и готов к финальной выгрузке." : null}
                     </p>
                   </div>
-                  {estimateWorkflow ? <EstimateWorkflowPanel reportId={report.id} workflow={estimateWorkflow} /> : null}
-                </div>
-                <div className="report-action-stack">
-                  {isSpecialReport ? (
-                    <div className="estimate-report-actions">
-                      <span className="status-pill tone-info">Спецworkflow</span>
-                      <p>
-                        Обычный анализ и генерация отключены. Ниже уже доступен демонстрационный маршрут
-                        государственной экспертизы по сметной стоимости.
-                      </p>
-                      <button type="button" className="action-button action-secondary" disabled>
-                        Workflow: UI skeleton
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="action-cluster">
-                      <button type="button" className="action-button action-primary" onClick={() => onAnalyze(report.id)}>
-                        Анализ
-                      </button>
-                      <button type="button" className="action-button action-secondary" onClick={() => onGenerate(report.id)}>
-                        Генерация
-                      </button>
-                      <button
-                        type="button"
-                        className="action-button action-ghost"
-                        disabled={!canSubmit(report.status)}
-                        onClick={() => onSubmitForApproval(report.id)}
-                      >
-                        На согласование
-                      </button>
-                    </div>
-                  )}
-                  <div className="action-cluster">
-                    <div className="inline-menu-anchor">
-                      <button
-                        type="button"
-                        className="action-button action-light"
-                        onClick={() => setExportMenuReportId((current) => (current === report.id ? null : report.id))}
-                      >
-                        Скачать
-                      </button>
-                      {exportMenuReportId === report.id ? (
-                        <div className="inline-menu">
-                          {(isStateExpertiseEstimateCostReport(report.report_type) ? ESTIMATE_EXPORT_OPTIONS : EXPORT_OPTIONS).map((option) => (
-                            <button
-                              key={option.value}
-                              type="button"
-                              className="inline-menu-item"
-                              onClick={() => {
-                                setExportMenuReportId(null);
-                                void onExport(report.id, option.value);
-                              }}
-                            >
-                              <strong>{option.label}</strong>
-                              <span>{option.hint}</span>
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                    <button
-                      type="button"
-                      className="action-button action-success"
-                      disabled={!canApprove(report.status)}
-                      onClick={() => onApprove(report.id)}
-                    >
-                      Согласовать
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button action-warning"
-                      disabled={!canApprove(report.status)}
-                      onClick={() => onReturnToRevision(report.id)}
-                    >
-                      На доработку
-                    </button>
-                    <button type="button" className="action-button action-danger" onClick={() => void onDeleteReport(report)}>
-                      Удалить
-                    </button>
-                  </div>
+                  {estimateWorkflow ? (
+                    <EstimateWorkflowPanel
+                      reportId={report.id}
+                      workflow={estimateWorkflow}
+                      onWorkflowUpdate={(workflow) =>
+                        setEstimateWorkflowByReportId((current) => ({
+                          ...current,
+                          [report.id]: workflow,
+                        }))
+                      }
+                    />
+                  ) : null}
                 </div>
               </article>
             );

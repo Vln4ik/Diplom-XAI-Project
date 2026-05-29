@@ -2,8 +2,10 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:5173/login}"
-API_DOCS_URL="${API_DOCS_URL:-http://localhost:8000/docs}"
+XAI_BACKEND_PORT="${XAI_BACKEND_PORT:-8000}"
+XAI_FRONTEND_PORT="${XAI_FRONTEND_PORT:-5173}"
+FRONTEND_URL="${FRONTEND_URL:-http://localhost:${XAI_FRONTEND_PORT}/login}"
+API_DOCS_URL="${API_DOCS_URL:-http://localhost:${XAI_BACKEND_PORT}/docs}"
 
 cd "$ROOT_DIR"
 

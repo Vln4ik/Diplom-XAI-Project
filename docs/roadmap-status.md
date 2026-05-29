@@ -139,12 +139,16 @@
 - model resolver для `Ollama`: выбор лучшей доступной модели из профиля;
 - `/api/system/ai-status` показывает runtime profile, providers, candidate models, resolved models, fallback/model mode;
 - Docker Compose и launcher по умолчанию переводят backend/worker в `ollama` provider mode;
+- Docker Compose и launcher поддерживают overrides портов `XAI_BACKEND_PORT`, `XAI_FRONTEND_PORT`, `XAI_POSTGRES_PORT`, `XAI_REDIS_PORT`;
+- добавлен online installer для Apple Silicon Mac с `.command`-скриптами установки, запуска, остановки, открытия и проверки;
 - `quality-benchmark-suite` и pilot `real_corpus` стабилизированы после calibration work;
 - marker-based section quality уже измеряется и на committed suite, и на real corpus;
 - state expertise workflow для `ПП 145` и `ПП 87` перенесён в backend/Celery persistence contour;
 - для `ПП 145` реализованы этапы `start -> filename_content -> completeness -> quality_spell_signature -> final`;
 - для `ПП 87` вместо комплектности подачи по `ПП 145` используется этап `section_content`;
 - реализованы findings, user decisions, replacement re-check, audit trail, XAI summary и export для спецworkflow;
+- frontend показывает stage rail спецworkflow сверху и последовательно раскрывает findings текущего этапа;
+- dashboard readiness переведён на weighted score по documents/reports/requirements/unresolved risks;
 - добавлены локальные baseline-провайдеры `layout-baseline-v1`, `layout-quality-baseline-v1`, `local-terminology-rules-v1`;
 - synthetic benchmark проектно-сметного спецworkflow проходит `4/4` cases и `10/10` targets;
 - реальный локальный пакет `Водоканалпроект / 1. ИРД` подтверждает работу на большом наборе документов.
@@ -201,4 +205,4 @@ Platform maturity:
 
 Корректная формулировка:
 
-> `EvidenceXAI` — локально разворачиваемая web-first платформа объяснимой подготовки отчётности. `MVP 1` завершён, а активный `MVP 2` уже содержит profile-aware локальный AI runtime, расширенные benchmark-артефакты и прикладной спецworkflow государственной экспертизы с findings, XAI, user decisions и export, но production-grade vision, широкий real-world corpus и enterprise workflow ещё остаются задачами следующих этапов.
+> `EvidenceXAI` — локально разворачиваемая web-first платформа объяснимой подготовки отчётности. `MVP 1` завершён, а активный `MVP 2` уже содержит profile-aware локальный AI runtime, расширенные benchmark-артефакты, weighted readiness dashboard, macOS installer и прикладной спецworkflow государственной экспертизы с findings, XAI, user decisions и export, но production-grade vision, широкий real-world corpus и enterprise workflow ещё остаются задачами следующих этапов.

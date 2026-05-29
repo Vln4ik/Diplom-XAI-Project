@@ -3,11 +3,15 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
+COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-evidencxai}"
 AI_PROFILE="${XAI_APP_AI_RUNTIME_PROFILE:-baseline}"
 EMBED_MODEL="${XAI_APP_OLLAMA_EMBEDDING_MODEL:-all-minilm}"
 LLM_MODEL="${XAI_APP_OLLAMA_LLM_MODEL:-gemma3:270m}"
-AI_STATUS_URL="${AI_STATUS_URL:-http://localhost:8000/api/system/ai-status}"
+XAI_BACKEND_PORT="${XAI_BACKEND_PORT:-8000}"
+AI_STATUS_URL="${AI_STATUS_URL:-http://localhost:${XAI_BACKEND_PORT}/api/system/ai-status}"
 OLLAMA_TAGS_URL="${OLLAMA_TAGS_URL:-http://localhost:11434/api/tags}"
+
+export COMPOSE_PROJECT_NAME XAI_BACKEND_PORT
 
 echo "Starting stack with Ollama profile..."
 COMPOSE_PROFILES=local-ai \

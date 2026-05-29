@@ -30,6 +30,19 @@ bash infra/start_full_stack.sh
 
 Он проверяет Docker, host Ollama, модели `all-minilm` и `gemma3:270m`, затем запускает backend/worker/frontend с `ollama` providers.
 
+Runtime-порты настраиваются через environment variables:
+
+- `XAI_BACKEND_PORT`;
+- `XAI_FRONTEND_PORT`;
+- `XAI_POSTGRES_PORT`;
+- `XAI_REDIS_PORT`.
+
+Для передачи проекта на чистый Apple Silicon Mac добавлен online installer:
+
+- build entrypoint: [../Build EvidenceXAI Installer.command](../Build%20EvidenceXAI%20Installer.command);
+- installer scripts: [../infra/macos-installer](../infra/macos-installer);
+- user guide: [../INSTALL_RU.md](../INSTALL_RU.md).
+
 ## 3. Доменная модель
 
 Ключевые сущности:
@@ -81,6 +94,15 @@ bash infra/start_full_stack.sh
 9. Export формирует `DOCX`, `XLSX`, `ZIP`, `HTML`.
 
 Спецтипы государственной экспертизы не используют обычные `analyze/generate`. Для них запускается отдельный state expertise workflow.
+
+Dashboard readiness считается не как простое среднее готовности отчётов, а как weighted score:
+
+- documents: `35%`;
+- reports: `25%`;
+- requirements: `25%`;
+- unresolved risks: `15%`.
+
+Frontend дополнительно строит live readiness на текущем состоянии документов, отчётов, требований и рисков, чтобы dashboard менялся без ожидания ручного refresh.
 
 ## 6. AI/XAI контур
 
@@ -155,6 +177,8 @@ Stage logic включает:
 - signature/seal baseline;
 - XAI per finding;
 - user decision and replacement loop.
+
+Frontend state expertise UI показывает единый stage rail в верхнем блоке отчёта и последовательный список выводов текущего этапа. Для blocking findings следующий этап открывается только после `approve`, `skip` или replacement decision; informational findings не требуют пользовательского решения.
 
 ## 8. Storage boundaries
 

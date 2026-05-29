@@ -249,6 +249,7 @@ function AppShell() {
 
     const intervalId = window.setInterval(() => {
       fetchDocuments(selectedOrganizationId).then(setDocuments).catch(() => undefined);
+      fetchDashboard(selectedOrganizationId).then(setDashboard).catch(() => undefined);
     }, 2000);
 
     return () => window.clearInterval(intervalId);
@@ -795,7 +796,10 @@ function AppShell() {
           />
         }
       >
-        <Route index element={<DashboardPage dashboard={dashboard} documents={documents} />} />
+        <Route
+          index
+          element={<DashboardPage dashboard={dashboard} documents={documents} reports={reports} requirements={requirements} risks={risks} />}
+        />
         <Route
           path="organizations"
           element={

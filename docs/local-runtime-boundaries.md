@@ -10,6 +10,7 @@
 - документы не отправляются во внешние LLM API;
 - OCR, embeddings, LLM, XAI, benchmark и экспорт выполняются внутри локального стенда;
 - Docker Compose является основным способом запуска демо и разработки.
+- macOS installer разворачивает тот же локальный контур на Apple Silicon Mac и не добавляет внешние OCR/LLM API.
 
 ## 2. Что означает “локальная модель”
 
@@ -42,6 +43,8 @@
 Fallback providers `hash-fallback` и `template-fallback` остаются только как аварийная деградация, если локальный AI runtime временно недоступен. Для полноценной демонстрации и защиты проекта должен использоваться режим `ollama`.
 
 Диагностика фактического режима доступна через `/api/system/ai-status`: там видно configured provider, candidate models, resolved model, mode `model/fallback` и признак `sends_documents_to_external_services = false` для локальных OCR/vision providers.
+
+Порты локального стенда можно менять через `XAI_BACKEND_PORT`, `XAI_FRONTEND_PORT`, `XAI_POSTGRES_PORT`, `XAI_REDIS_PORT`. Это меняет сетевые bindings Docker Compose, но не меняет privacy/runtime boundary.
 
 ## 3. Текущий OCR / vision contour
 

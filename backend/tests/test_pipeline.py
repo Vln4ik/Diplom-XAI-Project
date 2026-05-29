@@ -3,7 +3,20 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
-from app.models import Document, DocumentCategory, DocumentStatus, Report, Risk, RiskLevel, RiskStatus
+from sqlalchemy import select
+
+from app.models import (
+    Document,
+    DocumentCategory,
+    DocumentStatus,
+    Report,
+    ReportStatus,
+    Requirement,
+    RequirementStatus,
+    Risk,
+    RiskLevel,
+    RiskStatus,
+)
 from app.services.auth import create_user
 from app.services.documents import describe_processing_error
 from app.services.estimate_expertise import ensure_estimate_expertise_workflow, recalculate_workflow_metrics
@@ -20,6 +33,106 @@ def _auth_headers(test_client, email: str, password: str) -> dict[str, str]:
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
+
+
+def test_dashboard_readiness_uses_documents_reports_requirements_and_unresolved_risks(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="dashboard-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "dashboard-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Dashboard Progress Company", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    empty_dashboard_response = test_client.get(f"/api/organizations/{organization_id}/dashboard", headers=headers)
+    assert empty_dashboard_response.status_code == 200
+    assert empty_dashboard_response.json()["readiness_percent"] == 0
+
+    with session_factory() as session:
+        processed_document = Document(
+            organization_id=organization_id,
+            file_name="processed.txt",
+            original_file_name="processed.txt",
+            file_type="text/plain",
+            file_size=100,
+            category=DocumentCategory.evidence,
+            storage_path="processed.txt",
+            status=DocumentStatus.processed,
+        )
+        queued_document = Document(
+            organization_id=organization_id,
+            file_name="queued.txt",
+            original_file_name="queued.txt",
+            file_type="text/plain",
+            file_size=100,
+            category=DocumentCategory.evidence,
+            storage_path="queued.txt",
+            status=DocumentStatus.queued,
+        )
+        report = Report(
+            organization_id=organization_id,
+            title="Dashboard report",
+            regulator="rosobrnadzor",
+            report_type="rosobrnadzor_education",
+            status=ReportStatus.requires_review,
+            readiness_percent=80,
+        )
+        session.add_all([processed_document, queued_document, report])
+        session.flush()
+        requirement = Requirement(
+            organization_id=organization_id,
+            report_id=report.id,
+            category="Документы",
+            title="Подтверждение",
+            text="Требование подтверждено evidence.",
+            status=RequirementStatus.confirmed,
+            confidence_score=0.9,
+            required_data=["evidence"],
+            found_data=["processed.txt"],
+        )
+        session.add(requirement)
+        session.flush()
+        risk = Risk(
+            organization_id=organization_id,
+            report_id=report.id,
+            requirement_id=requirement.id,
+            title="Высокий риск",
+            description="Есть открытый риск.",
+            risk_level=RiskLevel.high,
+            status=RiskStatus.new,
+        )
+        session.add(risk)
+        session.commit()
+
+    dashboard_response = test_client.get(f"/api/organizations/{organization_id}/dashboard", headers=headers)
+    assert dashboard_response.status_code == 200
+    dashboard = dashboard_response.json()
+    assert dashboard["processed_documents"] == 1
+    assert dashboard["active_reports"] == 1
+    assert dashboard["total_requirements"] == 1
+    assert dashboard["high_risks"] == 1
+    assert dashboard["readiness_percent"] > empty_dashboard_response.json()["readiness_percent"]
+
+    with session_factory() as session:
+        document = session.scalar(
+            select(Document).where(Document.organization_id == organization_id, Document.file_name == "queued.txt")
+        )
+        document.status = DocumentStatus.processed
+        risk = session.scalar(select(Risk).where(Risk.organization_id == organization_id))
+        risk.status = RiskStatus.resolved
+        session.commit()
+
+    improved_dashboard_response = test_client.get(f"/api/organizations/{organization_id}/dashboard", headers=headers)
+    assert improved_dashboard_response.status_code == 200
+    improved_dashboard = improved_dashboard_response.json()
+    assert improved_dashboard["processed_documents"] == 2
+    assert improved_dashboard["high_risks"] == 0
+    assert improved_dashboard["readiness_percent"] > dashboard["readiness_percent"]
 
 
 def test_folder_upload_preserves_relative_paths(client):

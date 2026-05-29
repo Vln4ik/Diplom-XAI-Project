@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 
 import { PageGuide } from "../components/PageGuide";
-import { useLiveDocumentProgress } from "../lib/liveProgress";
-import type { Dashboard, DocumentItem } from "../lib/types";
+import { useLiveDocumentProgress, useLiveReportProgress } from "../lib/liveProgress";
+import type { Dashboard, DocumentItem, ReportItem, RequirementItem, RiskItem } from "../lib/types";
 import {
   clampProgress,
   formatDocumentCategory,
   formatDocumentStatus,
+  getLiveReportAnalysisProgress,
   getLiveDocumentProgressMeta,
   getReadinessMeta,
   type UiTone,
@@ -15,24 +16,89 @@ import {
 type Props = {
   dashboard: Dashboard | null;
   documents: DocumentItem[];
+  reports: ReportItem[];
+  requirements: RequirementItem[];
+  risks: RiskItem[];
 };
 
-function useAnimatedProgress(value: number) {
+function useAnimatedProgress(value: number, durationMs = 900) {
   const [animatedValue, setAnimatedValue] = useState(0);
 
   useEffect(() => {
-    setAnimatedValue(0);
-    let nextFrameId = 0;
-    const frameId = window.requestAnimationFrame(() => {
-      nextFrameId = window.requestAnimationFrame(() => setAnimatedValue(clampProgress(value)));
-    });
-    return () => {
-      window.cancelAnimationFrame(frameId);
-      window.cancelAnimationFrame(nextFrameId);
+    const targetValue = clampProgress(value);
+    const startValue = animatedValue;
+    const startedAt = performance.now();
+    let frameId = 0;
+
+    function tick(now: number) {
+      const progress = Math.min(1, (now - startedAt) / durationMs);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      setAnimatedValue(startValue + (targetValue - startValue) * easedProgress);
+      if (progress < 1) {
+        frameId = window.requestAnimationFrame(tick);
+      }
     };
-  }, [value]);
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
+  }, [durationMs, value]);
 
   return animatedValue;
+}
+
+function getReportProgress(report: ReportItem, elapsedMs: number): number {
+  if (report.status === "analyzing") {
+    return getLiveReportAnalysisProgress(report.readiness_percent, elapsedMs);
+  }
+
+  if (report.readiness_percent > 0) {
+    return clampProgress(report.readiness_percent);
+  }
+
+  const statusScores: Record<string, number> = {
+    draft: 12,
+    requires_review: 72,
+    in_revision: 66,
+    awaiting_approval: 88,
+    approved: 100,
+    exported: 100,
+    archived: 100,
+  };
+  return statusScores[report.status] ?? 0;
+}
+
+function getRequirementProgress(requirement: RequirementItem): number {
+  const statusScores: Record<string, number> = {
+    new: 8,
+    applicable: 45,
+    not_applicable: 100,
+    needs_clarification: 25,
+    data_found: 75,
+    data_partial: 48,
+    data_missing: 18,
+    confirmed: 100,
+    rejected: 100,
+    included_in_report: 100,
+    archived: 100,
+  };
+  return statusScores[requirement.status] ?? 0;
+}
+
+function getRiskPenalty(riskLevel: string): number {
+  const penalties: Record<string, number> = {
+    low: 5,
+    medium: 12,
+    high: 24,
+    critical: 35,
+  };
+  return penalties[riskLevel] ?? 0;
+}
+
+function average(values: number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
 function AnimatedProgressBar({ value, tone, large = false }: { value: number; tone: UiTone; large?: boolean }) {
@@ -79,21 +145,21 @@ function ReadinessDonut({ value }: { value: number }) {
       }}
     >
       <div className="readiness-donut-inner">
-        <strong>{animatedValue}%</strong>
+        <strong>{Math.round(animatedValue)}%</strong>
         <span>готовность</span>
       </div>
     </div>
   );
 }
 
-export function DashboardPage({ dashboard, documents }: Props) {
+export function DashboardPage({ dashboard, documents, reports, requirements, risks }: Props) {
   const { getDocumentElapsedMs } = useLiveDocumentProgress(documents);
+  const { getReportElapsedMs } = useLiveReportProgress(reports);
 
   if (!dashboard) {
     return <div className="panel">Выберите организацию на вкладке «Организации», чтобы открыть дашборд.</div>;
   }
 
-  const readiness = getReadinessMeta(dashboard.readiness_percent);
   const documentRows = documents.slice(0, 8);
   const documentQuality = documents.length
     ? Math.round(
@@ -103,13 +169,25 @@ export function DashboardPage({ dashboard, documents }: Props) {
         ) / documents.length,
       )
     : 0;
+  const reportQuality = reports.length
+    ? Math.round(average(reports.map((report) => getReportProgress(report, getReportElapsedMs(report)))))
+    : 0;
+  const requirementsQuality = requirements.length ? Math.round(average(requirements.map(getRequirementProgress))) : 0;
+  const unresolvedRisks = risks.filter((risk) => ["new", "in_progress", "needs_review"].includes(risk.status));
+  const riskQuality = reports.length ? clampProgress(100 - unresolvedRisks.reduce((sum, risk) => sum + getRiskPenalty(risk.risk_level), 0)) : 0;
+  const liveReadiness = Math.round(
+    clampProgress(documentQuality * 0.35 + reportQuality * 0.25 + requirementsQuality * 0.25 + riskQuality * 0.15),
+  );
+  const hasLocalOperationalState = documents.length > 0 || reports.length > 0 || requirements.length > 0 || risks.length > 0;
+  const effectiveReadinessPercent = hasLocalOperationalState ? liveReadiness : Math.round(dashboard.readiness_percent);
+  const readiness = getReadinessMeta(effectiveReadinessPercent);
   const activeDocuments = documents.filter((document) => ["queued", "processing"].includes(document.status)).length;
   const readyDocuments = documents.filter((document) => ["processed", "requires_review"].includes(document.status)).length;
   const chartItems = [
     { label: "Документы", value: documents.length ? documentQuality : 0, tone: "info" as UiTone },
-    { label: "Отчеты", value: dashboard.active_reports > 0 ? Math.min(100, dashboard.active_reports * 35) : 0, tone: "success" as UiTone },
-    { label: "Требования", value: dashboard.total_requirements > 0 ? Math.min(100, dashboard.total_requirements * 8) : 0, tone: "warning" as UiTone },
-    { label: "Риски", value: dashboard.high_risks > 0 ? Math.min(100, dashboard.high_risks * 25) : 8, tone: "danger" as UiTone },
+    { label: "Отчеты", value: reportQuality, tone: "success" as UiTone },
+    { label: "Требования", value: requirementsQuality, tone: "warning" as UiTone },
+    { label: "Риски", value: riskQuality, tone: "danger" as UiTone },
   ];
   const nextStep =
     documents.length === 0
@@ -164,7 +242,7 @@ export function DashboardPage({ dashboard, documents }: Props) {
         <div className="dashboard-command-progress">
           <div className="meter-meta">
             <span>{readiness.label}</span>
-            <strong>{dashboard.readiness_percent}%</strong>
+            <strong>{effectiveReadinessPercent}%</strong>
           </div>
           <AnimatedProgressBar value={readiness.progress} tone={readiness.tone} large />
           <p className="helper-text">{readiness.detail}</p>
@@ -181,7 +259,7 @@ export function DashboardPage({ dashboard, documents }: Props) {
             <span className={`status-pill tone-${readiness.tone}`}>{readiness.label}</span>
           </div>
           <div className="chart-layout">
-            <ReadinessDonut value={dashboard.readiness_percent} />
+            <ReadinessDonut value={effectiveReadinessPercent} />
             <div className="chart-bars">
               {chartItems.map((item) => (
                 <div key={item.label} className="chart-bar-row">
@@ -209,11 +287,11 @@ export function DashboardPage({ dashboard, documents }: Props) {
               <span>готовы к анализу</span>
             </div>
             <div>
-              <strong>{dashboard.active_reports}</strong>
+              <strong>{reports.length}</strong>
               <span>активных отчетов</span>
             </div>
             <div>
-              <strong>{dashboard.high_risks}</strong>
+              <strong>{unresolvedRisks.filter((risk) => ["high", "critical"].includes(risk.risk_level)).length}</strong>
               <span>высоких рисков</span>
             </div>
           </div>

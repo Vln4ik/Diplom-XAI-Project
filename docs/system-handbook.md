@@ -61,6 +61,7 @@
 - chunking и индексирование фрагментов
 - поиск по фрагментам
 - progress-индикаторы обработки в web UI
+- сортировка документов от проблемных статусов к готовым
 
 ### 4.1.a. Организации
 
@@ -91,6 +92,8 @@
 - export `DOCX`, `XLSX`, `ZIP`, `HTML`
 - базовый контур review / submit / approve
 - export спецworkflow `DOCX/XLSX/XAI HTML/ZIP`
+- верхняя панель действий выбранного отчёта
+- staged state expertise UI с текущим этапом, ETA, решениями пользователя и replacement loop
 
 ### 4.4. Инженерная зрелость `MVP 1`
 
@@ -100,6 +103,8 @@
 - calibration sweep
 - базовый observability-контур
 - synthetic benchmark проектно-сметного спецworkflow
+- backend/frontend readiness model, учитывающая documents, reports, requirements и unresolved risks
+- online installer для Apple Silicon Mac
 
 ## 5. Пользователи и роли
 

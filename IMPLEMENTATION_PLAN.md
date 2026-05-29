@@ -17,6 +17,7 @@
 - основной завершённый сценарий: `Рособрнадзор + образовательная организация`;
 - текущий расширенный прикладной трек: государственная экспертиза проектной документации, `ПП 145` и `ПП 87`;
 - штатный demo/runtime путь: локальный `Ollama + Tesseract + rule-based/XAI` без внешних OCR/LLM API.
+- актуальный delivery layer: Docker Compose launcher с configurable ports и macOS online installer для Apple Silicon.
 
 ## 3. Что включает завершённый `MVP 1`
 
@@ -53,6 +54,8 @@
 - web UI основного сценария;
 - документы и дерево папок;
 - требования, матрица, риски, XAI;
+- weighted readiness dashboard;
+- сортировка документов по проблемности;
 - report workflow;
 - export `DOCX/XLSX/ZIP/HTML`;
 - review / submit / approve.
@@ -81,11 +84,14 @@
 - resolved model selection для локального `Ollama`;
 - `/api/system/ai-status`;
 - Docker/launcher default на `XAI_APP_EMBEDDING_PROVIDER=ollama` и `XAI_APP_LLM_PROVIDER=ollama`;
+- Docker/launcher port overrides для backend/frontend/postgres/redis;
+- macOS online installer и install/start/stop/open/check command package;
 - committed benchmark-suite с evidence precision `0.9714` и F1 `0.9855`;
 - pilot `real_corpus`: `5/5` cases, `20/20` targets;
 - marker-based section quality benchmark;
 - state expertise workflow для `ПП 145` и `ПП 87`;
 - findings, user decisions, replacement re-check, audit trail, XAI summary и export для спецworkflow;
+- frontend stage rail и sequential current-stage findings для спецworkflow;
 - local terminology, visual quality и signature/seal baseline providers;
 - synthetic estimate expertise benchmark: `4/4` cases, `10/10` targets;
 - реальный локальный прогон `Водоканалпроект / 1. ИРД / ПП 145`.
