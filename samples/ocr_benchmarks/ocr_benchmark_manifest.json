@@ -2,6 +2,7 @@
   "benchmark_name": "ocr_demo_benchmark",
   "ocr_provider": "tesseract",
   "ocr_languages": "rus+eng",
+  "ocr_enable_table_recovery": true,
   "cases": [
     {
       "benchmark_id": "ocr-clean-image",

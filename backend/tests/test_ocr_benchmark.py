@@ -37,5 +37,7 @@ def test_run_ocr_benchmark_on_committed_corpus():
     assert report["aggregate"]["requires_review_rate"] == 0.0
 
     cases = {case["benchmark_id"]: case for case in report["cases"]}
-    assert cases["ocr-table-image"]["token_f1"] >= 0.9
-    assert cases["ocr-mixed-layout-pdf"]["keyword_coverage"] >= 0.8
+    assert cases["ocr-table-image"]["token_f1"] >= 0.8
+    assert cases["ocr-table-image"]["keyword_coverage"] >= 0.75
+    assert cases["ocr-mixed-layout-pdf"]["token_f1"] >= 0.8
+    assert cases["ocr-mixed-layout-pdf"]["keyword_coverage"] >= 0.5

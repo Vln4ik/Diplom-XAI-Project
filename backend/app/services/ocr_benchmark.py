@@ -73,12 +73,15 @@ def _mean(values: list[float]) -> float:
 
 
 @contextmanager
-def temporary_ocr_runtime(provider: str = "tesseract", languages: str = "rus+eng"):
+def temporary_ocr_runtime(provider: str = "tesseract", languages: str = "rus+eng", enable_table_recovery: bool | None = None):
     previous_provider = os.environ.get("XAI_APP_OCR_PROVIDER")
     previous_languages = os.environ.get("XAI_APP_OCR_LANGUAGES")
+    previous_table_recovery = os.environ.get("XAI_APP_OCR_ENABLE_TABLE_RECOVERY")
     try:
         os.environ["XAI_APP_OCR_PROVIDER"] = provider
         os.environ["XAI_APP_OCR_LANGUAGES"] = languages
+        if enable_table_recovery is not None:
+            os.environ["XAI_APP_OCR_ENABLE_TABLE_RECOVERY"] = "true" if enable_table_recovery else "false"
         get_settings.cache_clear()
         get_ocr_provider.cache_clear()
         yield
@@ -92,6 +95,11 @@ def temporary_ocr_runtime(provider: str = "tesseract", languages: str = "rus+eng
             os.environ.pop("XAI_APP_OCR_LANGUAGES", None)
         else:
             os.environ["XAI_APP_OCR_LANGUAGES"] = previous_languages
+
+        if previous_table_recovery is None:
+            os.environ.pop("XAI_APP_OCR_ENABLE_TABLE_RECOVERY", None)
+        else:
+            os.environ["XAI_APP_OCR_ENABLE_TABLE_RECOVERY"] = previous_table_recovery
 
         get_settings.cache_clear()
         get_ocr_provider.cache_clear()
@@ -115,6 +123,7 @@ def run_ocr_benchmark(manifest_path: Path) -> dict[str, object]:
     with temporary_ocr_runtime(
         provider=manifest.get("ocr_provider", "tesseract"),
         languages=manifest.get("ocr_languages", "rus+eng"),
+        enable_table_recovery=manifest.get("ocr_enable_table_recovery"),
     ):
         provider_status = get_ocr_provider().describe()
         results: list[dict[str, object]] = []
