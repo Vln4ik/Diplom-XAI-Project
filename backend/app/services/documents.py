@@ -1,15 +1,16 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import PurePosixPath
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.models import Document, DocumentCategory, DocumentFragment, DocumentStatus, FragmentType
 from app.processors.documents import extract_document
 from app.services.audit import log_action
-from app.services.retrieval import compute_embedding, rank_fragments, tokenize
+from app.services.retrieval import compute_embeddings, rank_fragments, tokenize
 from app.services.storage import storage
 
 
@@ -22,7 +23,7 @@ def describe_processing_error(exc: Exception) -> str:
         suffix = raw.split(":", 1)[-1].strip() if ":" in raw else "неизвестный формат"
         return (
             f"Формат файла {suffix} пока не поддерживается контуром извлечения текста. "
-            "Загрузите документ в PDF, DOCX, DOC, XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S, GGE "
+            "Загрузите документ в PDF, DOCX, DOC, XLS/XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S/SIGN, GGE, GSFX "
             "или графическом формате, либо предварительно конвертируйте файл."
         )
 
@@ -40,8 +41,9 @@ def describe_processing_error(exc: Exception) -> str:
 
     if "softtimelimit" in normalized or "timelimit" in normalized or "time limit" in normalized or "timeout" in normalized:
         return (
-            "Обработка превысила лимит времени. Обычно это происходит на больших сканах, тяжелых PDF или архивах. "
-            "Разделите пакет на несколько файлов, уменьшите размер сканов или повторите обработку."
+            "Обработка превысила лимит времени: файл слишком тяжёлый для текущего профиля worker или OCR/конвертация заняли слишком много времени. "
+            "В активной версии лимит увеличен, а embeddings считаются пакетно; повторите обработку. Если ошибка сохранится, уменьшите число OCR-страниц, "
+            "разделите архив на подпапки или загрузите PDF с текстовым слоем."
         )
 
     if "ocr" in normalized or "tesseract" in normalized or "pdf ocr rendering" in normalized:
@@ -57,9 +59,41 @@ def describe_processing_error(exc: Exception) -> str:
         return "DOCX/DOC-файл не удалось разобрать как корректный документ Word. Проверьте, что файл не поврежден, и при необходимости пересохраните его."
 
     if "openpyxl" in normalized or "excel" in normalized or "workbook" in normalized:
-        return "Excel-файл не удалось открыть как корректную книгу. Проверьте формат, защиту и целостность XLSX/XLSM-файла."
+        return "Excel-файл не удалось открыть как корректную книгу. Проверьте формат, защиту и целостность XLS/XLSX/XLSM-файла."
 
     return f"Не удалось обработать документ: {raw}"
+
+
+def describe_stale_processing_error(stale_after_minutes: int) -> str:
+    return (
+        "Обработка была остановлена по тайм-ауту или после перезапуска worker: документ оставался в статусе "
+        f"`processing` больше {stale_after_minutes} мин. Повторите обработку или загрузите облегченную копию файла."
+    )
+
+
+def recover_stale_processing_documents(
+    db: Session,
+    *,
+    organization_id: str | None = None,
+    stale_after_minutes: int | None = None,
+) -> int:
+    actual_stale_after_minutes = max(1, stale_after_minutes or get_settings().document_processing_stale_minutes)
+    threshold = datetime.now(UTC) - timedelta(minutes=actual_stale_after_minutes)
+    query = select(Document).where(Document.status == DocumentStatus.processing, Document.updated_at < threshold)
+    if organization_id is not None:
+        query = query.where(Document.organization_id == organization_id)
+
+    stale_documents = list(db.scalars(query))
+    if not stale_documents:
+        return 0
+
+    reason = describe_stale_processing_error(actual_stale_after_minutes)
+    for document in stale_documents:
+        document.status = DocumentStatus.failed
+        document.processing_error = reason
+        db.add(document)
+    db.commit()
+    return len(stale_documents)
 
 
 def create_document(
@@ -76,6 +110,34 @@ def create_document(
 ) -> Document:
     normalized_relative_path = normalize_document_relative_path(relative_path, fallback_file_name=file_name)
     storage_path = storage.save_document_bytes(organization_id, file_name, content)
+    return create_document_record(
+        db,
+        organization_id=organization_id,
+        uploaded_by_id=uploaded_by_id,
+        file_name=file_name,
+        storage_path=storage_path,
+        file_size=len(content),
+        content_type=content_type,
+        category=category,
+        tags=tags,
+        relative_path=normalized_relative_path,
+    )
+
+
+def create_document_record(
+    db: Session,
+    *,
+    organization_id: str,
+    uploaded_by_id: str | None,
+    file_name: str,
+    storage_path: str,
+    file_size: int,
+    content_type: str | None,
+    category: DocumentCategory,
+    tags: list[str] | None = None,
+    relative_path: str | None = None,
+) -> Document:
+    normalized_relative_path = normalize_document_relative_path(relative_path, fallback_file_name=file_name)
     document = Document(
         organization_id=organization_id,
         uploaded_by_id=uploaded_by_id,
@@ -83,7 +145,7 @@ def create_document(
         original_file_name=file_name,
         relative_path=normalized_relative_path,
         file_type=content_type or "application/octet-stream",
-        file_size=len(content),
+        file_size=file_size,
         category=category,
         storage_path=storage_path,
         status=DocumentStatus.uploaded,
@@ -134,8 +196,10 @@ def process_document(db: Session, document_id: str) -> Document:
         document.page_count = extracted.page_count
         document.processed_at = datetime.now(UTC)
         document.status = DocumentStatus.requires_review if extracted.requires_review else DocumentStatus.processed
+        document.processing_error = "\n".join(extracted.review_reasons) if extracted.requires_review else None
 
-        for seed in extracted.fragments:
+        fragment_embeddings = compute_embeddings([seed.text for seed in extracted.fragments])
+        for seed, embedding_vector in zip(extracted.fragments, fragment_embeddings, strict=True):
             db.add(
                 DocumentFragment(
                     organization_id=document.organization_id,
@@ -148,7 +212,7 @@ def process_document(db: Session, document_id: str) -> Document:
                     row_end=seed.row_end,
                     paragraph_number=seed.paragraph_number,
                     fragment_type=seed.fragment_type if isinstance(seed.fragment_type, FragmentType) else FragmentType.paragraph,
-                    embedding_vector=compute_embedding(seed.text),
+                    embedding_vector=embedding_vector,
                 )
             )
 
@@ -160,7 +224,7 @@ def process_document(db: Session, document_id: str) -> Document:
             entity_id=document.id,
             organization_id=document.organization_id,
             user_id=document.uploaded_by_id,
-            details={"status": document.status.value, "fragments": len(extracted.fragments)},
+            details={"status": document.status.value, "fragments": len(extracted.fragments), "review_reasons": extracted.review_reasons},
         )
         db.commit()
         db.refresh(document)

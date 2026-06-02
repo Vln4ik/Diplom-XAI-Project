@@ -4,6 +4,7 @@ from app.schemas.common import MessageResponse
 from app.schemas.document import DocumentFragmentResponse, DocumentProcessResponse, DocumentResponse, DocumentSearchMatchResponse
 from app.schemas.estimate_expertise import (
     EstimateExpertiseDecisionRequest,
+    EstimateExpertiseDecisionLogResponse,
     EstimateExpertiseWorkflowResponse,
 )
 from app.schemas.notification import NotificationMarkAllResponse, NotificationResponse
@@ -38,6 +39,7 @@ __all__ = [
     "DocumentResponse",
     "DocumentSearchMatchResponse",
     "EstimateExpertiseDecisionRequest",
+    "EstimateExpertiseDecisionLogResponse",
     "EstimateExpertiseWorkflowResponse",
     "ExplanationResponse",
     "RequirementBulkUpdate",

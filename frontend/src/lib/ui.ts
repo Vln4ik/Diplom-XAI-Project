@@ -139,13 +139,13 @@ export function getDocumentProgressMeta(status: string): ProgressMeta {
       detail: "Файл уже загружен, но pipeline обработки еще не был запущен.",
     },
     queued: {
-      progress: 28,
+      progress: 12,
       tone: "warning",
       label: "В очереди",
-      detail: "Документ поставлен в очередь на извлечение текста, chunking и индексацию.",
+      detail: "Документ ожидает свободный worker. Прогресс начнет расти, когда статус станет «Обрабатывается».",
     },
     processing: {
-      progress: 68,
+      progress: 28,
       tone: "info",
       label: "Обрабатывается",
       detail: "Система извлекает текст, строит фрагменты и подготавливает поиск evidence.",
@@ -194,18 +194,36 @@ export function getDocumentProcessingReason(document: DocumentItem): string | nu
   }
 
   if (document.status === "requires_review") {
-    return "Документ был обработан частично: текст извлечен, но качество результата, структура файла или OCR-слой требуют ручной проверки перед анализом.";
+    return "Причина ручной проверки не была сохранена в старой версии pipeline. Нажмите «Повторить», чтобы backend заново обработал файл и записал конкретную причину.";
   }
 
   return null;
 }
 
 function formatStoredDocumentProcessingError(reason: string): string {
+  const userFacingReviewPrefixes = [
+    "DOC-файл",
+    "XML-файл",
+    "PDF ",
+    "PDF-файл",
+    "OCR изображения",
+    "На странице",
+    "Архив",
+    "В архиве",
+    "Вложение",
+    "XLS-файл",
+    "GGE-файл",
+    "GSFX-файл",
+  ];
+  if (reason.includes("\n") || userFacingReviewPrefixes.some((prefix) => reason.startsWith(prefix))) {
+    return reason;
+  }
+
   const normalized = reason.toLowerCase();
 
   if (normalized.includes("unsupported document format")) {
     const suffix = reason.split(":").pop()?.trim() || "неизвестный формат";
-    return `Формат файла ${suffix} пока не поддерживается контуром извлечения текста. Загрузите PDF, DOCX, DOC, XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S, GGE или изображение, либо предварительно конвертируйте файл.`;
+    return `Формат файла ${suffix} пока не поддерживается контуром извлечения текста. Загрузите PDF, DOCX, DOC, XLS/XLSX, CSV, TXT, JSON, XML, ZIP, SIG/P7S/SIGN, GGE, GSFX или изображение, либо предварительно конвертируйте файл.`;
   }
 
   if (normalized.includes("invalid zip") || normalized.includes("badzipfile") || normalized.includes("file is not a zip file")) {
@@ -213,7 +231,7 @@ function formatStoredDocumentProcessingError(reason: string): string {
   }
 
   if (normalized.includes("time limit") || normalized.includes("timelimit") || normalized.includes("timeout")) {
-    return "Обработка превысила лимит времени. Разделите пакет на несколько файлов, уменьшите размер сканов или повторите обработку.";
+    return "Обработка превысила лимит времени. В активной версии лимит увеличен, а индексация ускорена пакетными embeddings; повторите обработку. Если ошибка сохранится, уменьшите число OCR-страниц, разделите архив на подпапки или загрузите PDF с текстовым слоем.";
   }
 
   if (normalized.includes("no such file") || normalized.includes("filenotfound")) {
@@ -228,16 +246,13 @@ export function getLiveDocumentProgressMeta(status: string, liveElapsedMs = 0): 
   const elapsedSeconds = Math.max(0, liveElapsedMs / 1000);
 
   if (status === "queued") {
-    return {
-      ...meta,
-      progress: clampProgress(Math.min(64, 18 + elapsedSeconds * 0.55)),
-    };
+    return meta;
   }
 
   if (status === "processing") {
     return {
       ...meta,
-      progress: clampProgress(Math.min(92, 64 + elapsedSeconds * 0.45)),
+      progress: clampProgress(Math.min(92, 28 + elapsedSeconds * 0.65)),
     };
   }
 

@@ -45,6 +45,8 @@ export type EstimateExpertiseStage = {
 };
 
 export type EstimateExpertiseWorkflow = {
+  createdAt?: string;
+  updatedAt?: string;
   status?: string;
   progress: number;
   etaLabel: string;
@@ -263,7 +265,7 @@ function buildFilenameFindings(documents: DocumentItem[], reportType: string): E
       documentName: weakNameDocument.file_name,
       title: "Название файла требует проверки",
       description:
-        "В имени файла не найден устойчивый маркер типа сметного документа. На реальном backend этапе система сравнит имя, заголовки и первые страницы документа.",
+        "В названии файла не найден понятный признак типа сметного документа. Система сравнивает название с содержанием документа: заголовками, первыми страницами и извлеченным текстом.",
       severity: "warning",
       confidence: 0.72,
       normativeBasis: `${regulationLabel} и правило EvidenceXAI: имя файла должно отражать фактический тип документа для трассируемой подачи`,
@@ -443,6 +445,38 @@ export function buildEstimateExpertiseWorkflow(report: ReportItem, documents: Do
     checkedFiles: Math.max(...stages.map((stage) => stage.checkedFiles), 0),
     totalFiles,
     unresolvedFindings,
+    documents: workflowDocuments,
+    stages,
+  };
+}
+
+export function buildEstimateExpertiseWorkflowPlaceholder(
+  report: ReportItem,
+  documents: DocumentItem[],
+): EstimateExpertiseWorkflow {
+  const stageDefinitions = report.report_type === REPORT_TYPE_STATE_EXPERTISE_ESTIMATE_COST_PP87 ? PP87_STAGE_DEFS : STAGE_DEFS;
+  const workflowDocuments = getWorkflowDocuments(report, documents);
+  const totalFiles = workflowDocuments.length;
+  const backendReady = report.readiness_percent >= 100 || ["awaiting_approval", "approved", "exported", "archived"].includes(report.status);
+  const stages = stageDefinitions.map((definition, index) =>
+    buildStage(
+      definition,
+      index + 1,
+      backendReady ? "completed" : index === 0 && totalFiles > 0 ? "completed" : "pending",
+      backendReady || (index === 0 && totalFiles > 0) ? 100 : 0,
+      backendReady || index === 0 ? totalFiles : 0,
+      totalFiles,
+      [],
+    ),
+  );
+
+  return {
+    status: backendReady ? "completed" : "queued",
+    progress: backendReady ? 100 : totalFiles > 0 ? Math.round(100 / Math.max(1, stages.length)) : 0,
+    etaLabel: backendReady ? "завершено" : "ожидает backend state",
+    checkedFiles: backendReady ? totalFiles : 0,
+    totalFiles,
+    unresolvedFindings: 0,
     documents: workflowDocuments,
     stages,
   };

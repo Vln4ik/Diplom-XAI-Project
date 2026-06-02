@@ -78,17 +78,21 @@ class DisabledOCRProvider(OCRProvider):
 
 
 class TesseractOCRProvider(OCRProvider):
-    _PSM_CANDIDATES = (3, 4, 11)
+    _FAST_PSM_CANDIDATES = (6, 11)
+    _BALANCED_PSM_CANDIDATES = (3, 6, 11)
+    _EXHAUSTIVE_PSM_CANDIDATES = (3, 4, 6, 11, 12)
 
     def __init__(self) -> None:
         self.settings = get_settings()
         try:
             import pytesseract  # type: ignore
-            from PIL import Image, ImageOps  # type: ignore
+            from PIL import Image, ImageEnhance, ImageFilter, ImageOps  # type: ignore
         except Exception as exc:  # pragma: no cover - optional dependency path
             raise OCRError("Tesseract OCR dependencies are not installed") from exc
         self._pytesseract = pytesseract
         self._image_module = Image
+        self._image_enhance = ImageEnhance
+        self._image_filter = ImageFilter
         self._image_ops = ImageOps
         self._tesseract_cmd = self.settings.tesseract_cmd or which("tesseract")
         if not self._tesseract_cmd:
@@ -131,45 +135,95 @@ class TesseractOCRProvider(OCRProvider):
         details = super().describe()
         details["available"] = True
         details["tesseract_cmd"] = self._tesseract_cmd
-        details["psm_candidates"] = list(self._PSM_CANDIDATES)
-        details["variants"] = ["original", "threshold"]
+        details["profile"] = self.settings.ocr_profile
+        details["candidate_timeout_seconds"] = self.settings.ocr_tesseract_timeout_seconds
+        details["table_recovery_enabled"] = self.settings.ocr_enable_table_recovery
+        details["psm_candidates"] = list(self._psm_candidates())
+        details["variants"] = [name for name, _ in self._iter_image_variants(self._image_module.new("RGB", (20, 20), "white"))]
         return details
 
     def _collect_candidates(self, image: Any) -> list[OCRCandidate]:
         candidates: list[OCRCandidate] = []
+        psm_candidates = self._psm_candidates()
         for variant_name, prepared in self._iter_image_variants(image):
-            for psm in self._PSM_CANDIDATES:
+            for psm in psm_candidates:
                 candidate = self._run_candidate(prepared, variant_name=variant_name, psm=psm)
                 if candidate is not None:
                     candidates.append(candidate)
+        if candidates:
+            return candidates
+
+        if self.settings.ocr_profile.lower() == "fast":
+            return candidates
+
+        for angle in (90, 270, 180):
+            rotated = self._image_ops.exif_transpose(image).rotate(angle, expand=True)
+            for variant_name, prepared in self._iter_image_variants(rotated, prefix=f"rotated_{angle}"):
+                for psm in psm_candidates:
+                    candidate = self._run_candidate(prepared, variant_name=variant_name, psm=psm)
+                    if candidate is not None:
+                        candidates.append(candidate)
         return candidates
 
-    def _iter_image_variants(self, image: Any) -> list[tuple[str, Any]]:
-        grayscale = self._image_ops.autocontrast(image.convert("L"))
-        threshold = grayscale.point(lambda value: 255 if value > 180 else 0, mode="1").convert("L")
+    def _psm_candidates(self) -> tuple[int, ...]:
+        profile = self.settings.ocr_profile.lower()
+        if profile == "exhaustive":
+            return self._EXHAUSTIVE_PSM_CANDIDATES
+        if profile == "balanced":
+            return self._BALANCED_PSM_CANDIDATES
+        return self._FAST_PSM_CANDIDATES
+
+    def _iter_image_variants(self, image: Any, *, prefix: str = "") -> list[tuple[str, Any]]:
+        original = self._image_ops.exif_transpose(image)
+        grayscale = self._image_ops.autocontrast(original.convert("L"))
+        contrast = self._image_enhance.Contrast(grayscale).enhance(1.8)
+        sharp = contrast.filter(self._image_filter.SHARPEN)
+        threshold = sharp.point(lambda value: 255 if value > 175 else 0, mode="1").convert("L")
+        upscaled_threshold = threshold
+        if max(threshold.size) < 2200:
+            upscaled_threshold = threshold.resize((threshold.width * 2, threshold.height * 2))
+        profile = self.settings.ocr_profile.lower()
+        if profile == "exhaustive":
+            variants = [
+                ("original", original),
+                ("autocontrast", grayscale),
+                ("contrast_sharp", sharp),
+                ("threshold", threshold),
+                ("upscaled_threshold", upscaled_threshold),
+            ]
+        elif profile == "balanced":
+            variants = [
+                ("autocontrast", grayscale),
+                ("contrast_sharp", sharp),
+                ("threshold", threshold),
+            ]
+        else:
+            variants = [
+                ("autocontrast", grayscale),
+                ("threshold", threshold),
+            ]
+        if prefix:
+            return [(f"{prefix}_{name}", variant) for name, variant in variants]
         return [
-            ("original", image),
-            ("threshold", threshold),
+            (name, variant) for name, variant in variants
         ]
 
     def _run_candidate(self, image: Any, *, variant_name: str, psm: int) -> OCRCandidate | None:
         config = f"--oem 3 --psm {psm}"
-        text = self._normalize_text(
-            self._pytesseract.image_to_string(
+        try:
+            data = self._pytesseract.image_to_data(
                 image,
                 lang=self.settings.ocr_languages,
                 config=config,
+                output_type=self._pytesseract.Output.DICT,
+                timeout=max(3, self.settings.ocr_tesseract_timeout_seconds),
             )
-        )
-        if not text:
+        except RuntimeError:
             return None
 
-        data = self._pytesseract.image_to_data(
-            image,
-            lang=self.settings.ocr_languages,
-            config=config,
-            output_type=self._pytesseract.Output.DICT,
-        )
+        text = self._normalize_text(self._text_from_data(data))
+        if not text:
+            return None
         confidences = [
             float(value)
             for value in data.get("conf", [])
@@ -208,7 +262,41 @@ class TesseractOCRProvider(OCRProvider):
         lines = [line.strip() for line in text.splitlines() if line.strip()]
         return "\n".join(lines).strip()
 
+    @staticmethod
+    def _text_from_data(data: dict[str, list[Any]]) -> str:
+        def value_at(key: str, index: int) -> int:
+            values = data.get(key, [])
+            if index >= len(values):
+                return 0
+            return int(values[index] or 0)
+
+        rows: list[tuple[int, int, int, int, str]] = []
+        texts = data.get("text", [])
+        for index, raw_text in enumerate(texts):
+            token = str(raw_text).strip()
+            if not token:
+                continue
+            rows.append(
+                (
+                    value_at("block_num", index),
+                    value_at("par_num", index),
+                    value_at("line_num", index),
+                    value_at("word_num", index),
+                    token,
+                )
+            )
+        grouped: dict[tuple[int, int, int], list[tuple[int, str]]] = {}
+        for block, paragraph, line, word, token in rows:
+            grouped.setdefault((block, paragraph, line), []).append((word, token))
+        lines = [
+            " ".join(token for _, token in sorted(words, key=lambda item: item[0]))
+            for _, words in sorted(grouped.items())
+        ]
+        return "\n".join(lines)
+
     def _extract_layout_table_rows(self, image: Any) -> list[str]:
+        if not self.settings.ocr_enable_table_recovery:
+            return []
         try:
             import numpy as np  # type: ignore
         except Exception:
@@ -310,17 +398,29 @@ class TesseractOCRProvider(OCRProvider):
         best_score = -1.0
         for psm in psms:
             config = f"--oem 3 --psm {psm}"
-            text = self._normalize_text(
-                self._pytesseract.image_to_string(cell_crop, lang=lang, config=config)
-            ).replace("\n", " ")
+            try:
+                text = self._normalize_text(
+                    self._pytesseract.image_to_string(
+                        cell_crop,
+                        lang=lang,
+                        config=config,
+                        timeout=max(3, self.settings.ocr_tesseract_timeout_seconds),
+                    )
+                ).replace("\n", " ")
+            except RuntimeError:
+                continue
             if not text:
                 continue
-            data = self._pytesseract.image_to_data(
-                cell_crop,
-                lang=lang,
-                config=config,
-                output_type=self._pytesseract.Output.DICT,
-            )
+            try:
+                data = self._pytesseract.image_to_data(
+                    cell_crop,
+                    lang=lang,
+                    config=config,
+                    output_type=self._pytesseract.Output.DICT,
+                    timeout=max(3, self.settings.ocr_tesseract_timeout_seconds),
+                )
+            except RuntimeError:
+                continue
             confidences = [
                 float(value)
                 for value in data.get("conf", [])

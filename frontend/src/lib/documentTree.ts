@@ -111,10 +111,10 @@ export function summarizeFolderDocuments(documents: DocumentItem[]): DocumentFol
       return 92;
     }
     if (document.status === "processing") {
-      return 68;
+      return 28;
     }
     if (document.status === "queued") {
-      return 28;
+      return 12;
     }
     if (document.status === "uploaded") {
       return 10;

@@ -83,9 +83,10 @@ Fallback providers нужны для отказоустойчивости, а н
 - `DOCX`;
 - legacy `DOC` через `antiword`/`LibreOffice` или fallback binary string extraction;
 - `XLSX`, `CSV`;
-- `TXT`, `JSON`, `XML`;
-- `ZIP` с ограничениями по числу и размеру вложений;
-- `SIG/P7S/GGE` как evidence/metadata-like источники;
+- `TXT`, `JSON`, `XML`, включая tolerant XML recovery после очистки управляющих символов;
+- `HTML/HTM`, `RTF`;
+- `ZIP` с настраиваемыми ограничениями по числу, размеру и глубине вложений;
+- `SIG/P7S/GGE` как evidence/metadata-like источники, включая binary-string fallback для GGE без ZIP-структуры;
 - `JPG/PNG/TIFF/BMP`;
 - image-only `PDF` через локальный OCR.
 
@@ -96,9 +97,9 @@ Fallback providers нужны для отказоустойчивости, а н
 `TesseractOCRProvider`:
 
 - работает локально;
-- проверяет несколько `psm` режимов: `3`, `4`, `11`;
+- проверяет несколько `psm` режимов: `3`, `4`, `6`, `11`, `12`;
 - сравнивает OCR candidates по confidence, token count и структуре строк;
-- использует варианты изображения `original` и `threshold`;
+- использует варианты изображения `original`, `autocontrast`, `contrast_sharp`, `threshold`, `upscaled_threshold` и поворот страницы при неудачном распознавании;
 - пытается восстановить table-like rows через image layout heuristics.
 
 Текущий OCR benchmark:

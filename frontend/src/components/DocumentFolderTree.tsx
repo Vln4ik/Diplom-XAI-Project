@@ -16,11 +16,13 @@ type Props = {
   sortByHealth?: boolean;
   activeDocumentId?: string | null;
   selectedDocumentIds?: string[];
+  openFolderPaths?: string[];
   getSelectableDocuments?: (documents: DocumentItem[]) => DocumentItem[];
   getProgressMeta?: (document: DocumentItem) => ProgressMeta;
   onInspectDocument?: (document: DocumentItem) => void;
   onToggleDocument?: (documentId: string) => void;
   onToggleFolder?: (documents: DocumentItem[]) => void;
+  onToggleFolderOpen?: (folderPath: string, isOpen: boolean) => void;
   onProcessFolder?: (documentIds: string[]) => Promise<void>;
   onDeleteDocument?: (document: DocumentItem) => Promise<void>;
   onDeleteFolder?: (documents: DocumentItem[], folderPath: string) => Promise<void>;
@@ -56,6 +58,10 @@ function isBusy(document: DocumentItem): boolean {
   return ["queued", "processing"].includes(document.status);
 }
 
+function isProcessing(document: DocumentItem): boolean {
+  return document.status === "processing";
+}
+
 function DocumentFolderNodeView({
   folder,
   mode,
@@ -63,11 +69,13 @@ function DocumentFolderNodeView({
   sortByHealth,
   activeDocumentId,
   selectedDocumentIds,
+  openFolderPaths,
   getSelectableDocuments,
   getProgressMeta,
   onInspectDocument,
   onToggleDocument,
   onToggleFolder,
+  onToggleFolderOpen,
   onProcessFolder,
   onDeleteDocument,
   onDeleteFolder,
@@ -79,9 +87,20 @@ function DocumentFolderNodeView({
   const selectedCount = selectableDocuments.filter((document) => isDocumentSelected(document, selectedDocumentIds)).length;
   const isFolderSelected = selectableDocuments.length > 0 && selectedCount === selectableDocuments.length;
   const processableDocuments = folderDocuments.filter((document) => !isBusy(document));
+  const hasProcessingDocuments = folderDocuments.some(isProcessing);
+  const isControlledOpen = Array.isArray(openFolderPaths);
+  const isOpen = isControlledOpen ? openFolderPaths.includes(folder.path) : defaultOpen;
 
   return (
-    <details className={`liquid-folder-node folder-health-${summary.health}`} {...(defaultOpen ? { open: true } : {})}>
+    <details
+      className={`liquid-folder-node folder-health-${summary.health}`}
+      {...(isOpen ? { open: true } : {})}
+      onToggle={(event) => {
+        if (isControlledOpen) {
+          onToggleFolderOpen?.(folder.path, event.currentTarget.open);
+        }
+      }}
+    >
       <summary>
         <span className="liquid-folder-title">
           <span className="liquid-folder-caret" aria-hidden="true" />
@@ -104,7 +123,7 @@ function DocumentFolderNodeView({
           </div>
           <div className="progress-track">
             <div
-              className={`progress-fill tone-${summary.health} ${summary.pending > 0 ? "animated-fill" : ""}`}
+              className={`progress-fill tone-${summary.health} ${hasProcessingDocuments ? "animated-fill" : ""}`}
               style={{ width: `${summary.averageProgress}%` }}
             />
           </div>
@@ -165,11 +184,13 @@ function DocumentFolderNodeView({
               sortByHealth={sortByHealth}
               activeDocumentId={activeDocumentId}
               selectedDocumentIds={selectedDocumentIds}
+              openFolderPaths={openFolderPaths}
               getSelectableDocuments={getSelectableDocuments}
               getProgressMeta={getProgressMeta}
               onInspectDocument={onInspectDocument}
               onToggleDocument={onToggleDocument}
               onToggleFolder={onToggleFolder}
+              onToggleFolderOpen={onToggleFolderOpen}
               onProcessFolder={onProcessFolder}
               onDeleteDocument={onDeleteDocument}
               onDeleteFolder={onDeleteFolder}
@@ -210,7 +231,7 @@ function DocumentFolderNodeView({
                   <span className={`status-pill tone-${progressMeta.tone}`}>{formatDocumentStatus(document.status)}</span>
                   <div className="mini-progress-track">
                     <div
-                      className={`progress-fill tone-${progressMeta.tone} ${isBusy(document) ? "animated-fill" : ""}`}
+                      className={`progress-fill tone-${progressMeta.tone} ${isProcessing(document) ? "animated-fill" : ""}`}
                       style={{ width: `${progressMeta.progress}%` }}
                     />
                   </div>

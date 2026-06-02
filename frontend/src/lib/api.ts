@@ -12,6 +12,7 @@ import type {
   Dashboard,
   DocumentSearchMatch,
   DocumentItem,
+  ExpertiseDecisionItem,
   Explanation,
   MemberItem,
   ExportFile,
@@ -180,8 +181,9 @@ export function markAllNotificationsRead(organizationId: string): Promise<{ upda
   });
 }
 
-export function fetchAuditLogs(organizationId: string): Promise<AuditLogItem[]> {
-  return request<AuditLogItem[]>(`/api/organizations/${organizationId}/audit-logs`);
+export function fetchAuditLogs(organizationId: string, limit = 300): Promise<AuditLogItem[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return request<AuditLogItem[]>(`/api/organizations/${organizationId}/audit-logs?${params.toString()}`);
 }
 
 export function fetchDocuments(organizationId: string): Promise<DocumentItem[]> {
@@ -322,6 +324,8 @@ type RawEstimateExpertiseStage = {
 
 type RawEstimateExpertiseWorkflow = {
   id: string;
+  created_at?: string;
+  updated_at?: string;
   status: string;
   progress: number;
   eta_seconds: number;
@@ -385,6 +389,8 @@ function normalizeEstimateWorkflow(raw: RawEstimateExpertiseWorkflow): EstimateE
     findings: stage.findings.map(normalizeEstimateFinding),
   }));
   return {
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
     status: raw.status,
     progress: Math.round(raw.progress),
     etaLabel: formatEstimateEta(raw.eta_seconds),
@@ -519,6 +525,10 @@ export function rejectRequirement(requirementId: string): Promise<RequirementIte
 
 export function fetchRisks(organizationId: string): Promise<RiskItem[]> {
   return request<RiskItem[]>(`/api/organizations/${organizationId}/risks`);
+}
+
+export function fetchExpertiseDecisions(organizationId: string): Promise<ExpertiseDecisionItem[]> {
+  return request<ExpertiseDecisionItem[]>(`/api/organizations/${organizationId}/estimate-expertise/decisions`);
 }
 
 export function updateRisk(

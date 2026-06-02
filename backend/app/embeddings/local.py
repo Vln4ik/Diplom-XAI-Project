@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import Counter
 from collections.abc import Sequence
@@ -17,6 +18,11 @@ def _tokenize(text: str) -> list[str]:
     return [token.lower() for token in TOKEN_RE.findall(text)]
 
 
+def _stable_bucket(token: str, vector_size: int) -> int:
+    digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+    return int.from_bytes(digest, "big") % vector_size
+
+
 class HashEmbeddingProvider(EmbeddingProvider):
     def __init__(self, vector_size: int) -> None:
         self.vector_size = vector_size
@@ -28,7 +34,7 @@ class HashEmbeddingProvider(EmbeddingProvider):
     def embed_text(self, text: str) -> list[float]:
         bucket = [0.0] * self.vector_size
         for token, count in Counter(_tokenize(text)).items():
-            bucket[hash(token) % self.vector_size] += float(count)
+            bucket[_stable_bucket(token, self.vector_size)] += float(count)
         return normalize_vector(bucket)
 
     def status(self) -> dict[str, object]:

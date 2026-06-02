@@ -52,6 +52,11 @@ Fallback providers `hash-fallback` и `template-fallback` остаются то�
 
 - OCR provider: локальный `Tesseract`;
 - image-only `PDF` рендерится локально и передаётся в локальный OCR provider;
+- PDF OCR использует локальный preprocessing и retry-стратегию: `psm 3/4/6/11/12`, контраст/threshold/upscale и попытки поворота страницы;
+- лимиты document runtime задаются env-настройками `XAI_APP_DOCUMENT_PDF_OCR_PAGE_LIMIT`, `XAI_APP_DOCUMENT_ZIP_MAX_ENTRIES`, `XAI_APP_DOCUMENT_ZIP_MAX_MEMBER_BYTES`, `XAI_APP_DOCUMENT_ZIP_MAX_TOTAL_BYTES`, `XAI_APP_DOCUMENT_ZIP_MAX_NESTED_DEPTH`;
+- legacy `DOC` обрабатывается локально через `antiword`/`LibreOffice`, при неудаче сохраняется fallback из читаемых бинарных строк с причиной `requires_review`;
+- `XML` проходит строгий parse, а при управляющих символах выполняется безопасная локальная очистка и повторный parse;
+- `GGE` сначала проверяется как ZIP-compatible контейнер, а для бинарного варианта извлекаются читаемые строки без внешних конвертеров;
 - визуальная проверка подписи/печати работает через `layout-baseline-v1`;
 - `layout-baseline-v1` анализирует изображение или первую страницу PDF локально;
 - оценка визуального качества работает через `layout-quality-baseline-v1`;

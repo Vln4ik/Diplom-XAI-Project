@@ -307,6 +307,7 @@ export function DocumentsPage({
           <DocumentFolderTree
             folders={folderTree}
             mode="manage"
+            defaultOpen={false}
             sortByHealth
             getProgressMeta={(document) => getLiveDocumentProgressMeta(document.status, getDocumentElapsedMs(document))}
             onProcessFolder={onProcessFolder}
@@ -389,7 +390,7 @@ export function DocumentsPage({
                     <div className="progress-track">
                       <div
                         className={`progress-fill tone-${progressMeta.tone} ${
-                          ["queued", "processing"].includes(document.status) ? "animated-fill" : ""
+                          document.status === "processing" ? "animated-fill" : ""
                         }`}
                         style={{ width: `${progressMeta.progress}%` }}
                       />

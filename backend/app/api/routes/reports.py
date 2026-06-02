@@ -8,7 +8,9 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ensure_org_access, get_current_user, get_db
+from app.core.config import get_settings
 from app.models import (
+    Document,
     DocumentCategory,
     DocumentStatus,
     Evidence,
@@ -30,6 +32,7 @@ from app.models import (
 )
 from app.schemas import (
     EstimateExpertiseDecisionRequest,
+    EstimateExpertiseDecisionLogResponse,
     EstimateExpertiseWorkflowResponse,
     ExportFileResponse,
     ReportCreate,
@@ -40,9 +43,10 @@ from app.schemas import (
     ReportUpdate,
     ReportVersionResponse,
 )
-from app.services.documents import create_document
+from app.services.documents import create_document_record
 from app.services.estimate_expertise import (
     ensure_estimate_expertise_workflow,
+    mark_workflow_start_queued,
     record_replacement_started,
     record_finding_decision,
     serialize_workflow,
@@ -57,6 +61,7 @@ from app.services.reports import (
     submit_report_for_approval,
 )
 from app.services.report_types import requires_special_workflow
+from app.services.storage import storage
 from app.workers.tasks import (
     document_process_task,
     estimate_expertise_replacement_recheck_task,
@@ -98,6 +103,122 @@ def _get_expertise_finding_or_404(db: Session, finding_id: str) -> ExpertiseFind
     return finding
 
 
+def _format_decision_log_label(status_value: str) -> str:
+    return {
+        "approved": "Пользователь одобрил вывод и разрешил использовать его дальше в проверке.",
+        "skipped": "Пользователь пропустил вывод и исключил его из дальнейшей проверки.",
+    }.get(status_value, "Решение пользователя сохранено.")
+
+
+def _dedupe_ids(values: list[str]) -> list[str]:
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        deduped.append(value)
+    return deduped
+
+
+def _validate_selected_document_ids(
+    db: Session,
+    *,
+    organization_id: str,
+    document_ids: list[str],
+    report_type: str,
+) -> list[str]:
+    unique_ids = _dedupe_ids(document_ids)
+    settings = get_settings()
+    max_documents = (
+        settings.special_workflow_max_selected_documents
+        if requires_special_workflow(report_type)
+        else settings.report_max_selected_documents
+    )
+    if len(unique_ids) > max_documents:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Too many selected documents: {len(unique_ids)}. Limit: {max_documents}.",
+        )
+    if not unique_ids:
+        return []
+
+    owned_ids = set(
+        db.scalars(
+            select(Document.id).where(
+                Document.organization_id == organization_id,
+                Document.id.in_(unique_ids),
+            )
+        )
+    )
+    missing_or_forbidden = [document_id for document_id in unique_ids if document_id not in owned_ids]
+    if missing_or_forbidden:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Selected documents must belong to the report organization.",
+        )
+    return unique_ids
+
+
+def _count_special_workflow_documents(db: Session, report: Report) -> int:
+    query = select(Document.id).where(
+        Document.organization_id == report.organization_id,
+        Document.status.in_((DocumentStatus.processed, DocumentStatus.requires_review)),
+    )
+    if report.selected_document_ids:
+        query = query.where(Document.id.in_(report.selected_document_ids))
+    return len(list(db.scalars(query)))
+
+
+def _ensure_special_workflow_volume(db: Session, report: Report) -> None:
+    max_documents = get_settings().special_workflow_max_selected_documents
+    document_count = _count_special_workflow_documents(db, report)
+    if document_count > max_documents:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=(
+                f"Special workflow selected {document_count} ready documents. "
+                f"Limit is {max_documents}; split the package or select a smaller folder."
+            ),
+        )
+
+
+async def _save_replacement_upload_stream(
+    *,
+    organization_id: str,
+    file: UploadFile,
+    file_name: str,
+) -> tuple[str, int]:
+    settings = get_settings()
+    target = storage.create_document_path(organization_id, file_name)
+    written = 0
+    try:
+        with target.open("wb") as output:
+            while True:
+                chunk = await file.read(max(8192, settings.upload_read_chunk_bytes))
+                if not chunk:
+                    break
+                written += len(chunk)
+                if settings.upload_max_file_bytes > 0 and written > settings.upload_max_file_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=(
+                            f"Replacement file '{file_name}' exceeds upload limit "
+                            f"{settings.upload_max_file_bytes // (1024 * 1024)} MB"
+                        ),
+                    )
+                output.write(chunk)
+    except Exception:
+        storage.delete_file(str(target))
+        raise
+    finally:
+        await file.close()
+    if written == 0:
+        storage.delete_file(str(target))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Replacement file is empty")
+    return str(target), written
+
+
 @router.get("/organizations/{organization_id}/reports", response_model=list[ReportResponse])
 def list_reports(
     organization_id: str,
@@ -119,7 +240,14 @@ def create_report(
     organization = db.scalar(select(Organization).where(Organization.id == organization_id))
     if organization is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
-    report = Report(organization_id=organization_id, **payload.model_dump())
+    data = payload.model_dump()
+    data["selected_document_ids"] = _validate_selected_document_ids(
+        db,
+        organization_id=organization_id,
+        document_ids=data.get("selected_document_ids") or [],
+        report_type=data["report_type"],
+    )
+    report = Report(organization_id=organization_id, **data)
     db.add(report)
     db.commit()
     db.refresh(report)
@@ -135,8 +263,10 @@ def start_estimate_expertise_workflow(
     report = _get_report_or_404(db, report_id)
     ensure_org_access(db, organization_id=report.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
     _ensure_special_workflow_report(report)
+    _ensure_special_workflow_volume(db, report)
     workflow = ensure_estimate_expertise_workflow(db, report)
     if workflow_needs_pipeline_run(db, workflow):
+        mark_workflow_start_queued(db, workflow)
         estimate_expertise_start_task.delay(report.id)
         db.refresh(workflow)
     return serialize_workflow(db, workflow)
@@ -153,6 +283,61 @@ def get_estimate_expertise_workflow_state(
     _ensure_special_workflow_report(report)
     workflow = ensure_estimate_expertise_workflow(db, report)
     return serialize_workflow(db, workflow)
+
+
+@router.get("/organizations/{organization_id}/estimate-expertise/decisions", response_model=list[EstimateExpertiseDecisionLogResponse])
+def list_estimate_expertise_decisions(
+    organization_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    ensure_org_access(db, organization_id=organization_id, user=user)
+    rows = db.execute(
+        select(ExpertiseUserDecision, ExpertiseFinding, Report, ExpertiseWorkflowStage, Document)
+        .join(ExpertiseFinding, ExpertiseFinding.id == ExpertiseUserDecision.finding_id)
+        .join(Report, Report.id == ExpertiseFinding.report_id)
+        .outerjoin(ExpertiseWorkflowStage, ExpertiseWorkflowStage.id == ExpertiseFinding.stage_id)
+        .outerjoin(Document, Document.id == ExpertiseFinding.document_id)
+        .where(ExpertiseUserDecision.organization_id == organization_id)
+        .where(ExpertiseFinding.user_decision_status.in_(["approved", "skipped"]))
+        .where(ExpertiseUserDecision.decision_type.in_(["approve", "skip"]))
+        .order_by(ExpertiseUserDecision.created_at.desc())
+    ).all()
+
+    latest_by_finding: dict[str, dict] = {}
+    for decision, finding, report, stage, document in rows:
+        if finding.id in latest_by_finding:
+            continue
+        decision_status = finding.user_decision_status or (decision.payload_json or {}).get("decision_status") or decision.decision_type
+        latest_by_finding[finding.id] = {
+            "id": decision.id,
+            "created_at": decision.created_at,
+            "updated_at": decision.updated_at,
+            "organization_id": decision.organization_id,
+            "report_id": report.id,
+            "report_title": report.title,
+            "report_type": report.report_type,
+            "workflow_id": decision.workflow_id,
+            "finding_id": finding.id,
+            "finding_title": finding.title,
+            "finding_description": finding.description,
+            "finding_severity": finding.severity,
+            "stage_key": finding.stage_key,
+            "stage_title": stage.short_title if stage is not None else finding.stage_key,
+            "document_id": finding.document_id,
+            "document_name": document.file_name if document is not None else "Пакет документов",
+            "decision_status": decision_status,
+            "decision_type": decision.decision_type,
+            "decision_label": _format_decision_log_label(decision_status),
+            "comment": decision.comment,
+            "normative_basis": finding.normative_basis,
+            "source_ref": finding.source_ref,
+            "recommendation": finding.recommendation,
+            "confidence_score": finding.confidence_score,
+            "xai_summary": finding.xai_json or [],
+        }
+
+    return list(latest_by_finding.values())
 
 
 @router.post("/estimate-expertise/findings/{finding_id}/approve", response_model=EstimateExpertiseWorkflowResponse)
@@ -191,16 +376,19 @@ async def upload_estimate_expertise_replacement(
 ) -> dict:
     finding = _get_expertise_finding_or_404(db, finding_id)
     ensure_org_access(db, organization_id=finding.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
-    content = await file.read()
-    if not content:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Replacement file is empty")
     file_name = file.filename or "replacement.bin"
-    replacement_document = create_document(
+    storage_path, file_size = await _save_replacement_upload_stream(
+        organization_id=finding.organization_id,
+        file=file,
+        file_name=file_name,
+    )
+    replacement_document = create_document_record(
         db,
         organization_id=finding.organization_id,
         uploaded_by_id=user.id,
         file_name=file_name,
-        content=content,
+        storage_path=storage_path,
+        file_size=file_size,
         content_type=file.content_type,
         category=DocumentCategory.evidence,
         tags=["estimate_expertise_replacement"],
@@ -239,7 +427,16 @@ def update_report(
 ) -> Report:
     report = _get_report_or_404(db, report_id)
     ensure_org_access(db, organization_id=report.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    next_report_type = data.get("report_type", report.report_type)
+    if "selected_document_ids" in data:
+        data["selected_document_ids"] = _validate_selected_document_ids(
+            db,
+            organization_id=report.organization_id,
+            document_ids=data["selected_document_ids"] or [],
+            report_type=next_report_type,
+        )
+    for field, value in data.items():
         setattr(report, field, value)
     db.add(report)
     db.commit()

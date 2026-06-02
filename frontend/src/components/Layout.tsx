@@ -73,9 +73,9 @@ export function Layout({ organizationName, activeTasks, floatingWidget }: Layout
           <nav className="topbar-nav" aria-label="Навигация по активной организации">
             <NavLink to="/documents">Документы</NavLink>
             <NavLink to="/reports">Отчеты</NavLink>
-            <NavLink to="/matrix">Матрица</NavLink>
-            <NavLink to="/requirements">Требования</NavLink>
+            <NavLink to="/matrix">Графы</NavLink>
             <NavLink to="/risks">Риски</NavLink>
+            <NavLink to="/requirements">Требования</NavLink>
             <NavLink to="/explanations">XAI</NavLink>
           </nav>
           <div className="workspace-topbar-actions">

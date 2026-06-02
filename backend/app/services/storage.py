@@ -22,9 +22,12 @@ class FileStorage:
         return path
 
     def save_document_bytes(self, organization_id: str, file_name: str, content: bytes) -> str:
-        target = self.document_dir(organization_id) / f"{uuid4().hex[:12]}_{Path(file_name).name}"
+        target = self.create_document_path(organization_id, file_name)
         target.write_bytes(content)
         return str(target)
+
+    def create_document_path(self, organization_id: str, file_name: str) -> Path:
+        return self.document_dir(organization_id) / f"{uuid4().hex[:12]}_{Path(file_name).name}"
 
     def create_export_path(self, organization_id: str, file_name: str) -> str:
         target = self.export_dir(organization_id) / f"{uuid4().hex[:12]}_{Path(file_name).name}"

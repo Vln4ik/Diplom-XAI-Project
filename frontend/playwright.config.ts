@@ -25,7 +25,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `zsh -lc 'rm -rf "${e2eStateDir}" && mkdir -p "${e2eStoragePath}" && ../.venv/bin/alembic upgrade head && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8010'`,
+      command: `zsh -lc 'rm -rf "${e2eStateDir}" && mkdir -p "${e2eStoragePath}" && uv run --project . alembic upgrade head && uv run --project . python -m uvicorn app.main:app --host 127.0.0.1 --port 8010'`,
       cwd: path.join(repoRoot, "backend"),
       url: "http://127.0.0.1:8010/docs",
       timeout: 120_000,

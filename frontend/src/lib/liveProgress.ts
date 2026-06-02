@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { DocumentItem, ReportItem } from "./types";
 
 function isActiveDocument(document: DocumentItem): boolean {
-  return ["queued", "processing"].includes(document.status);
+  return document.status === "processing";
 }
 
 function isActiveReport(report: ReportItem): boolean {
@@ -15,10 +15,7 @@ export function useLiveDocumentProgress(documents: DocumentItem[]) {
   const startedAtRef = useRef<Record<string, number>>({});
   const activeDocuments = useMemo(() => documents.filter(isActiveDocument), [documents]);
   const currentDocument = useMemo(
-    () =>
-      activeDocuments.find((document) => document.status === "processing") ??
-      activeDocuments.find((document) => document.status === "queued") ??
-      null,
+    () => activeDocuments.find((document) => document.status === "processing") ?? null,
     [activeDocuments],
   );
 

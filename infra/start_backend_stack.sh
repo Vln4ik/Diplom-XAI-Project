@@ -34,6 +34,7 @@ WAIT_INTERVAL_SECONDS="${WAIT_INTERVAL_SECONDS:-2}"
 XAI_INCLUDE_FRONTEND="${XAI_INCLUDE_FRONTEND:-0}"
 XAI_INCLUDE_OBSERVABILITY="${XAI_INCLUDE_OBSERVABILITY:-0}"
 OLLAMA_PULL_RETRIES="${OLLAMA_PULL_RETRIES:-3}"
+COMPOSE_UP_RETRIES="${COMPOSE_UP_RETRIES:-3}"
 
 mkdir -p "$LOG_DIR"
 export COMPOSE_PROJECT_NAME
@@ -198,6 +199,36 @@ pull_models() {
   pull_ollama_model "$ollama_bin" "$LLM_MODEL"
 }
 
+compose_up_services() {
+  local compose_profiles="$1"
+  shift
+  local services=("$@")
+  local attempt=1
+
+  while [[ "$attempt" -le "$COMPOSE_UP_RETRIES" ]]; do
+    echo "Docker Compose up: попытка $attempt/$COMPOSE_UP_RETRIES"
+    if COMPOSE_PROFILES="$compose_profiles" \
+      XAI_APP_AI_RUNTIME_PROFILE="$AI_PROFILE" \
+      XAI_APP_EMBEDDING_PROVIDER=ollama \
+      XAI_APP_LLM_PROVIDER=ollama \
+      XAI_APP_OLLAMA_BASE_URL="$CONTAINER_OLLAMA_BASE_URL" \
+      XAI_APP_OLLAMA_EMBEDDING_MODEL="$EMBED_MODEL" \
+      XAI_APP_OLLAMA_LLM_MODEL="$LLM_MODEL" \
+      docker compose -f "$COMPOSE_FILE" up -d "${services[@]}"; then
+      return 0
+    fi
+
+    if [[ "$attempt" -lt "$COMPOSE_UP_RETRIES" ]]; then
+      echo "Docker Compose up не прошел, повторяю через 15 секунд." >&2
+      sleep 15
+    fi
+    attempt=$((attempt + 1))
+  done
+
+  echo "Docker Compose up не прошел после $COMPOSE_UP_RETRIES попыток." >&2
+  return 1
+}
+
 start_backend_services() {
   local services=(postgres redis backend worker)
   local compose_profiles="local-ai"
@@ -214,14 +245,7 @@ start_backend_services() {
   fi
 
   print_step "Запуск $stack_label"
-  COMPOSE_PROFILES="$compose_profiles" \
-  XAI_APP_AI_RUNTIME_PROFILE="$AI_PROFILE" \
-  XAI_APP_EMBEDDING_PROVIDER=ollama \
-  XAI_APP_LLM_PROVIDER=ollama \
-  XAI_APP_OLLAMA_BASE_URL="$CONTAINER_OLLAMA_BASE_URL" \
-  XAI_APP_OLLAMA_EMBEDDING_MODEL="$EMBED_MODEL" \
-  XAI_APP_OLLAMA_LLM_MODEL="$LLM_MODEL" \
-  docker compose -f "$COMPOSE_FILE" up -d "${services[@]}"
+  compose_up_services "$compose_profiles" "${services[@]}"
 
   wait_for_command "$SERVICE_WAIT_ATTEMPTS" "curl -fsS '$BACKEND_AI_STATUS_URL'" "backend API"
   echo "Backend API готов."

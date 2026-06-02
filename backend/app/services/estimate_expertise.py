@@ -17,6 +17,7 @@ from app.models import (
     ExpertiseWorkflow,
     ExpertiseWorkflowStage,
     Report,
+    ReportStatus,
 )
 from app.services.audit import log_action
 from app.services.report_types import STATE_EXPERTISE_ESTIMATE_COST_PP87_REPORT
@@ -34,6 +35,12 @@ SIGNATURE_MARKERS = ("подпись", "подписал", "подписано",
 VISUAL_DOCUMENT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 IMAGE_DOCUMENT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp"}
 ANALYSIS_STAGE_KEYS = {"filename_content", "completeness", "section_content", "quality_spell_signature"}
+REPORT_STATUS_LOCKED_BY_USER = {
+    ReportStatus.awaiting_approval,
+    ReportStatus.approved,
+    ReportStatus.exported,
+    ReportStatus.archived,
+}
 
 
 @dataclass(frozen=True)
@@ -971,8 +978,8 @@ def _build_filename_findings(documents: list[Document], *, profile: EstimateRule
             "document_id": weak_document.id,
             "title": "Название файла требует проверки",
             "description": (
-                "В имени файла не найден устойчивый маркер типа сметного документа. На реальном backend этапе "
-                "система сравнит имя, заголовки и первые страницы документа."
+                "В названии файла не найден понятный признак типа сметного документа. Система сравнивает название "
+                "с содержанием документа: заголовками, первыми страницами и извлеченным текстом."
             ),
             "severity": "warning",
             "confidence_score": _clamp(max(weak_classification.confidence, 0.62), 0.62, 0.82),
@@ -1274,6 +1281,11 @@ def ensure_estimate_expertise_workflow(db: Session, report: Report, *, reset_out
     workflow = db.scalar(select(ExpertiseWorkflow).where(ExpertiseWorkflow.report_id == report.id))
     if workflow is not None:
         if reset_outdated and (workflow.model_version != MODEL_VERSION or workflow.rule_version != profile.rule_version):
+            if workflow.status in PIPELINE_ACTIVE_STATUSES:
+                recalculate_workflow_metrics(db, workflow)
+                db.commit()
+                db.refresh(workflow)
+                return workflow
             db.delete(workflow)
             db.commit()
         else:
@@ -1286,10 +1298,29 @@ def ensure_estimate_expertise_workflow(db: Session, report: Report, *, reset_out
     return _create_empty_workflow(db, report, documents, profile=profile)
 
 
+def mark_workflow_start_queued(db: Session, workflow: ExpertiseWorkflow) -> None:
+    report = db.scalar(select(Report).where(Report.id == workflow.report_id))
+    workflow.status = "running"
+    workflow.current_stage_key = "start"
+    workflow.progress = max(float(workflow.progress or 0), 1.0)
+    workflow.state_json = {
+        **(workflow.state_json or {}),
+        "start_task_queued_at": datetime.now(UTC).isoformat(),
+    }
+    db.add(workflow)
+    if report is not None and report.status not in REPORT_STATUS_LOCKED_BY_USER:
+        report.status = ReportStatus.analyzing
+        report.readiness_percent = max(float(report.readiness_percent or 0), 12.0)
+        db.add(report)
+    db.commit()
+
+
 def workflow_needs_pipeline_run(db: Session, workflow: ExpertiseWorkflow) -> bool:
     if workflow.status == "queued":
         return True
-    return workflow.status in PIPELINE_ACTIVE_STATUSES and not _workflow_has_findings(db, workflow)
+    if workflow.status == "blocked" and not _workflow_has_findings(db, workflow):
+        return True
+    return False
 
 
 def run_estimate_expertise_pipeline(db: Session, report_id: str) -> ExpertiseWorkflow:
@@ -1297,12 +1328,14 @@ def run_estimate_expertise_pipeline(db: Session, report_id: str) -> ExpertiseWor
     if report is None:
         raise ValueError("Report not found")
     profile = _rules_profile_for_report(report)
-    workflow = ensure_estimate_expertise_workflow(db, report)
+    workflow = ensure_estimate_expertise_workflow(db, report, reset_outdated=False)
     if workflow.model_version != MODEL_VERSION or workflow.rule_version != profile.rule_version:
-        workflow = ensure_estimate_expertise_workflow(db, report)
+        workflow = ensure_estimate_expertise_workflow(db, report, reset_outdated=False)
 
     documents = _load_workflow_documents(db, report)
     workflow.status = "running"
+    workflow.model_version = MODEL_VERSION
+    workflow.rule_version = profile.rule_version
     workflow.total_files = len(documents)
     workflow.current_stage_key = "start"
     workflow.checked_files = 0
@@ -1316,13 +1349,9 @@ def run_estimate_expertise_pipeline(db: Session, report_id: str) -> ExpertiseWor
 
     _run_start_stage(db, workflow, documents)
     if documents:
-        _run_analysis_stage(db, workflow, "filename_content", _build_filename_findings(documents, profile=profile), documents)
-        if any(definition.key == "completeness" for definition in profile.stage_definitions):
-            _run_analysis_stage(db, workflow, "completeness", _build_completeness_findings(documents, profile=profile), documents)
-        if any(definition.key == "section_content" for definition in profile.stage_definitions):
-            _run_analysis_stage(db, workflow, "section_content", _build_pp87_section_content_findings(documents, profile=profile), documents)
-        _run_analysis_stage(db, workflow, "quality_spell_signature", _build_quality_findings(documents, profile=profile), documents)
-    _run_final_stage(db, workflow)
+        _advance_workflow_until_blocked_or_complete(db, workflow)
+    else:
+        _run_final_stage(db, workflow)
     recalculate_workflow_metrics(db, workflow)
     db.commit()
     db.refresh(workflow)
@@ -1420,7 +1449,7 @@ def _run_analysis_stage(
     stage.total_files = len(documents)
     stage.checked_files = len(documents)
     stage.progress = 100
-    stage.status = "blocked" if any(seed["severity"] == "danger" for seed in seeds) else "completed" if not seeds else "running"
+    stage.status = "blocked" if any(seed["severity"] != "info" for seed in seeds) else "completed"
     stage.summary_json = {
         "generated_findings": len(seeds),
         "danger": sum(1 for seed in seeds if seed["severity"] == "danger"),
@@ -1428,6 +1457,72 @@ def _run_analysis_stage(
         "info": sum(1 for seed in seeds if seed["severity"] == "info"),
     }
     db.add(stage)
+    db.commit()
+
+
+def _analysis_stage_keys(profile: EstimateRulesProfile) -> list[str]:
+    return [
+        definition.key
+        for definition in profile.stage_definitions
+        if definition.key not in {"start", "final"}
+    ]
+
+
+def _build_stage_findings(stage_key: str, documents: list[Document], *, profile: EstimateRulesProfile) -> list[dict]:
+    if stage_key == "filename_content":
+        return _build_filename_findings(documents, profile=profile)
+    if stage_key == "completeness":
+        return _build_completeness_findings(documents, profile=profile)
+    if stage_key == "section_content":
+        return _build_pp87_section_content_findings(documents, profile=profile)
+    if stage_key == "quality_spell_signature":
+        return _build_quality_findings(documents, profile=profile)
+    return []
+
+
+def _stage_has_unresolved_actions(db: Session, workflow: ExpertiseWorkflow, stage_key: str) -> bool:
+    return db.scalar(
+        select(ExpertiseFinding.id)
+        .where(
+            ExpertiseFinding.workflow_id == workflow.id,
+            ExpertiseFinding.stage_key == stage_key,
+            ExpertiseFinding.severity != "info",
+            ExpertiseFinding.status.in_(OPEN_STATUSES),
+        )
+        .limit(1)
+    ) is not None
+
+
+def _advance_workflow_until_blocked_or_complete(db: Session, workflow: ExpertiseWorkflow) -> None:
+    report = db.scalar(select(Report).where(Report.id == workflow.report_id))
+    if report is None:
+        raise ValueError("Report not found")
+
+    profile = _rules_profile_for_report(report)
+    documents = _load_workflow_documents(db, report)
+    for stage_key in _analysis_stage_keys(profile):
+        stage = _get_stage(db, workflow, stage_key)
+        if _stage_has_unresolved_actions(db, workflow, stage_key):
+            recalculate_workflow_metrics(db, workflow)
+            db.commit()
+            return
+        if stage.status == "completed":
+            continue
+        if stage.status in {"pending", "running", "blocked"}:
+            _run_analysis_stage(
+                db,
+                workflow,
+                stage_key,
+                _build_stage_findings(stage_key, documents, profile=profile),
+                documents,
+            )
+            if _stage_has_unresolved_actions(db, workflow, stage_key):
+                recalculate_workflow_metrics(db, workflow)
+                db.commit()
+                return
+
+    _run_final_stage(db, workflow)
+    recalculate_workflow_metrics(db, workflow)
     db.commit()
 
 
@@ -1506,10 +1601,17 @@ def recalculate_workflow_metrics(db: Session, workflow: ExpertiseWorkflow) -> No
         db.add(stage)
 
     final_stage = stage_by_key.get("final")
-    if final_stage is not None and final_stage.status != "pending" and not unresolved and workflow.total_files > 0:
+    analysis_stages = [stage for stage in stages if stage.stage_key in ANALYSIS_STAGE_KEYS]
+    analysis_complete = bool(analysis_stages) and all(stage.status == "completed" for stage in analysis_stages)
+    if final_stage is not None and not unresolved and workflow.total_files > 0 and analysis_complete:
         final_stage.status = "completed"
         final_stage.progress = 100
         final_stage.checked_files = final_stage.total_files
+        db.add(final_stage)
+    elif final_stage is not None and final_stage.status == "completed":
+        final_stage.status = "pending"
+        final_stage.progress = 0
+        final_stage.checked_files = 0
         db.add(final_stage)
 
     stage_count = max(1, len(stages))
@@ -1531,6 +1633,29 @@ def recalculate_workflow_metrics(db: Session, workflow: ExpertiseWorkflow) -> No
         "final",
     )
     db.add(workflow)
+    _sync_report_readiness_from_workflow(db, workflow)
+
+
+def _sync_report_readiness_from_workflow(db: Session, workflow: ExpertiseWorkflow) -> None:
+    report = db.scalar(select(Report).where(Report.id == workflow.report_id))
+    if report is None:
+        return
+
+    workflow_progress = _clamp(round(workflow.progress), 0, 100)
+    if workflow.status == "completed":
+        report.readiness_percent = 100.0
+        if report.status not in REPORT_STATUS_LOCKED_BY_USER:
+            report.status = ReportStatus.requires_review
+    elif workflow.status in PIPELINE_ACTIVE_STATUSES:
+        report.readiness_percent = max(float(report.readiness_percent or 0), float(workflow_progress), 12.0)
+        if report.status not in REPORT_STATUS_LOCKED_BY_USER:
+            report.status = ReportStatus.analyzing
+    elif workflow.status == "blocked":
+        report.readiness_percent = max(float(workflow_progress), 12.0)
+        if report.status not in REPORT_STATUS_LOCKED_BY_USER:
+            report.status = ReportStatus.requires_review
+
+    db.add(report)
 
 
 def record_finding_decision(
@@ -1596,10 +1721,15 @@ def record_finding_decision(
             "replacement_file_name": replacement_document.file_name if replacement_document else None,
         },
     )
+    db.flush()
     workflow = db.scalar(select(ExpertiseWorkflow).where(ExpertiseWorkflow.id == finding.workflow_id))
     if workflow is None:
         raise ValueError("Workflow not found")
     recalculate_workflow_metrics(db, workflow)
+    db.flush()
+    if not _stage_has_unresolved_actions(db, workflow, finding.stage_key):
+        _advance_workflow_until_blocked_or_complete(db, workflow)
+        recalculate_workflow_metrics(db, workflow)
     db.commit()
     db.refresh(workflow)
     return workflow
@@ -1657,6 +1787,7 @@ def record_replacement_started(
             "replacement_progress": 35,
         },
     )
+    db.flush()
     workflow = db.scalar(select(ExpertiseWorkflow).where(ExpertiseWorkflow.id == finding.workflow_id))
     if workflow is None:
         raise ValueError("Workflow not found")

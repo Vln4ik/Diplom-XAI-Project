@@ -36,6 +36,7 @@ from app.schemas import (
 from app.services.audit import log_action
 from app.services.auth import create_user
 from app.services.organization_autofill import suggest_organization_profile_from_documents
+from app.services.report_types import requires_special_workflow
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -55,6 +56,9 @@ def _document_readiness_score(status: DocumentStatus) -> float:
 
 
 def _report_readiness_score(status: ReportStatus, readiness_percent: float | None) -> float:
+    if status in {ReportStatus.approved, ReportStatus.exported, ReportStatus.archived}:
+        return 100.0
+
     if readiness_percent and readiness_percent > 0:
         return min(100.0, max(0.0, readiness_percent))
 
@@ -222,12 +226,12 @@ def get_dashboard(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
     document_statuses = list(db.scalars(select(Document.status).where(Document.organization_id == organization_id)))
-    report_rows = list(db.execute(select(Report.status, Report.readiness_percent).where(Report.organization_id == organization_id)))
+    report_rows = list(db.execute(select(Report.status, Report.readiness_percent, Report.report_type).where(Report.organization_id == organization_id)))
     requirement_statuses = list(db.scalars(select(Requirement.status).where(Requirement.organization_id == organization_id)))
     risk_rows = list(db.execute(select(Risk.risk_level, Risk.status).where(Risk.organization_id == organization_id)))
 
     active_reports = len(report_rows)
-    reports_awaiting_approval = sum(1 for status_value, _readiness in report_rows if status_value == ReportStatus.awaiting_approval)
+    reports_awaiting_approval = sum(1 for status_value, _readiness, _report_type in report_rows if status_value == ReportStatus.awaiting_approval)
     processed_documents = sum(1 for status_value in document_statuses if status_value in [DocumentStatus.processed, DocumentStatus.requires_review])
     total_requirements = len(requirement_statuses)
     unresolved_risk_statuses = {RiskStatus.new, RiskStatus.in_progress, RiskStatus.needs_review}
@@ -235,8 +239,13 @@ def get_dashboard(
     high_risks = sum(1 for risk_level, _status_value in unresolved_risks if risk_level in [RiskLevel.high, RiskLevel.critical])
 
     document_progress = _mean([_document_readiness_score(status_value) for status_value in document_statuses])
-    report_progress = _mean([_report_readiness_score(status_value, readiness_percent) for status_value, readiness_percent in report_rows])
-    requirement_progress = _mean([_requirement_readiness_score(status_value) for status_value in requirement_statuses])
+    report_progress = _mean([_report_readiness_score(status_value, readiness_percent) for status_value, readiness_percent, _report_type in report_rows])
+    has_special_workflow_report = any(requires_special_workflow(report_type) for _status_value, _readiness_percent, report_type in report_rows)
+    requirement_progress = (
+        _mean([_requirement_readiness_score(status_value) for status_value in requirement_statuses])
+        if requirement_statuses
+        else report_progress if has_special_workflow_report else 0.0
+    )
     risk_progress = max(0.0, 100.0 - sum(_risk_penalty(risk_level) for risk_level, _status_value in unresolved_risks)) if report_rows else 0.0
     readiness = round(
         document_progress * 0.35 + report_progress * 0.25 + requirement_progress * 0.25 + risk_progress * 0.15,
@@ -294,11 +303,16 @@ def create_member(
     ensure_org_access(db, organization_id=organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.system_admin])
     existing_user = db.scalar(select(User).where(User.email == payload.email.lower()))
     if existing_user is None:
+        if not payload.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password is required when creating a new member user.",
+            )
         existing_user = create_user(
             db,
             full_name=payload.full_name,
             email=payload.email,
-            password=payload.password or "ChangeMe123!",
+            password=payload.password,
         )
 
     member = get_membership(db, organization_id=organization_id, user_id=existing_user.id)

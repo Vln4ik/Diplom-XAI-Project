@@ -15,9 +15,12 @@ import {
   deleteOrganization,
   deleteReport,
   exportReport,
+  fetchAuditLogs,
   fetchDashboard,
   fetchDocuments,
+  fetchEstimateExpertiseWorkflow,
   fetchExplanation,
+  fetchExpertiseDecisions,
   fetchMembers,
   fetchMatrix,
   fetchNotifications,
@@ -31,6 +34,7 @@ import {
   rejectRequirement,
   resolveRisk,
   returnReportToRevision,
+  startEstimateExpertiseWorkflow,
   submitReportForApproval,
   searchDocuments,
   updateOrganization,
@@ -40,10 +44,14 @@ import {
 } from "./lib/api";
 import { getAccessToken } from "./lib/session";
 import { useLiveDocumentProgress, useLiveReportProgress } from "./lib/liveProgress";
+import { isStateExpertiseEstimateCostReport } from "./lib/reportTypes";
+import type { EstimateExpertiseWorkflow } from "./lib/estimateExpertise";
 import type {
   Dashboard,
   DocumentSearchMatch,
   DocumentItem,
+  AuditLogItem,
+  ExpertiseDecisionItem,
   Explanation,
   MemberItem,
   NotificationItem,
@@ -64,10 +72,39 @@ import { RequirementsPage } from "./pages/RequirementsPage";
 import { RisksPage } from "./pages/RisksPage";
 import { clampProgress, getLiveDocumentProgressMeta, getLiveReportAnalysisProgress, type UiTask } from "./lib/ui";
 
+const LAST_ORGANIZATION_STORAGE_KEY = "evidencexai:last-organization-id";
+const FOLDER_PROCESS_CONCURRENCY = 4;
+const SPECIAL_REPORT_SELECTED_DOCUMENT_LIMIT = 120;
+
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  task: (item: T, index: number) => Promise<void>,
+) {
+  const queue = [...items.entries()];
+  const workerCount = Math.min(Math.max(1, concurrency), queue.length);
+  await Promise.all(
+    Array.from({ length: workerCount }, async () => {
+      while (queue.length > 0) {
+        const next = queue.shift();
+        if (!next) {
+          return;
+        }
+        const [index, item] = next;
+        await task(item, index);
+      }
+    }),
+  );
+}
+
+function getStoredOrganizationId(): string | null {
+  return window.localStorage.getItem(LAST_ORGANIZATION_STORAGE_KEY);
+}
+
 function AppShell() {
   const location = useLocation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(null);
+  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string | null>(() => getStoredOrganizationId());
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedRequirementId, setSelectedRequirementId] = useState<string | null>(null);
   const [isXaiWidgetOpen, setIsXaiWidgetOpen] = useState(false);
@@ -78,6 +115,9 @@ function AppShell() {
   const [matrixRows, setMatrixRows] = useState<ReportMatrixRow[]>([]);
   const [requirements, setRequirements] = useState<RequirementItem[]>([]);
   const [risks, setRisks] = useState<RiskItem[]>([]);
+  const [expertiseDecisions, setExpertiseDecisions] = useState<ExpertiseDecisionItem[]>([]);
+  const [estimateWorkflowByReportId, setEstimateWorkflowByReportId] = useState<Record<string, EstimateExpertiseWorkflow>>({});
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   const [members, setMembers] = useState<MemberItem[]>([]);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [explanation, setExplanation] = useState<Explanation | null>(null);
@@ -92,7 +132,7 @@ function AppShell() {
   );
   const xaiWidgetRoutes: Record<string, string> = {
     "/reports": "Контекст отчета",
-    "/matrix": "Контекст матрицы",
+    "/matrix": "Контекст графов",
     "/requirements": "Контекст требования",
     "/risks": "Контекст риска",
   };
@@ -103,13 +143,23 @@ function AppShell() {
   async function reloadOrganizations(preferredOrganizationId?: string | null) {
     const items = await fetchOrganizations();
     setOrganizations(items);
-    const nextOrganizationId =
-      preferredOrganizationId && items.some((organization) => organization.id === preferredOrganizationId)
-        ? preferredOrganizationId
-        : items[0]?.id ?? null;
+    const explicitPreferred = arguments.length > 0 ? preferredOrganizationId : undefined;
+    const storedOrganizationId = getStoredOrganizationId();
+    const organizationCandidates = [explicitPreferred, selectedOrganizationId, storedOrganizationId, items[0]?.id ?? null];
+    const nextOrganizationId = organizationCandidates.find(
+      (candidate): candidate is string => Boolean(candidate && items.some((organization) => organization.id === candidate)),
+    ) ?? null;
     setSelectedOrganizationId(nextOrganizationId);
     return { items, nextOrganizationId };
   }
+
+  useEffect(() => {
+    if (selectedOrganizationId) {
+      window.localStorage.setItem(LAST_ORGANIZATION_STORAGE_KEY, selectedOrganizationId);
+    } else {
+      window.localStorage.removeItem(LAST_ORGANIZATION_STORAGE_KEY);
+    }
+  }, [selectedOrganizationId]);
 
   function clearTaskTimer(taskId: string) {
     const timerId = taskTimersRef.current[taskId];
@@ -145,9 +195,43 @@ function AppShell() {
     setManualTasks((current) => current.filter((item) => item.id !== taskId));
   }
 
+  function handleEstimateWorkflowUpdate(reportId: string, workflow: EstimateExpertiseWorkflow) {
+    setEstimateWorkflowByReportId((current) => ({
+      ...current,
+      [reportId]: workflow,
+    }));
+  }
+
+  async function refreshEstimateWorkflows(items: ReportItem[]) {
+    const specialReports = items.filter((report) => isStateExpertiseEstimateCostReport(report.report_type));
+    const activeReportIds = new Set(specialReports.map((report) => report.id));
+    setEstimateWorkflowByReportId((current) =>
+      Object.fromEntries(Object.entries(current).filter(([reportId]) => activeReportIds.has(reportId))),
+    );
+    if (specialReports.length === 0) {
+      return;
+    }
+    const results = await Promise.allSettled(
+      specialReports.map(async (report) => ({
+        reportId: report.id,
+        workflow: await fetchEstimateExpertiseWorkflow(report.id),
+      })),
+    );
+    const nextEntries = results
+      .filter((result): result is PromiseFulfilledResult<{ reportId: string; workflow: EstimateExpertiseWorkflow }> => result.status === "fulfilled")
+      .map((result) => [result.value.reportId, result.value.workflow] as const);
+    if (nextEntries.length > 0) {
+      setEstimateWorkflowByReportId((current) => ({
+        ...current,
+        ...Object.fromEntries(nextEntries),
+      }));
+    }
+  }
+
   async function reloadReports(organizationId: string, preferredReportId?: string | null) {
     const items = await fetchReports(organizationId);
     setReports(items);
+    void refreshEstimateWorkflows(items);
     const candidateReportId = arguments.length > 1 ? preferredReportId : selectedReportId;
     const nextReportId =
       candidateReportId && items.some((report) => report.id === candidateReportId)
@@ -182,6 +266,9 @@ function AppShell() {
     setMatrixRows([]);
     setRequirements([]);
     setRisks([]);
+    setExpertiseDecisions([]);
+    setEstimateWorkflowByReportId({});
+    setAuditLogs([]);
     setMembers([]);
     setNotifications([]);
     setExplanation(null);
@@ -198,6 +285,7 @@ function AppShell() {
     fetchDocuments(selectedOrganizationId).then(setDocuments).catch(() => setDocuments([]));
     fetchMembers(selectedOrganizationId).then(setMembers).catch(() => setMembers([]));
     fetchNotifications(selectedOrganizationId).then(setNotifications).catch(() => setNotifications([]));
+    fetchAuditLogs(selectedOrganizationId).then(setAuditLogs).catch(() => setAuditLogs([]));
     reloadReports(selectedOrganizationId)
       .then(async (items) => {
         if (!items.nextReportId) {
@@ -214,6 +302,7 @@ function AppShell() {
       })
       .catch(() => setRequirements([]));
     fetchRisks(selectedOrganizationId).then(setRisks).catch(() => setRisks([]));
+    fetchExpertiseDecisions(selectedOrganizationId).then(setExpertiseDecisions).catch(() => setExpertiseDecisions([]));
   }, [selectedOrganizationId]);
 
   useEffect(() => {
@@ -239,6 +328,13 @@ function AppShell() {
   }, [showXaiWidget]);
 
   useEffect(() => {
+    if (!selectedOrganizationId || !location.pathname.startsWith("/risks")) {
+      return;
+    }
+    fetchExpertiseDecisions(selectedOrganizationId).then(setExpertiseDecisions).catch(() => setExpertiseDecisions([]));
+  }, [location.pathname, selectedOrganizationId]);
+
+  useEffect(() => {
     if (!selectedOrganizationId) {
       return;
     }
@@ -260,7 +356,13 @@ function AppShell() {
       return;
     }
     const hasActiveReportAnalysis = reports.some((report) => report.status === "analyzing");
-    if (!hasActiveReportAnalysis) {
+    const hasActiveSpecialWorkflow = reports.some(
+      (report) =>
+        isStateExpertiseEstimateCostReport(report.report_type) &&
+        !["approved", "exported", "archived"].includes(report.status) &&
+        report.readiness_percent < 100,
+    );
+    if (!hasActiveReportAnalysis && !hasActiveSpecialWorkflow) {
       return;
     }
 
@@ -276,23 +378,37 @@ function AppShell() {
       return;
     }
     const preferredReportId = reportId ?? selectedReportId;
-    await reloadReports(selectedOrganizationId, preferredReportId);
-    fetchDashboard(selectedOrganizationId).then(setDashboard).catch(() => setDashboard(null));
-    fetchNotifications(selectedOrganizationId).then(setNotifications).catch(() => setNotifications([]));
-    fetchRequirements(selectedOrganizationId)
-      .then((items) => {
-        setRequirements(items);
-        setSelectedRequirementId((current) =>
-          current && items.some((item) => item.id === current) ? current : items[0]?.id ?? null,
-        );
-      })
-      .catch(() => setRequirements([]));
-    fetchRisks(selectedOrganizationId).then(setRisks).catch(() => setRisks([]));
-    if (selectedRequirementId) {
-      fetchExplanation(selectedRequirementId).then(setExplanation).catch(() => setExplanation(null));
+    const { nextReportId } = await reloadReports(selectedOrganizationId, preferredReportId);
+    const [nextDashboard, nextNotifications, nextRequirements, nextRisks, nextExpertiseDecisions, nextAuditLogs] = await Promise.all([
+      fetchDashboard(selectedOrganizationId).catch(() => null),
+      fetchNotifications(selectedOrganizationId).catch(() => [] as NotificationItem[]),
+      fetchRequirements(selectedOrganizationId).catch(() => [] as RequirementItem[]),
+      fetchRisks(selectedOrganizationId).catch(() => [] as RiskItem[]),
+      fetchExpertiseDecisions(selectedOrganizationId).catch(() => [] as ExpertiseDecisionItem[]),
+      fetchAuditLogs(selectedOrganizationId).catch(() => [] as AuditLogItem[]),
+    ]);
+    setDashboard(nextDashboard);
+    setNotifications(nextNotifications);
+    setRequirements(nextRequirements);
+    setRisks(nextRisks);
+    setExpertiseDecisions(nextExpertiseDecisions);
+    setAuditLogs(nextAuditLogs);
+    setSelectedRequirementId((current) =>
+      current && nextRequirements.some((item) => item.id === current) ? current : nextRequirements[0]?.id ?? null,
+    );
+    const nextRequirementId =
+      selectedRequirementId && nextRequirements.some((item) => item.id === selectedRequirementId)
+        ? selectedRequirementId
+        : nextRequirements[0]?.id ?? null;
+    if (nextRequirementId) {
+      fetchExplanation(nextRequirementId).then(setExplanation).catch(() => setExplanation(null));
+    } else {
+      setExplanation(null);
     }
-    if (preferredReportId) {
-      fetchMatrix(preferredReportId).then(setMatrixRows).catch(() => setMatrixRows([]));
+    if (nextReportId) {
+      fetchMatrix(nextReportId).then(setMatrixRows).catch(() => setMatrixRows([]));
+    } else {
+      setMatrixRows([]);
     }
   }
 
@@ -442,7 +558,13 @@ function AppShell() {
       64,
     );
     try {
-      await Promise.all(processableIds.map((documentId) => processDocument(documentId)));
+      await runWithConcurrency(processableIds, FOLDER_PROCESS_CONCURRENCY, async (documentId, index) => {
+        await processDocument(documentId);
+        updateTask(taskId, {
+          detail: `Поставлено в очередь ${index + 1}/${processableIds.length} файл(ов). API и worker не перегружаются массовым Promise.all.`,
+          progress: clampProgress(18 + ((index + 1) / processableIds.length) * 54),
+        });
+      });
       updateTask(taskId, {
         detail: "Файлы поставлены в очередь. Статусы ветки будут обновляться автоматически.",
         progress: 78,
@@ -520,6 +642,16 @@ function AppShell() {
     if (!selectedOrganizationId) {
       return;
     }
+    if (
+      isStateExpertiseEstimateCostReport(payload.report_type) &&
+      payload.selected_document_ids.length > SPECIAL_REPORT_SELECTED_DOCUMENT_LIMIT
+    ) {
+      window.alert(
+        `Для спецworkflow выбрано ${payload.selected_document_ids.length} документов. ` +
+          `Лимит активной версии: ${SPECIAL_REPORT_SELECTED_DOCUMENT_LIMIT}. Разделите пакет на несколько папок.`,
+      );
+      return;
+    }
     const taskId = `create-report-${Date.now()}`;
     beginTask(
       {
@@ -533,6 +665,16 @@ function AppShell() {
     );
     try {
       const report = await createReport(selectedOrganizationId, payload);
+      if (isStateExpertiseEstimateCostReport(report.report_type)) {
+        updateTask(taskId, {
+          detail: "Спецотчет создан. Запускаем независимый workflow проверки ПП 145/87 на backend.",
+          progress: 58,
+        });
+        const workflow = await startEstimateExpertiseWorkflow(report.id).catch(() => null);
+        if (workflow) {
+          handleEstimateWorkflowUpdate(report.id, workflow);
+        }
+      }
       updateTask(taskId, {
         detail: "Отчет создан. Обновляем связанные разделы интерфейса.",
         progress: 88,
@@ -546,6 +688,16 @@ function AppShell() {
 
   async function handleCreateAndAnalyzeReport(payload: { title: string; report_type: string; selected_document_ids: string[] }) {
     if (!selectedOrganizationId) {
+      return;
+    }
+    if (
+      isStateExpertiseEstimateCostReport(payload.report_type) &&
+      payload.selected_document_ids.length > SPECIAL_REPORT_SELECTED_DOCUMENT_LIMIT
+    ) {
+      window.alert(
+        `Для спецworkflow выбрано ${payload.selected_document_ids.length} документов. ` +
+          `Лимит активной версии: ${SPECIAL_REPORT_SELECTED_DOCUMENT_LIMIT}. Разделите пакет на несколько папок.`,
+      );
       return;
     }
     const taskId = `create-analyze-report-${Date.now()}`;
@@ -798,7 +950,16 @@ function AppShell() {
       >
         <Route
           index
-          element={<DashboardPage dashboard={dashboard} documents={documents} reports={reports} requirements={requirements} risks={risks} />}
+          element={
+            <DashboardPage
+              dashboard={dashboard}
+              documents={documents}
+              reports={reports}
+              requirements={requirements}
+              risks={risks}
+              estimateWorkflowByReportId={estimateWorkflowByReportId}
+            />
+          }
         />
         <Route
           path="organizations"
@@ -835,6 +996,7 @@ function AppShell() {
           path="reports"
           element={
             <ReportsPage
+              organizationId={selectedOrganizationId}
               reports={reports}
               documents={documents}
               selectedReportId={selectedReportId}
@@ -845,6 +1007,8 @@ function AppShell() {
               onAnalyze={handleAnalyzeReport}
               onGenerate={handleGenerateReport}
               onExport={handleExportReport}
+              estimateWorkflowByReportId={estimateWorkflowByReportId}
+              onEstimateWorkflowUpdate={handleEstimateWorkflowUpdate}
               onSubmitForApproval={async (reportId) => {
                 await submitReportForApproval(reportId);
                 await refreshOrganizationState(reportId);
@@ -863,14 +1027,27 @@ function AppShell() {
         <Route
           path="matrix"
           element={
-            <MatrixPage rows={matrixRows} selectedRequirementId={selectedRequirementId} onSelectRequirement={handleInspectRequirement} />
+            <MatrixPage
+              documents={documents}
+              reports={reports}
+              rows={matrixRows}
+              requirements={requirements}
+              risks={risks}
+              expertiseDecisions={expertiseDecisions}
+              auditLogs={auditLogs}
+              selectedRequirementId={selectedRequirementId}
+              onSelectRequirement={handleInspectRequirement}
+            />
           }
         />
         <Route
           path="requirements"
           element={
             <RequirementsPage
+              documents={documents}
+              reports={reports}
               requirements={requirements}
+              risks={risks}
               selectedRequirementId={selectedRequirementId}
               onSelectRequirement={handleInspectRequirement}
               onConfirm={handleConfirmRequirement}
@@ -885,6 +1062,7 @@ function AppShell() {
           element={
             <RisksPage
               risks={risks}
+              expertiseDecisions={expertiseDecisions}
               members={members}
               selectedRequirementId={selectedRequirementId}
               onSelectRequirement={handleInspectRequirement}

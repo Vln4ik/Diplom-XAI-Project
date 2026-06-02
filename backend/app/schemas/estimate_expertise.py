@@ -21,6 +21,31 @@ class EstimateExpertiseDecisionSummary(BaseModel):
     comment: str | None = None
 
 
+class EstimateExpertiseDecisionLogResponse(TimestampedModel):
+    organization_id: str
+    report_id: str
+    report_title: str
+    report_type: str
+    workflow_id: str
+    finding_id: str
+    finding_title: str
+    finding_description: str
+    finding_severity: str
+    stage_key: str
+    stage_title: str
+    document_id: str | None = None
+    document_name: str
+    decision_status: str
+    decision_type: str
+    decision_label: str
+    comment: str | None = None
+    normative_basis: str
+    source_ref: str
+    recommendation: str
+    confidence_score: float
+    xai_summary: list[str]
+
+
 class EstimateExpertiseFindingResponse(TimestampedModel):
     stage_id: str | None = None
     stage_key: str

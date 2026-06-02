@@ -148,6 +148,34 @@ export type RiskItem = {
   assigned_to_id?: string | null;
 };
 
+export type ExpertiseDecisionItem = {
+  id: string;
+  organization_id: string;
+  report_id: string;
+  report_title: string;
+  report_type: string;
+  workflow_id: string;
+  finding_id: string;
+  finding_title: string;
+  finding_description: string;
+  finding_severity: string;
+  stage_key: string;
+  stage_title: string;
+  document_id?: string | null;
+  document_name: string;
+  decision_status: "approved" | "skipped" | string;
+  decision_type: string;
+  decision_label: string;
+  comment?: string | null;
+  normative_basis: string;
+  source_ref: string;
+  recommendation: string;
+  confidence_score: number;
+  xai_summary: string[];
+  created_at: string;
+  updated_at: string;
+};
+
 export type ReportSection = {
   id: string;
   title: string;

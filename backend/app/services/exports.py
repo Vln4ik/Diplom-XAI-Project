@@ -91,15 +91,19 @@ def export_explanations_html(db: Session, report: Report, created_by_id: str | N
     explanations_payload = build_report_explanations_payload(db, report)
     blocks: list[str] = []
     for item in explanations_payload:
-        logic_lines = "".join(f"<li>{line}</li>" for line in item["logic"])
-        recommended = f"<p><strong>Рекомендация:</strong> {item['recommended_action']}</p>" if item["recommended_action"] else ""
+        logic_lines = "".join(f"<li>{escape(str(line))}</li>" for line in item["logic"])
+        recommended = (
+            f"<p><strong>Рекомендация:</strong> {escape(str(item['recommended_action']))}</p>"
+            if item["recommended_action"]
+            else ""
+        )
         blocks.append(
             f"""
             <section class="explanation-card">
-              <h2>{item['conclusion']}</h2>
-              <p>{item['explanation_text']}</p>
-              <p><strong>Уверенность:</strong> {item['confidence_score']}</p>
-              <p><strong>Риск:</strong> {item['risk_level']}</p>
+              <h2>{escape(str(item['conclusion']))}</h2>
+              <p>{escape(str(item['explanation_text']))}</p>
+              <p><strong>Уверенность:</strong> {escape(str(item['confidence_score']))}</p>
+              <p><strong>Риск:</strong> {escape(str(item['risk_level']))}</p>
               <ul>{logic_lines}</ul>
               {recommended}
             </section>
@@ -110,7 +114,7 @@ def export_explanations_html(db: Session, report: Report, created_by_id: str | N
     <html lang="ru">
       <head>
         <meta charset="utf-8" />
-        <title>XAI explanations - {report.title}</title>
+        <title>XAI explanations - {escape(report.title)}</title>
         <style>
           body {{ font-family: Arial, sans-serif; margin: 2rem; color: #1d2430; }}
           .explanation-card {{ border: 1px solid #d7dde4; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }}
@@ -119,7 +123,7 @@ def export_explanations_html(db: Session, report: Report, created_by_id: str | N
         </style>
       </head>
       <body>
-        <h1>XAI-объяснения: {report.title}</h1>
+        <h1>XAI-объяснения: {escape(report.title)}</h1>
         {''.join(blocks) if blocks else '<p>Объяснения пока не сформированы.</p>'}
       </body>
     </html>
@@ -440,7 +444,14 @@ def export_estimate_expertise_package(db: Session, report: Report, created_by_id
 
     selected_documents = []
     if report.selected_document_ids:
-        selected_documents = list(db.scalars(select(Document).where(Document.id.in_(report.selected_document_ids))))
+        selected_documents = list(
+            db.scalars(
+                select(Document).where(
+                    Document.organization_id == report.organization_id,
+                    Document.id.in_(report.selected_document_ids),
+                )
+            )
+        )
 
     with zipfile.ZipFile(path, "w") as archive:
         archive.write(docx_export.storage_path, arcname="summary.docx")

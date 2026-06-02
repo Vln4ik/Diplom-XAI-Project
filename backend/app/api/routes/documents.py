@@ -1,16 +1,54 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import ensure_org_access, get_current_user, get_db
+from app.core.config import get_settings
 from app.models import Document, DocumentCategory, DocumentFragment, DocumentStatus, MemberRole, Organization, User
 from app.schemas import DocumentFragmentResponse, DocumentProcessResponse, DocumentResponse, DocumentSearchMatchResponse
-from app.services.documents import create_document, search_document_fragments
+from app.services.documents import create_document_record, recover_stale_processing_documents, search_document_fragments
+from app.services.storage import storage
 from app.workers.tasks import document_process_task
 
 router = APIRouter(tags=["documents"])
+
+
+async def _save_upload_stream(
+    *,
+    organization_id: str,
+    file: UploadFile,
+    file_name: str,
+    max_file_bytes: int,
+    chunk_size: int,
+) -> tuple[str, int]:
+    target = storage.create_document_path(organization_id, file_name)
+    written = 0
+    try:
+        with target.open("wb") as output:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if max_file_bytes > 0 and written > max_file_bytes:
+                    raise HTTPException(
+                        status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                        detail=(
+                            f"File '{file_name}' exceeds upload limit "
+                            f"{max_file_bytes // (1024 * 1024)} MB"
+                        ),
+                    )
+                output.write(chunk)
+    except Exception:
+        storage.delete_file(str(target))
+        raise
+    finally:
+        await file.close()
+    return str(target), written
 
 
 @router.get("/organizations/{organization_id}/documents", response_model=list[DocumentResponse])
@@ -20,6 +58,7 @@ def list_documents(
     db: Session = Depends(get_db),
 ) -> list[Document]:
     ensure_org_access(db, organization_id=organization_id, user=user)
+    recover_stale_processing_documents(db, organization_id=organization_id)
     return list(db.scalars(select(Document).where(Document.organization_id == organization_id).order_by(Document.created_at.desc())))
 
 
@@ -61,29 +100,61 @@ async def upload_documents(
     if organization is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 
+    settings = get_settings()
+    if len(files) > settings.upload_max_files:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Too many files in one upload: {len(files)}. Limit: {settings.upload_max_files}.",
+        )
+
     saved: list[Document] = []
     tag_list = [item.strip() for item in tags.split(",") if item.strip()]
     submitted_paths = relative_paths or []
-    for index, file in enumerate(files):
-        content = await file.read()
-        file_name = file.filename or "document.bin"
-        submitted_path = submitted_paths[index] if index < len(submitted_paths) else None
-        normalized_path = (submitted_path or file_name).replace("\\", "/")
-        if file_name == ".DS_Store" or normalized_path.endswith("/.DS_Store") or normalized_path.startswith("__MACOSX/"):
-            continue
-        saved.append(
-            create_document(
-                db,
+    total_uploaded_bytes = 0
+    try:
+        for index, file in enumerate(files):
+            file_name = file.filename or "document.bin"
+            submitted_path = submitted_paths[index] if index < len(submitted_paths) else None
+            normalized_path = (submitted_path or file_name).replace("\\", "/")
+            if Path(file_name).name == ".DS_Store" or normalized_path.endswith("/.DS_Store") or normalized_path.startswith("__MACOSX/"):
+                continue
+            storage_path, file_size = await _save_upload_stream(
                 organization_id=organization.id,
-                uploaded_by_id=user.id,
+                file=file,
                 file_name=file_name,
-                content=content,
-                content_type=file.content_type,
-                category=category,
-                tags=tag_list,
-                relative_path=submitted_path,
+                max_file_bytes=settings.upload_max_file_bytes,
+                chunk_size=max(8192, settings.upload_read_chunk_bytes),
             )
-        )
+            total_uploaded_bytes += file_size
+            if settings.upload_max_total_bytes > 0 and total_uploaded_bytes > settings.upload_max_total_bytes:
+                storage.delete_file(storage_path)
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=(
+                        f"Upload batch exceeds total limit "
+                        f"{settings.upload_max_total_bytes // (1024 * 1024)} MB"
+                    ),
+                )
+            saved.append(
+                create_document_record(
+                    db,
+                    organization_id=organization.id,
+                    uploaded_by_id=user.id,
+                    file_name=file_name,
+                    storage_path=storage_path,
+                    file_size=file_size,
+                    content_type=file.content_type,
+                    category=category,
+                    tags=tag_list,
+                    relative_path=submitted_path,
+                )
+            )
+    except HTTPException:
+        for document in saved:
+            storage.delete_file(document.storage_path)
+            db.delete(document)
+        db.commit()
+        raise
     return saved
 
 
@@ -117,6 +188,8 @@ def process_uploaded_document(
     if document is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found")
     ensure_org_access(db, organization_id=document.organization_id, user=user, allowed_roles=[MemberRole.org_admin, MemberRole.specialist, MemberRole.system_admin])
+    recover_stale_processing_documents(db, organization_id=document.organization_id)
+    db.refresh(document)
     if document.status in {DocumentStatus.queued, DocumentStatus.processing}:
         return DocumentProcessResponse(document_id=document.id, status=document.status, task_id=None)
     document.status = DocumentStatus.queued

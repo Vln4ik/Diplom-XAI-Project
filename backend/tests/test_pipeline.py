@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import zipfile
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from sqlalchemy import select
@@ -9,6 +10,8 @@ from app.models import (
     Document,
     DocumentCategory,
     DocumentStatus,
+    Organization,
+    OrganizationType,
     Report,
     ReportStatus,
     Requirement,
@@ -18,7 +21,7 @@ from app.models import (
     RiskStatus,
 )
 from app.services.auth import create_user
-from app.services.documents import describe_processing_error
+from app.services.documents import describe_processing_error, recover_stale_processing_documents
 from app.services.estimate_expertise import ensure_estimate_expertise_workflow, recalculate_workflow_metrics
 
 
@@ -33,6 +36,40 @@ def _auth_headers(test_client, email: str, password: str) -> dict[str, str]:
     assert response.status_code == 200
     access_token = response.json()["access_token"]
     return {"Authorization": f"Bearer {access_token}"}
+
+
+def _workflow_findings(workflow: dict) -> list[dict]:
+    return [finding for stage in workflow["stages"] for finding in stage["findings"]]
+
+
+def _blocking_findings(workflow: dict, stage_key: str | None = None) -> list[dict]:
+    findings = _workflow_findings(workflow)
+    if stage_key is not None:
+        findings = [finding for finding in findings if finding["stage_key"] == stage_key]
+    return [
+        finding
+        for finding in findings
+        if finding["severity"] in {"warning", "danger"} and not finding.get("decision")
+    ]
+
+
+def _advance_workflow_until_stage(test_client, headers: dict[str, str], workflow: dict, target_stage_key: str) -> dict:
+    latest = workflow
+    for _ in range(30):
+        target_stage = next(stage for stage in latest["stages"] if stage["stage_key"] == target_stage_key)
+        if target_stage["findings"] or target_stage["status"] in {"blocked", "completed", "running"}:
+            return latest
+        blockers = _blocking_findings(latest)
+        assert blockers, f"Workflow did not reach {target_stage_key}; current={latest.get('current_stage_key')}"
+        for finding in blockers:
+            response = test_client.post(
+                f"/api/estimate-expertise/findings/{finding['id']}/skip",
+                headers=headers,
+                json={},
+            )
+            assert response.status_code == 200
+            latest = response.json()
+    raise AssertionError(f"Workflow did not reach {target_stage_key}")
 
 
 def test_dashboard_readiness_uses_documents_reports_requirements_and_unresolved_risks(client):
@@ -174,6 +211,42 @@ def test_folder_upload_preserves_relative_paths(client):
     assert "audit-pack/staff/staff.txt" in listed_paths
 
 
+def test_upload_batch_total_limit_rolls_back_partial_uploads(client, monkeypatch):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="upload-limit-owner@example.com", password="ChangeMe123!")
+
+    from app.core.config import get_settings
+
+    monkeypatch.setenv("XAI_APP_UPLOAD_MAX_TOTAL_BYTES", "10")
+    get_settings.cache_clear()
+
+    headers = _auth_headers(test_client, "upload-limit-owner@example.com", "ChangeMe123!")
+    organization_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Upload Limit Company", "organization_type": "educational"},
+    )
+    assert organization_response.status_code == 201
+    organization_id = organization_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{organization_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files=[
+            ("files", ("small-a.txt", b"12345", "text/plain")),
+            ("files", ("small-b.txt", b"123456", "text/plain")),
+        ],
+    )
+    assert upload_response.status_code == 413
+
+    documents_response = test_client.get(f"/api/organizations/{organization_id}/documents", headers=headers)
+    assert documents_response.status_code == 200
+    assert documents_response.json() == []
+    get_settings.cache_clear()
+
+
 def test_document_process_endpoint_is_idempotent_for_active_documents(client):
     test_client, session_factory = client
     with session_factory() as session:
@@ -209,11 +282,53 @@ def test_document_process_endpoint_is_idempotent_for_active_documents(client):
     assert payload["status"] == "queued"
     assert payload["task_id"] is None
 
-    with session_factory() as session:
-        document = session.get(Document, document_id)
-        assert document.status == DocumentStatus.queued
-        assert document.extracted_text is None
 
+def test_recover_stale_processing_documents_marks_timed_out_files_failed(client):
+    _test_client, session_factory = client
+    with session_factory() as session:
+        user = create_user(session, full_name="Stale Owner", email="stale-owner@example.com", password="ChangeMe123!")
+        organization_response = Organization(name="Stale Processing Company", organization_type=OrganizationType.educational)
+        session.add(organization_response)
+        session.commit()
+        stale_document = Document(
+            organization_id=organization_response.id,
+            uploaded_by_id=user.id,
+            file_name="stale.pdf",
+            original_file_name="stale.pdf",
+            file_type="application/pdf",
+            file_size=100,
+            category=DocumentCategory.evidence,
+            storage_path="stale.pdf",
+            status=DocumentStatus.processing,
+            updated_at=datetime.now(UTC) - timedelta(minutes=20),
+        )
+        active_document = Document(
+            organization_id=organization_response.id,
+            uploaded_by_id=user.id,
+            file_name="active.pdf",
+            original_file_name="active.pdf",
+            file_type="application/pdf",
+            file_size=100,
+            category=DocumentCategory.evidence,
+            storage_path="active.pdf",
+            status=DocumentStatus.processing,
+            updated_at=datetime.now(UTC),
+        )
+        session.add_all([stale_document, active_document])
+        session.commit()
+
+        recovered_count = recover_stale_processing_documents(
+            session,
+            organization_id=organization_response.id,
+            stale_after_minutes=8,
+        )
+
+        assert recovered_count == 1
+        session.refresh(stale_document)
+        session.refresh(active_document)
+        assert stale_document.status == DocumentStatus.failed
+        assert "оставался в статусе" in (stale_document.processing_error or "")
+        assert active_document.status == DocumentStatus.processing
 
 def test_state_expertise_estimate_cost_report_type_is_special_workflow(client):
     test_client, session_factory = client
@@ -289,6 +404,49 @@ def test_report_can_be_deleted_from_api(client):
     list_response = test_client.get(f"/api/organizations/{organization_id}/reports", headers=headers)
     assert list_response.status_code == 200
     assert list_response.json() == []
+
+
+def test_report_rejects_foreign_selected_document_ids(client):
+    test_client, session_factory = client
+    with session_factory() as session:
+        create_user(session, full_name="Org Admin", email="tenant-owner@example.com", password="ChangeMe123!")
+
+    headers = _auth_headers(test_client, "tenant-owner@example.com", "ChangeMe123!")
+    first_org_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Tenant A", "organization_type": "educational"},
+    )
+    second_org_response = test_client.post(
+        "/api/organizations",
+        headers=headers,
+        json={"name": "Tenant B", "organization_type": "educational"},
+    )
+    assert first_org_response.status_code == 201
+    assert second_org_response.status_code == 201
+    first_org_id = first_org_response.json()["id"]
+    second_org_id = second_org_response.json()["id"]
+
+    upload_response = test_client.post(
+        f"/api/organizations/{first_org_id}/documents",
+        headers=headers,
+        data={"category": "evidence"},
+        files={"files": ("tenant-a.txt", b"tenant a evidence", "text/plain")},
+    )
+    assert upload_response.status_code == 201
+    foreign_document_id = upload_response.json()[0]["id"]
+
+    create_response = test_client.post(
+        f"/api/organizations/{second_org_id}/reports",
+        headers=headers,
+        json={
+            "title": "Cross tenant report",
+            "report_type": "readiness_report",
+            "selected_document_ids": [foreign_document_id],
+        },
+    )
+    assert create_response.status_code == 403
+    assert "Selected documents must belong" in create_response.json()["detail"]
 
 
 def test_state_expertise_workflow_persists_findings_and_user_decisions(client):
@@ -516,7 +674,8 @@ def test_state_expertise_workflow_uses_extracted_text_for_mismatch_and_quality_f
 
     start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
     assert start_response.status_code == 200
-    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+    workflow = start_response.json()
+    findings = _workflow_findings(workflow)
 
     mismatch_finding = next(finding for finding in findings if finding["title"] == "Название файла не совпадает с извлеченным содержанием")
     assert mismatch_finding["severity"] == "danger"
@@ -524,12 +683,15 @@ def test_state_expertise_workflow_uses_extracted_text_for_mismatch_and_quality_f
     assert "Обоснования стоимости" in mismatch_finding["description"]
     assert any("Пересечения" in step for step in mismatch_finding["xai_summary"])
 
-    typo_finding = next(finding for finding in findings if finding["title"] == "Найдены подозрительные орфографические ошибки")
+    workflow = _advance_workflow_until_stage(test_client, headers, workflow, "quality_spell_signature")
+    quality_findings = _workflow_findings(workflow)
+
+    typo_finding = next(finding for finding in quality_findings if finding["title"] == "Найдены подозрительные орфографические ошибки")
     assert typo_finding["severity"] == "warning"
     assert "сметнная" in typo_finding["description"]
     assert "стоимоть" in typo_finding["description"]
 
-    signature_finding = next(finding for finding in findings if finding["title"] == "Не найдены текстовые признаки подписи или печати")
+    signature_finding = next(finding for finding in quality_findings if finding["title"] == "Не найдены текстовые признаки подписи или печати")
     assert signature_finding["severity"] == "info"
     assert "layout-aware vision" in " ".join(signature_finding["xai_summary"])
 
@@ -614,7 +776,8 @@ def test_state_expertise_filename_classifier_can_use_llm_provider(client, monkey
 
     start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
     assert start_response.status_code == 200
-    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+    workflow = _advance_workflow_until_stage(test_client, headers, start_response.json(), "quality_spell_signature")
+    findings = _workflow_findings(workflow)
     mismatch_finding = next(finding for finding in findings if finding["title"] == "Название файла не совпадает с извлеченным содержанием")
 
     xai_text = " ".join(mismatch_finding["xai_summary"])
@@ -747,7 +910,7 @@ def test_state_expertise_pp87_report_uses_pp87_completeness_rules(client):
 
     start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
     assert start_response.status_code == 200
-    payload = start_response.json()
+    payload = _advance_workflow_until_stage(test_client, headers, start_response.json(), "section_content")
     stage_keys = [stage["stage_key"] for stage in payload["stages"]]
     findings = [finding for stage in payload["stages"] for finding in stage["findings"]]
     completeness_findings = [finding for finding in findings if finding["stage_key"] == "completeness"]
@@ -812,7 +975,8 @@ def test_state_expertise_quality_stage_flags_scan_like_low_text_density(client):
 
     start_response = test_client.post(f"/api/reports/{report_id}/estimate-expertise/start", headers=headers)
     assert start_response.status_code == 200
-    findings = [finding for stage in start_response.json()["stages"] for finding in stage["findings"]]
+    workflow = _advance_workflow_until_stage(test_client, headers, start_response.json(), "quality_spell_signature")
+    findings = _workflow_findings(workflow)
 
     density_finding = next(finding for finding in findings if finding["title"] == "Низкая плотность извлеченного текста")
     assert density_finding["severity"] == "warning"

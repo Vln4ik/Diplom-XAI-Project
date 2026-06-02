@@ -36,6 +36,10 @@ def compute_embedding(text: str) -> list[float]:
     return get_embedding_provider().embed_text(text)
 
 
+def compute_embeddings(texts: Sequence[str]) -> list[list[float]]:
+    return get_embedding_provider().embed_many(texts)
+
+
 def keyword_overlap_score(left: str, right: str) -> float:
     left_tokens = set(tokenize(left))
     right_tokens = set(tokenize(right))

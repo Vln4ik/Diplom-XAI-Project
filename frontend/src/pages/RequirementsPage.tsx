@@ -1,11 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { PageGuide } from "../components/PageGuide";
-import type { RequirementItem } from "../lib/types";
-import { formatRequirementStatus, formatRiskLevel, getRiskTone, getScoreTone } from "../lib/ui";
+import { fetchEstimateExpertiseWorkflow } from "../lib/api";
+import {
+  isActiveDocumentRequirement,
+  isActiveEstimateFinding,
+  isActiveRequirement,
+  isActiveRiskRequirement,
+} from "../lib/activeRequirements";
+import type { EstimateExpertiseFinding, EstimateExpertiseWorkflow } from "../lib/estimateExpertise";
+import { isStateExpertiseEstimateCostReport } from "../lib/reportTypes";
+import type { DocumentItem, ReportItem, RequirementItem, RiskItem } from "../lib/types";
+import {
+  formatDocumentStatus,
+  formatRequirementStatus,
+  formatReportType,
+  formatRiskLevel,
+  getDocumentProcessingReason,
+  getRiskTone,
+  getScoreTone,
+  type UiTone,
+} from "../lib/ui";
 
 type Props = {
+  documents: DocumentItem[];
+  reports: ReportItem[];
   requirements: RequirementItem[];
+  risks: RiskItem[];
   selectedRequirementId: string | null;
   onSelectRequirement: (requirementId: string) => void;
   onConfirm: (requirementId: string) => Promise<void>;
@@ -25,8 +46,200 @@ type Props = {
   onRefreshArtifacts: (requirementId: string) => Promise<void>;
 };
 
+type ActiveAiRequirementKind = "requirement" | "document" | "finding" | "risk";
+
+type ActiveAiRequirement = {
+  id: string;
+  kind: ActiveAiRequirementKind;
+  kindLabel: string;
+  title: string;
+  description: string;
+  source: string;
+  statusLabel: string;
+  recommendation: string;
+  tone: UiTone;
+  confidencePercent?: number;
+  normativeBasis?: string;
+  requirementId?: string;
+};
+
+const ACTIVE_AI_KIND_LABELS: Record<ActiveAiRequirementKind | "all", string> = {
+  all: "Все типы",
+  requirement: "Нормализованные требования",
+  document: "Документы",
+  finding: "Спецпроверка",
+  risk: "Риски",
+};
+
+const TONE_SORT_WEIGHT: Record<UiTone, number> = {
+  danger: 0,
+  warning: 1,
+  info: 2,
+  success: 3,
+};
+
+function getRequirementRecommendation(requirement: RequirementItem): string {
+  if (requirement.status === "data_missing") {
+    return "Загрузить недостающие данные, заменить источник или отклонить требование, если оно неприменимо.";
+  }
+  if (requirement.status === "data_partial") {
+    return "Проверить найденные evidence, уточнить комментарий и подтвердить либо отклонить вывод ИИ.";
+  }
+  if (requirement.status === "data_found") {
+    return "Проверить корректность вывода ИИ и подтвердить требование вручную.";
+  }
+  if (requirement.applicability_status === "needs_clarification") {
+    return "Определить применимость требования и сохранить ручной комментарий.";
+  }
+  return "Проверить требование и закрыть его решением пользователя.";
+}
+
+function getRequirementTone(requirement: RequirementItem): UiTone {
+  if (requirement.status === "data_missing" || ["high", "critical"].includes(requirement.risk_level)) {
+    return "danger";
+  }
+  if (requirement.status === "data_partial" || requirement.applicability_status === "needs_clarification") {
+    return "warning";
+  }
+  return "info";
+}
+
+function getDocumentAction(document: DocumentItem): { title: string; recommendation: string; tone: UiTone } {
+  if (document.status === "failed") {
+    return {
+      title: `Обновить файл: ${document.file_name}`,
+      recommendation: "Загрузить корректную копию файла или повторить обработку после исправления причины ошибки.",
+      tone: "danger",
+    };
+  }
+  if (document.status === "requires_review") {
+    return {
+      title: `Проверить корректность извлечения: ${document.file_name}`,
+      recommendation: "Открыть файл, проверить качество текста/OCR и при необходимости заменить источник.",
+      tone: "warning",
+    };
+  }
+  if (document.status === "outdated") {
+    return {
+      title: `Обновить актуальность файла: ${document.file_name}`,
+      recommendation: "Загрузить актуальную версию документа или исключить старую копию из проверки.",
+      tone: "warning",
+    };
+  }
+  return {
+    title: `Дождаться обработки: ${document.file_name}`,
+    recommendation: "Дождаться завершения pipeline, после чего ИИ сможет использовать документ в evidence linking.",
+    tone: "info",
+  };
+}
+
+function getRiskStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    new: "Новый",
+    in_progress: "В работе",
+    needs_review: "Нужна проверка",
+    resolved: "Закрыт",
+  };
+  return labels[status] ?? status;
+}
+
+function getFindingTone(finding: EstimateExpertiseFinding): UiTone {
+  if (finding.severity === "danger") {
+    return "danger";
+  }
+  if (finding.severity === "warning") {
+    return "warning";
+  }
+  return "info";
+}
+
+function buildActiveAiRequirements(params: {
+  documents: DocumentItem[];
+  reports: ReportItem[];
+  requirements: RequirementItem[];
+  risks: RiskItem[];
+  estimateWorkflows: Record<string, EstimateExpertiseWorkflow>;
+}): ActiveAiRequirement[] {
+  const requirementActions = params.requirements.filter(isActiveRequirement).map((requirement): ActiveAiRequirement => ({
+    id: `requirement-${requirement.id}`,
+    kind: "requirement",
+    kindLabel: "Требование ИИ",
+    title:
+      requirement.status === "data_found"
+        ? `Проверить корректность: ${requirement.title}`
+        : `Закрыть требование: ${requirement.title}`,
+    description: requirement.text,
+    source: `${requirement.category} · ${requirement.applicability_status}`,
+    statusLabel: formatRequirementStatus(requirement.status),
+    recommendation: getRequirementRecommendation(requirement),
+    tone: getRequirementTone(requirement),
+    confidencePercent: Math.round(requirement.confidence_score * 100),
+    normativeBasis: requirement.applicability_reason ?? undefined,
+    requirementId: requirement.id,
+  }));
+
+  const documentActions = params.documents.filter(isActiveDocumentRequirement).map((document): ActiveAiRequirement => {
+    const action = getDocumentAction(document);
+    const reason = getDocumentProcessingReason(document);
+    return {
+      id: `document-${document.id}`,
+      kind: "document",
+      kindLabel: "Документ",
+      title: action.title,
+      description: reason ?? "Документ сейчас требует внимания пользователя или завершения pipeline.",
+      source: document.relative_path || document.original_file_name || document.file_name,
+      statusLabel: formatDocumentStatus(document.status),
+      recommendation: action.recommendation,
+      tone: action.tone,
+    };
+  });
+
+  const riskActions = params.risks.filter(isActiveRiskRequirement).map((risk): ActiveAiRequirement => ({
+    id: `risk-${risk.id}`,
+    kind: "risk",
+    kindLabel: "Риск",
+    title: `Разобрать риск: ${risk.title}`,
+    description: risk.description,
+    source: risk.requirement_id ? `Связанное требование: ${risk.requirement_id.slice(0, 8)}` : "Общий риск отчета",
+    statusLabel: `${getRiskStatusLabel(risk.status)} · ${formatRiskLevel(risk.risk_level)}`,
+    recommendation: risk.recommended_action ?? "Проверить риск, принять решение и закрыть его после устранения.",
+    tone: getRiskTone(risk.risk_level),
+  }));
+
+  const findingActions = params.reports
+    .filter((report) => isStateExpertiseEstimateCostReport(report.report_type))
+    .flatMap((report) => {
+      const workflow = params.estimateWorkflows[report.id];
+      if (!workflow) {
+        return [];
+      }
+      return workflow.stages.flatMap((stage) =>
+        stage.findings.filter(isActiveEstimateFinding).map((finding): ActiveAiRequirement => ({
+          id: `finding-${finding.id}`,
+          kind: "finding",
+          kindLabel: "Спецпроверка",
+          title: finding.title,
+          description: finding.description,
+          source: `${report.title} · ${formatReportType(report.report_type)} · ${stage.shortTitle} · ${finding.documentName}`,
+          statusLabel: finding.decision?.label ?? "Требуется решение",
+          recommendation: finding.recommendation,
+          tone: getFindingTone(finding),
+          confidencePercent: Math.round(finding.confidence * 100),
+          normativeBasis: `${finding.normativeBasis} · ${finding.sourceRef}`,
+        })),
+      );
+    });
+
+  return [...findingActions, ...documentActions, ...requirementActions, ...riskActions].sort((left, right) => {
+    return TONE_SORT_WEIGHT[left.tone] - TONE_SORT_WEIGHT[right.tone] || left.kind.localeCompare(right.kind, "ru");
+  });
+}
+
 export function RequirementsPage({
+  documents,
+  reports,
   requirements,
+  risks,
   selectedRequirementId,
   onSelectRequirement,
   onConfirm,
@@ -35,7 +248,8 @@ export function RequirementsPage({
   onRefreshArtifacts,
 }: Props) {
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [kindFilter, setKindFilter] = useState<ActiveAiRequirementKind | "all">("all");
+  const [estimateWorkflows, setEstimateWorkflows] = useState<Record<string, EstimateExpertiseWorkflow>>({});
   const [draftTitle, setDraftTitle] = useState("");
   const [draftCategory, setDraftCategory] = useState("");
   const [draftText, setDraftText] = useState("");
@@ -49,15 +263,50 @@ export function RequirementsPage({
     [requirements, selectedRequirementId],
   );
 
-  const filteredRequirements = useMemo(
+  useEffect(() => {
+    const specialReports = reports.filter((report) => isStateExpertiseEstimateCostReport(report.report_type));
+    if (specialReports.length === 0) {
+      setEstimateWorkflows({});
+      return;
+    }
+
+    let cancelled = false;
+    Promise.allSettled(
+      specialReports.map(async (report) => ({
+        reportId: report.id,
+        workflow: await fetchEstimateExpertiseWorkflow(report.id),
+      })),
+    ).then((results) => {
+      if (cancelled) {
+        return;
+      }
+      const nextWorkflows = Object.fromEntries(
+        results
+          .filter((result): result is PromiseFulfilledResult<{ reportId: string; workflow: EstimateExpertiseWorkflow }> => result.status === "fulfilled")
+          .map((result) => [result.value.reportId, result.value.workflow]),
+      );
+      setEstimateWorkflows(nextWorkflows);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reports]);
+
+  const activeAiRequirements = useMemo(
+    () => buildActiveAiRequirements({ documents, reports, requirements, risks, estimateWorkflows }),
+    [documents, estimateWorkflows, reports, requirements, risks],
+  );
+
+  const filteredActiveAiRequirements = useMemo(
     () =>
-      requirements.filter((requirement) => {
-        const haystack = `${requirement.title} ${requirement.category} ${requirement.text}`.toLowerCase();
+      activeAiRequirements.filter((item) => {
+        const haystack = `${item.title} ${item.description} ${item.source} ${item.recommendation}`.toLowerCase();
         const matchesQuery = query.trim() ? haystack.includes(query.trim().toLowerCase()) : true;
-        const matchesStatus = statusFilter === "all" ? true : requirement.status === statusFilter;
-        return matchesQuery && matchesStatus;
+        const matchesKind = kindFilter === "all" ? true : item.kind === kindFilter;
+        return matchesQuery && matchesKind;
       }),
-    [query, requirements, statusFilter],
+    [activeAiRequirements, kindFilter, query],
   );
 
   useEffect(() => {
@@ -76,116 +325,107 @@ export function RequirementsPage({
   return (
     <div className="stack">
       <PageGuide
-        title="Требования"
-        summary="Здесь пользователь работает с извлеченными требованиями: проверяет их применимость, подтверждает или отклоняет результат анализа, вносит ручные правки и при необходимости пересчитывает XAI."
+        title="Активные требования ИИ"
+        summary="Вкладка показывает только текущие действия, которые система требует от пользователя: проверить корректность вывода, заменить файл, закрыть риск или принять решение по замечанию спецпроверки."
         blocks={[
           {
             title: "Что сюда попадает",
             points: [
-              "Нормализованные требования после анализа отчета.",
-              "Статусы применимости, confidence, risk level и пользовательские комментарии.",
-              "Выявленные системой required_data и found_data.",
+              "Незакрытые findings спецпроверки ПП 145/87.",
+              "Документы со статусом ошибки, ручной проверки, ожидания или обработки.",
+              "Неподтвержденные требования и открытые риски.",
             ],
           },
           {
-            title: "Что делать пользователю",
+            title: "Что считается закрытым",
             points: [
-              "Проверять требования со статусами partial, missing и needs clarification.",
-              "Подтверждать, отклонять или вручную корректировать спорные позиции.",
-              "После ручной правки пересчитывать XAI, чтобы объяснение соответствовало новой версии требования.",
+              "Требование подтверждено, отклонено, включено в отчет или признано неприменимым.",
+              "Finding спецпроверки получил решение пользователя: одобрено, пропущено или заменено.",
+              "Документ обработан без активной ошибки, а риск переведен в закрытый статус.",
             ],
           },
           {
-            title: "Как оптимизировать",
+            title: "Связь с дашбордом",
             points: [
-              "Сначала фильтровать по проблемным статусам, а не просматривать весь реестр подряд.",
-              "Использовать массовое подтверждение только для однотипных и уже проверенных строк.",
-              "Править здесь смысл требования, а доказательства уточнять через матрицу и документы.",
+              "Если отчет полностью сформирован и этот список пуст, дашборд показывает 100% готовности.",
+              "Если здесь есть хотя бы один активный пункт, общий контур остается в рабочем состоянии.",
             ],
           },
         ]}
       />
-      <section className="panel">
+
+      <section className="panel active-ai-panel">
         <div className="section-header">
-          <h2>Реестр требований</h2>
-          <span>{filteredRequirements.length}</span>
+          <div>
+            <p className="eyebrow">Текущий action-list</p>
+            <h2>Активные требования от ИИ</h2>
+          </div>
+          <span className={`status-pill tone-${activeAiRequirements.length > 0 ? "warning" : "success"}`}>
+            {activeAiRequirements.length > 0 ? `${activeAiRequirements.length} активно` : "Нет активных"}
+          </span>
         </div>
         <div className="form-grid compact">
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по требованию" />
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">Все статусы</option>
-            <option value="new">{formatRequirementStatus("new")}</option>
-            <option value="data_found">{formatRequirementStatus("data_found")}</option>
-            <option value="data_partial">{formatRequirementStatus("data_partial")}</option>
-            <option value="data_missing">{formatRequirementStatus("data_missing")}</option>
-            <option value="confirmed">{formatRequirementStatus("confirmed")}</option>
-            <option value="rejected">{formatRequirementStatus("rejected")}</option>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Поиск по активному требованию" />
+          <select value={kindFilter} onChange={(event) => setKindFilter(event.target.value as ActiveAiRequirementKind | "all")}>
+            {Object.entries(ACTIVE_AI_KIND_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </div>
-        <div className="list">
-          {filteredRequirements.map((requirement) => {
-            const confidencePercent = Math.round(requirement.confidence_score * 100);
-            const scoreTone = getScoreTone(confidencePercent);
-            return (
-            <article
-              key={requirement.id}
-              className={`list-item requirement-card tone-${scoreTone} ${selectedRequirementId === requirement.id ? "selected-row" : ""}`}
-            >
-              <div className="requirement-row">
-                <div className="requirement-summary">
-                  <strong>{requirement.title}</strong>
-                  <p>
-                    {requirement.category} · {formatRequirementStatus(requirement.status)} · {requirement.applicability_status}
-                  </p>
-                  <p>{requirement.text}</p>
-                  <div className="requirement-inline-actions">
-                    <button
-                      type="button"
-                      className="action-button action-success"
-                      onClick={() => void onConfirm(requirement.id)}
-                    >
-                      Подтвердить
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button action-warning"
-                      onClick={() => void onReject(requirement.id)}
-                    >
-                      Отклонить
-                    </button>
-                    <button
-                      type="button"
-                      className="action-button action-light"
-                      onClick={() => onSelectRequirement(requirement.id)}
-                    >
-                      {selectedRequirementId === requirement.id ? "Открыто в редакторе" : "Открыть"}
-                    </button>
+
+        {filteredActiveAiRequirements.length === 0 ? (
+          <div className="empty-state">
+            {activeAiRequirements.length === 0
+              ? "Активных требований ИИ сейчас нет. Если отчет сформирован полностью, дашборд покажет готовность 100%."
+              : "По текущему фильтру активных требований не найдено."}
+          </div>
+        ) : (
+          <div className="active-ai-list">
+            {filteredActiveAiRequirements.map((item) => (
+              <article key={item.id} className={`active-ai-card tone-${item.tone}`}>
+                <div className="active-ai-main">
+                  <div className="active-ai-head">
+                    <span className="eyebrow">{item.kindLabel}</span>
+                    <span className={`status-pill tone-${item.tone}`}>{item.statusLabel}</span>
+                  </div>
+                  <strong>{item.title}</strong>
+                  <p>{item.description}</p>
+                  <div className="active-ai-meta">
+                    <span>{item.source}</span>
+                    {typeof item.confidencePercent === "number" ? (
+                      <span className={`status-pill tone-${getScoreTone(item.confidencePercent)}`}>Confidence {item.confidencePercent}%</span>
+                    ) : null}
+                    {item.normativeBasis ? <span>{item.normativeBasis}</span> : null}
                   </div>
                 </div>
-              </div>
-              <div className="report-actions">
-                <div className="status-meter compact-meter requirement-meter">
-                  <div className="meter-meta">
-                    <span>Уверенность</span>
-                    <strong>{Math.round(requirement.confidence_score * 100)}%</strong>
-                  </div>
-                  <div className="progress-track">
-                    <div className={`progress-fill tone-${scoreTone}`} style={{ width: `${confidencePercent}%` }} />
-                  </div>
+                <div className="active-ai-action">
+                  <span>Что нужно сделать</span>
+                  <p>{item.recommendation}</p>
+                  {item.requirementId ? (
+                    <div className="requirement-inline-actions">
+                      <button type="button" className="action-button action-success" onClick={() => void onConfirm(item.requirementId!)}>
+                        Подтвердить
+                      </button>
+                      <button type="button" className="action-button action-warning" onClick={() => void onReject(item.requirementId!)}>
+                        Отклонить
+                      </button>
+                      <button type="button" className="action-button action-light" onClick={() => onSelectRequirement(item.requirementId!)}>
+                        Открыть правку
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
-                <span className={`status-pill tone-${getRiskTone(requirement.risk_level)}`}>
-                  Риск: {formatRiskLevel(requirement.risk_level)}
-                </span>
-              </div>
-            </article>
-            );
-          })}
-        </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="panel">
         <div className="section-header">
-          <h2>Ручная правка требования</h2>
+          <h2>Ручная правка нормализованного требования</h2>
           <span>{selectedRequirement ? selectedRequirement.id.slice(0, 8) : "—"}</span>
         </div>
         {selectedRequirement ? (
@@ -276,7 +516,7 @@ export function RequirementsPage({
             </div>
           </div>
         ) : (
-          <p>Выбери требование из реестра, чтобы отредактировать применимость и комментарий.</p>
+          <p>Выберите активное нормализованное требование из списка выше, чтобы открыть ручную правку.</p>
         )}
       </section>
     </div>
